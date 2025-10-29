@@ -2,12 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getServiceRoleClient } from '@/lib/supabase';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-});
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
@@ -19,6 +13,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-09-30.clover',
+    });
+
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
     let event: Stripe.Event;
 
