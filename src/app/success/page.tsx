@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, CheckCircle, Loader2 } from 'lucide-react';
 
-export default function Success() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [eventId, setEventId] = useState<string | null>(null);
@@ -72,5 +72,17 @@ export default function Success() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Success() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
