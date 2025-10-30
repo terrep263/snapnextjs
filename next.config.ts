@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Enable system TLS certificates for Turbopack to fetch Google Fonts
+  experimental: {
+    turbopackUseSystemTlsCerts: true,
+  },
 };
 
 export default nextConfig;
