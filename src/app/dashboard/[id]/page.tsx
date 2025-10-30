@@ -1,29 +1,166 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Camera, ExternalLink, Download, QrCode, Copy, Check } from 'lucide-react';
+import { Camera, ExternalLink, Download, QrCode, Copy, Check, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+import { supabase } from '@/lib/supabase';
+import { generateQRCode } from '@/lib/utils';
+
+interface Photo {
+  id: string;
+  file_path: string;
+  file_name: string;
+  uploaded_at: string;
+}
+
+interface EventData {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  created_at: string;
+  expires_at: string;
+}
 
 export default function Dashboard() {
   const params = useParams();
   const eventId = params.id as string;
   const [copied, setCopied] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [downloading, setDownloading] = useState(false);
 
-  const eventUrl = `${process.env.NEXT_PUBLIC_APP_URL}/e/${eventId}`;
+  // Fetch event details and photos
+  const fetchEventData = useCallback(async () => {
+    try {
+      // Fetch event details
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('id, name, slug, is_active, created_at, expires_at')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError || !eventData) {
+        setError('Event not found');
+        setLoading(false);
+        return;
+      }
+
+      setEvent(eventData);
+
+      // Generate QR code
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const eventUrl = `${appUrl}/e/${eventData.slug}`;
+
+      try {
+        const qrCode = await generateQRCode(eventUrl);
+        setQrCodeUrl(qrCode);
+      } catch (err) {
+        console.error('Failed to generate QR code:', err);
+      }
+
+      // Fetch photos
+      const { data: photosData, error: photosError } = await supabase
+        .from('photos')
+        .select('id, file_path, file_name, uploaded_at')
+        .eq('event_id', eventData.id)
+        .order('uploaded_at', { ascending: false });
+
+      if (photosError) {
+        console.error('Error fetching photos:', photosError);
+      } else {
+        setPhotos(photosData || []);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Failed to load event');
+    } finally {
+      setLoading(false);
+    }
+  }, [eventId]);
 
   useEffect(() => {
-    // TODO: Generate QR code
-    console.log('Generate QR code for:', eventUrl);
-  }, [eventUrl]);
+    fetchEventData();
+    // Refresh photos every 30 seconds
+    const interval = setInterval(fetchEventData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchEventData]);
 
   const copyToClipboard = async () => {
+    if (!event) return;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    const eventUrl = `${appUrl}/e/${event.slug}`;
     await navigator.clipboard.writeText(eventUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const downloadQRCode = () => {
+    if (!qrCodeUrl) return;
+    const link = document.createElement('a');
+    link.href = qrCodeUrl;
+    link.download = `${event?.slug || 'event'}-qr-code.png`;
+    link.click();
+  };
+
+  const downloadAllPhotos = async () => {
+    if (photos.length === 0) return;
+
+    setDownloading(true);
+    try {
+      // In a real implementation, you'd want to create a zip file on the backend
+      // For now, we'll download them individually
+      for (const photo of photos) {
+        const link = document.createElement('a');
+        link.href = photo.file_path;
+        link.download = photo.file_name;
+        link.target = '_blank';
+        link.click();
+        // Add a small delay between downloads
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Camera className="mx-auto mb-4 h-12 w-12 animate-pulse text-primary" />
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+          <h1 className="mb-2 text-2xl font-bold text-foreground">{error || 'Event not found'}</h1>
+          <Link
+            href="/"
+            className="text-primary hover:underline"
+          >
+            Go back home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const eventUrl = `${appUrl}/e/${event.slug}`;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -40,10 +177,12 @@ export default function Dashboard() {
         <div className="container mx-auto max-w-4xl px-4">
           <div className="mb-8">
             <h1 className="mb-2 text-3xl font-bold text-foreground">
-              Event Dashboard
+              {event.name}
             </h1>
             <p className="text-muted-foreground">
-              Manage your event and view all uploaded photos
+              {event.is_active
+                ? 'Manage your event and view all uploaded photos'
+                : 'This event is no longer active'}
             </p>
           </div>
 
@@ -63,10 +202,14 @@ export default function Dashboard() {
                     className="rounded-lg"
                   />
                 ) : (
-                  <QrCode className="h-24 w-24 text-muted-foreground" />
+                  <QrCode className="h-24 w-24 animate-pulse text-muted-foreground" />
                 )}
               </div>
-              <button className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+              <button
+                onClick={downloadQRCode}
+                disabled={!qrCodeUrl}
+                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 <Download className="mr-2 inline-block h-4 w-4" />
                 Download QR Code
               </button>
@@ -98,7 +241,7 @@ export default function Dashboard() {
                   )}
                 </button>
                 <Link
-                  href={`/e/${eventId}`}
+                  href={`/e/${event.slug}`}
                   target="_blank"
                   className="flex items-center justify-center rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
                 >
@@ -111,20 +254,53 @@ export default function Dashboard() {
           <div className="mt-8 rounded-lg bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-foreground">
-                Event Photos (0)
+                Event Photos ({photos.length})
               </h2>
-              <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
-                <Download className="mr-2 inline-block h-4 w-4" />
-                Download All
-              </button>
+              {photos.length > 0 && (
+                <button
+                  onClick={downloadAllPhotos}
+                  disabled={downloading}
+                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Download className="mr-2 inline-block h-4 w-4" />
+                  {downloading ? 'Downloading...' : 'Download All'}
+                </button>
+              )}
             </div>
 
-            <div className="py-12 text-center">
-              <Camera className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                No photos yet. Share your event link to start collecting photos!
-              </p>
-            </div>
+            {photos.length === 0 ? (
+              <div className="py-12 text-center">
+                <Camera className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  No photos yet. Share your event link to start collecting photos!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {photos.map((photo) => (
+                  <div
+                    key={photo.id}
+                    className="group relative aspect-square overflow-hidden rounded-lg bg-muted"
+                  >
+                    <Image
+                      src={photo.file_path}
+                      alt={photo.file_name}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    />
+                    <a
+                      href={photo.file_path}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/50 group-hover:opacity-100"
+                    >
+                      <Download className="h-8 w-8 text-white" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>
