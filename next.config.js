@@ -14,4 +14,5 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+// Use CommonJS export to avoid node warning when package.json has no "type": "module"
+module.exports = nextConfig
