@@ -9,4 +9,4 @@ export default function Page() {
     </Suspense>
   )
 }
-type PackageType = 'basic' | 'premium'
+
