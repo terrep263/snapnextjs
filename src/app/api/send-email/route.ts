@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, eventName, dashboardUrl, eventUrl } = await request.json();
+    const { to, eventName, dashboardUrl, eventUrl, qrCodeDataUrl } = await request.json();
 
     if (!to || !eventName || !dashboardUrl || !eventUrl) {
       return NextResponse.json(
@@ -49,7 +49,15 @@ export async function POST(request: NextRequest) {
                 <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
 
                 <h3>📷 QR Code</h3>
-                <p>Visit your dashboard to download a QR code that guests can scan to access the event.</p>
+                ${qrCodeDataUrl ? `
+                  <p>Scan this QR code to access your event:</p>
+                  <div style="text-align: center; margin: 20px 0;">
+                    <img src="${qrCodeDataUrl}" alt="Event QR Code" style="max-width: 300px; border: 2px solid #e5e7eb; border-radius: 8px;" />
+                  </div>
+                  <p style="font-size: 14px; color: #6b7280;">You can also download this QR code from your dashboard.</p>
+                ` : `
+                  <p>Visit your dashboard to download a QR code that guests can scan to access the event.</p>
+                `}
 
                 <p><strong>Event Duration:</strong> Your event will remain active for 30 days.</p>
               </div>
