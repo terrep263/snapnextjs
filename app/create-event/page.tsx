@@ -1,4 +1,7 @@
-'use client'
+"use client"
+
+// Force dynamic rendering for this client-heavy page (uses next/navigation hooks)
+export const dynamic = "force-dynamic"
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
