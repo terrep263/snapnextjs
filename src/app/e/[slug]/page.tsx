@@ -313,7 +313,7 @@ export default function EventPage() {
                 title: photo.title || photo.filename,
                 description: photo.description,
                 uploadedAt: photo.created_at,
-                isVideo: photo.is_video || photo.filename?.includes('.mp4') || photo.filename?.includes('.mov') || photo.filename?.includes('.avi') || photo.filename?.includes('.webm'),
+                isVideo: photo.is_video || false,
                 duration: photo.duration,
                 size: photo.size,
                 likes: photo.likes || 0,

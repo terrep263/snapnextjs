@@ -225,7 +225,8 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           url: publicUrl,
           file_path: filePath,
           size: file.size,
-          type: file.type
+          type: file.type,
+          is_video: isVideo
         };
 
         // Validate photoRecord is complete

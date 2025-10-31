@@ -203,11 +203,17 @@ export default function SnapworxxGallery({
     galleryRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Lightbox slides
+  // Lightbox slides with video support
   const slides = filteredPhotos.map(photo => ({
     src: photo.url,
     title: photo.title,
-    description: photo.description
+    description: photo.description,
+    type: photo.isVideo ? 'video' : 'image',
+    ...(photo.isVideo && {
+      poster: photo.thumbnail || photo.url,
+      width: 1920,
+      height: 1080
+    })
   }));
 
   // Photo card component
