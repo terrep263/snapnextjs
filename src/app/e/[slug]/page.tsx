@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import SnapworxxGallery from '@/components/SnapworxxGallery';
-import PhotoUpload from '@/components/PhotoUpload';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function EventPage() {
@@ -18,23 +17,14 @@ export default function EventPage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
+
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [headerImage, setHeaderImage] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string>('');
 
-  // Initialize event data
+  // Load real event from database
   useEffect(() => {
-    const eventId = slug || 'default-event';
-    const event = {
-      id: eventId,
-      name: slug === 'test' ? 'Test Event' : 'Sample Event Gallery',
-      slug: slug,
-      created_at: new Date().toISOString(),
-      status: 'active'
-    };
-    setEventData(event);
-    console.log('� Event initialized:', event);
+    loadEvent();
   }, [slug]);
 
   // Load photos when eventData changes
@@ -43,6 +33,45 @@ export default function EventPage() {
       loadPhotos();
     }
   }, [eventData]);
+
+  const loadEvent = async () => {
+    if (!slug) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔍 Loading event:', slug);
+      
+      // Try to load real event from database first
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+
+      if (eventError && eventError.code !== 'PGRST116') {
+        throw new Error(`Failed to load event: ${eventError.message}`);
+      }
+
+      if (event) {
+        // Real event found
+        console.log('✅ Real event loaded:', event);
+        setEventData(event);
+      } else {
+        // Event not found
+        console.log('❌ Event not found:', slug);
+        setError('Event not found');
+        setEventData(null);
+      }
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error loading event:', errorMessage);
+      setError(errorMessage);
+      setEventData(null);
+    }
+  };
 
   const loadPhotos = async () => {
     if (!eventData?.id) return;
@@ -113,22 +142,38 @@ export default function EventPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50">
-        <Loader2 className="h-8 w-8 animate-spin text-red-500" />
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-500 mx-auto mb-4" />
+          <p className="text-gray-600">Loading event...</p>
+        </div>
       </div>
     );
   }
 
-  if (!eventData) {
+  if (error || !eventData) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50">
-        <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-24 h-24 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
             <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">Event Not Found</h1>
-          <p className="text-gray-600">This event link may be invalid or expired.</p>
+          <h1 className="mb-4 text-3xl font-bold text-gray-900">Event Not Found</h1>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            The event "{slug}" doesn't exist or may have expired.
+            <br />
+            Please check your link or contact the event organizer.
+          </p>
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Go Home
+          </Link>
         </div>
       </div>
     );
@@ -193,30 +238,44 @@ export default function EventPage() {
             </div>
           </div>
 
-          {/* Event Title - More dramatic */}
+          {/* Event Title with Real Data */}
           <div className="mb-8">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4 leading-tight">
               {eventData.name}
             </h1>
             
-            {/* Elegant tagline */}
-            <p className="text-xl md:text-2xl text-gray-600 font-light mb-2">Memories that last a lifetime</p>
-            <div className="flex items-center justify-center gap-2 text-lg">
-              <span className="text-2xl">✨</span>
-              <span className="text-gray-500">Share your moments</span>
-              <span className="text-2xl">📸</span>
+            {/* Show real event details */}
+            <div className="space-y-2">
+              {eventData.event_date && (
+                <p className="text-xl text-gray-600 font-light">
+                  {new Date(eventData.event_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+              )}
+              <p className="text-xl md:text-2xl text-gray-600 font-light mb-2">Memories that last a lifetime</p>
+              <div className="flex items-center justify-center gap-2 text-lg">
+                <span className="text-2xl">✨</span>
+                <span className="text-gray-500">Share your moments</span>
+                <span className="text-2xl">📸</span>
+              </div>
             </div>
           </div>
 
-          {/* Stats or info cards */}
+          {/* Real Event Stats */}
           <div className="flex justify-center gap-6 mb-8">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-white/20">
               <div className="text-2xl font-bold text-indigo-600">{photos.length}</div>
               <div className="text-sm text-gray-600 font-medium">Photos</div>
             </div>
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-white/20">
-              <div className="text-2xl font-bold text-purple-600">∞</div>
-              <div className="text-sm text-gray-600 font-medium">Memories</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {eventData.status === 'active' ? '🟢' : '🔴'}
+              </div>
+              <div className="text-sm text-gray-600 font-medium capitalize">{eventData.status || 'Active'}</div>
             </div>
           </div>
         </div>
@@ -258,52 +317,25 @@ export default function EventPage() {
                 </button>
               </div>
 
-              {/* Elegant Upload Button */}
+              {/* Upload Link */}
               <div className="text-center">
-                <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowUpload(!showUpload);
-                }}
-                className="group relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-10 py-4 rounded-2xl shadow-xl transition-colors duration-300"
-              >
-                <span className="relative z-10 flex items-center gap-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  Add Your Photos
-                </span>
-                {/* Glow effect */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 opacity-50 blur-xl group-hover:opacity-70 transition-opacity duration-300"></div>
-              </button>
+                <Link 
+                  href={`/e/${slug}/upload`}
+                  className="group relative bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-10 py-4 rounded-2xl shadow-xl transition-colors duration-300 inline-block"
+                >
+                  <span className="relative z-10 flex items-center gap-3">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Upload Photos & Videos
+                  </span>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 opacity-50 blur-xl group-hover:opacity-70 transition-opacity duration-300"></div>
+                </Link>
               </div>
             </div>
             
-            {showUpload && (
-              <div className="mb-12 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
-                <div className="mb-6 text-center">
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Share Your Moments</h3>
-                  <p className="text-gray-600">Upload your photos to create lasting memories together</p>
-                </div>
-                <PhotoUpload 
-                  eventData={eventData}
-                  onUploadComplete={() => {
-                    console.log('🔄 Upload complete (empty state), refreshing gallery for event:', eventData.id);
-                    console.log('🔄 Current photos before refetch:', photos.length);
-                    loadPhotos().then(() => {
-                      console.log('🔄 Refetch completed (empty state)');
-                    });
-                    setShowUpload(false);
-                  }}
-                />
-              </div>
-            )}
+
             
             <SnapworxxGallery 
               photos={photos.map(photo => ({
@@ -320,7 +352,7 @@ export default function EventPage() {
                 isFavorite: photo.is_favorite || false
               }))}
               eventId={eventData.id}
-              onUpload={() => setShowUpload(true)}
+
               onDelete={(photoId: string) => {
                 console.log('Delete photo:', photoId);
                 // TODO: Implement delete functionality
@@ -356,24 +388,19 @@ export default function EventPage() {
               </div>
             </div>
 
-            {/* Inspiring Empty State Text */}
+            {/* Inspiring Empty State Text for Real Events */}
             <h3 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
               Let's Create Magic Together
             </h3>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Be the first to share your amazing moments from this event.<br/>
+              Be the first to share your amazing moments from <strong>{eventData.name}</strong>.<br/>
               Your photos will inspire others to join and contribute! 🌟
             </p>
 
-            {/* Beautiful Upload Button */}
-            <button
-              onClick={(e) => {
-                console.log('🟢 GALLERY PAGE - Upload Media button clicked (empty state)');
-                e.preventDefault();
-                e.stopPropagation();
-                setShowUpload(!showUpload);
-              }}
-              className="group relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold px-12 py-5 rounded-2xl shadow-xl transition-colors duration-300"
+            {/* Upload Link */}
+            <Link 
+              href={`/e/${slug}/upload`}
+              className="group relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold px-12 py-5 rounded-2xl shadow-xl transition-colors duration-300 inline-block"
             >
               <span className="relative z-10 flex items-center justify-center gap-3 text-lg">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -383,33 +410,9 @@ export default function EventPage() {
               </span>
               {/* Animated glow - static to prevent loops */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 opacity-50 blur-xl"></div>
-            </button>
+            </Link>
 
-            {/* Enhanced Upload Component */}
-            {showUpload && (
-              <div className="mt-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl p-8 border border-white/30">
-                <div className="mb-6 text-center">
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">Share Your Moment</h4>
-                  <p className="text-gray-600">Drag & drop your photos or click to browse</p>
-                </div>
-                <PhotoUpload 
-                  eventData={eventData}
-                  onUploadComplete={() => {
-                    console.log('🔄 Upload complete, refreshing gallery for event:', eventData.id);
-                    console.log('🔄 Current photos before refetch:', photos.length);
-                    loadPhotos().then(() => {
-                      console.log('🔄 Refetch completed');
-                    });
-                    setShowUpload(false);
-                  }}
-                />
-              </div>
-            )}
+
           </div>
         )}
 

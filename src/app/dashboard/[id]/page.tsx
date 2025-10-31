@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [editingHeader, setEditingHeader] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
+  const [editingEventName, setEditingEventName] = useState(false);
+  const [eventName, setEventName] = useState('');
 
   const eventUrl = eventData ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/${eventData.slug}` : '';
 
@@ -30,6 +32,12 @@ export default function Dashboard() {
       loadPhotos();
     }
   }, [eventUrl]);
+
+  useEffect(() => {
+    if (eventData?.name) {
+      setEventName(eventData.name);
+    }
+  }, [eventData]);
 
   const loadEventData = async () => {
     try {
@@ -128,6 +136,43 @@ export default function Dashboard() {
       await handleDownloadPhoto(photo);
       // Add delay to avoid overwhelming the browser
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
+  const updateEventName = async (newName: string) => {
+    if (!newName.trim()) return;
+    
+    try {
+      // Try to update in database first
+      const { error } = await supabase
+        .from('events')
+        .update({ name: newName.trim() })
+        .eq('id', eventId);
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Database update failed:', error);
+      }
+
+      // Update local state regardless
+      setEventData((prev: any) => prev ? { ...prev, name: newName.trim() } : null);
+      setEventName(newName.trim());
+      setEditingEventName(false);
+
+      // Also update in localStorage if it exists
+      const storedEvent = localStorage.getItem('currentEvent');
+      if (storedEvent) {
+        const parsed = JSON.parse(storedEvent);
+        if (parsed.id === eventId) {
+          parsed.name = newName.trim();
+          localStorage.setItem('currentEvent', JSON.stringify(parsed));
+        }
+      }
+    } catch (error) {
+      console.error('Error updating event name:', error);
+      // Still update local state for development
+      setEventData((prev: any) => prev ? { ...prev, name: newName.trim() } : null);
+      setEventName(newName.trim());
+      setEditingEventName(false);
     }
   };
 
@@ -323,16 +368,157 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Event Title */}
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {eventData ? eventData.name : 'Event Dashboard'}
-            </h1>
+            {/* Editable Event Title */}
+            <div className="mb-2">
+              {editingEventName ? (
+                <div className="flex items-center justify-center gap-2 max-w-md mx-auto">
+                  <input
+                    type="text"
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    className="text-4xl font-bold text-gray-900 bg-transparent border-b-2 border-purple-500 focus:outline-none text-center"
+                    placeholder="Event Name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') updateEventName(eventName);
+                      if (e.key === 'Escape') {
+                        setEditingEventName(false);
+                        setEventName(eventData?.name || '');
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => updateEventName(eventName)}
+                    className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
+                    title="Save"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingEventName(false);
+                      setEventName(eventData?.name || '');
+                    }}
+                    className="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-lg transition-colors"
+                    title="Cancel"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="group relative inline-block">
+                  <h1 className="text-4xl font-bold text-gray-900">
+                    {eventData ? eventData.name : 'Event Dashboard'}
+                  </h1>
+                  <button
+                    onClick={() => setEditingEventName(true)}
+                    className="absolute -right-8 top-1 opacity-0 group-hover:opacity-100 bg-purple-500 hover:bg-purple-600 text-white p-1 rounded-md transition-all duration-200 text-xs"
+                    title="Edit event name"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
             <p className="text-lg text-gray-600 mb-6">
               Manage your event and view all uploaded photos
             </p>
           </div>
 
           <main className="space-y-8">
+            {/* Event Details Section */}
+            <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
+              <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Event Information
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Name</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                        onBlur={() => {
+                          if (eventName !== eventData?.name && eventName.trim()) {
+                            updateEventName(eventName);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                        placeholder="Enter event name"
+                      />
+                    </div>
+                  </div>
+                  
+                  {eventData?.event_date && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Event Date</label>
+                      <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                        {new Date(eventData.event_date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event Status</label>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        eventData?.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {eventData?.status === 'active' ? '🟢 Active' : '🔴 Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Photos Uploaded</label>
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                      {photos.length} photos
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Event URL</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={eventUrl}
+                        readOnly
+                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-600 text-sm"
+                      />
+                      <button
+                        onClick={() => navigator.clipboard.writeText(eventUrl)}
+                        className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                        title="Copy URL"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Event Customization Section */}
             <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
               <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900">
