@@ -78,6 +78,7 @@ export default function SnapworxxGallery({
   // Video player state
   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
+  const [selectedVideoPhoto, setSelectedVideoPhoto] = useState<Photo | null>(null);
 
   // Refs
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -203,18 +204,14 @@ export default function SnapworxxGallery({
     galleryRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Lightbox slides with video support
-  const slides = filteredPhotos.map(photo => ({
-    src: photo.url,
-    title: photo.title,
-    description: photo.description,
-    type: photo.isVideo ? 'video' : 'image',
-    ...(photo.isVideo && {
-      poster: photo.thumbnail || photo.url,
-      width: 1920,
-      height: 1080
-    })
-  }));
+  // Lightbox slides (images only for now, videos will use custom modal)
+  const slides = filteredPhotos
+    .filter(photo => !photo.isVideo) // Only include images in lightbox
+    .map(photo => ({
+      src: photo.url,
+      title: photo.title,
+      description: photo.description
+    }));
 
   // Photo card component
   const PhotoCard = React.memo(({ photo, index }: { photo: Photo; index: number }) => (
@@ -226,7 +223,15 @@ export default function SnapworxxGallery({
       className={`relative group cursor-pointer rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-200 ${
         darkMode ? 'bg-gray-800' : 'bg-white'
       }`}
-      onClick={() => setSelectedPhoto(index)}
+      onClick={() => {
+        if (photo.isVideo) {
+          setSelectedVideoPhoto(photo);
+        } else {
+          // For images, find the index in the filtered images (not videos)
+          const imageIndex = filteredPhotos.filter(p => !p.isVideo).findIndex(p => p.id === photo.id);
+          setSelectedPhoto(imageIndex);
+        }
+      }}
     >
       {photo.isVideo ? (
         <div className="relative">
@@ -533,7 +538,51 @@ export default function SnapworxxGallery({
         <ChevronUp size={24} />
       </motion.button>
 
-      {/* Lightbox */}
+      {/* Custom Video Modal */}
+      {selectedVideoPhoto && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
+          <div className="relative max-w-7xl max-h-[90vh] w-full mx-4">
+            {/* Close button */}
+            <button
+              onClick={() => setSelectedVideoPhoto(null)}
+              className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+            >
+              <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Video Player */}
+            <video
+              src={selectedVideoPhoto.url}
+              poster={selectedVideoPhoto.thumbnail || selectedVideoPhoto.url}
+              className="w-full max-h-[90vh] object-contain rounded-lg"
+              controls
+              autoPlay
+              playsInline
+              preload="metadata"
+            />
+
+            {/* Video Info */}
+            {(selectedVideoPhoto.title || selectedVideoPhoto.description) && (
+              <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4">
+                {selectedVideoPhoto.title && (
+                  <h3 className="text-white font-semibold text-lg mb-1">
+                    {selectedVideoPhoto.title}
+                  </h3>
+                )}
+                {selectedVideoPhoto.description && (
+                  <p className="text-gray-300 text-sm">
+                    {selectedVideoPhoto.description}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox (Images Only) */}
       <Lightbox
         open={selectedPhoto >= 0}
         index={selectedPhoto}
