@@ -9,21 +9,78 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [eventId, setEventId] = useState<string | null>(null);
+  const [eventData, setEventData] = useState<any>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
+    const isMock = searchParams.get('mock') === 'true';
 
     if (sessionId) {
-      // TODO: Verify payment and get event details
-      // For now, simulate loading
-      setTimeout(() => {
-        setEventId('sample-event-id');
+      if (isMock) {
+        // Handle mock session for development
+        const mockEvent = {
+          id: 'mock_event_id',
+          name: 'Mock Event for Development',
+          slug: 'mock-event-dev',
+          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/mock_event_id`,
+          eventUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/mock-event-dev`
+        };
+        
+        setEventId(mockEvent.id);
+        setEventData(mockEvent);
+        localStorage.setItem('currentEvent', JSON.stringify(mockEvent));
         setLoading(false);
-      }, 1500);
+      } else {
+        verifyPayment(sessionId);
+      }
     } else {
       setLoading(false);
     }
   }, [searchParams]);
+
+  const verifyPayment = async (sessionId: string) => {
+    try {
+      const response = await fetch('/api/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Payment verification failed:', result);
+        throw new Error(result.details || result.error || 'Payment verification failed');
+      }
+
+      const { event } = result;
+      setEventId(event.id);
+      setEventData(event);
+      
+      // Store event details in localStorage for easy access
+      localStorage.setItem('currentEvent', JSON.stringify(event));
+      
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      // For development, still show success but with mock data
+      if (process.env.NODE_ENV === 'development') {
+        const mockEvent = {
+          id: 'fallback_event_id',
+          name: 'Event (Verification Failed)',
+          slug: 'fallback-event',
+          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/fallback_event_id`,
+          eventUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/fallback-event`
+        };
+        setEventId(mockEvent.id);
+        setEventData(mockEvent);
+        localStorage.setItem('currentEvent', JSON.stringify(mockEvent));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
