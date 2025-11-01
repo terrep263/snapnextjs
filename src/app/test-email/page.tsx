@@ -32,7 +32,7 @@ export default function TestEmail() {
       if (response.ok) {
         setResult(`✅ Email sent successfully! Message ID: ${data.messageId}`);
       } else {
-        setError(`❌ Failed to send email: ${data.error}`);
+        setError(`❌ Failed to send email: ${data.error}${data.details ? ` - ${data.details}` : ''}`);
       }
     } catch (err) {
       setError(`❌ Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -119,7 +119,7 @@ export default function TestEmail() {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">Email Configuration</h3>
             <div className="space-y-2 text-sm">
               <p><strong>Service:</strong> Resend API</p>
-              <p><strong>From Address:</strong> SnapWorxx &lt;noreply@snapworxx.com&gt;</p>
+              <p><strong>From Address:</strong> SnapWorxx &lt;noreply@snapworxx.app&gt;</p>
               <p><strong>API Key:</strong> Configured in environment variables</p>
             </div>
           </div>

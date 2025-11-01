@@ -12,9 +12,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Attempting to send email with API key:', process.env.RESEND_API_KEY?.substring(0, 10) + '...');
+    
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
-      from: 'SnapWorxx <noreply@snapworxx.com>',
+      from: 'SnapWorxx <noreply@snapworxx.app>',
       to,
       subject: `Your SnapWorxx Event: ${eventName}`,
       html: `
@@ -63,15 +65,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      console.error('Resend error:', error);
-      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
+      console.error('Resend error details:', error);
+      return NextResponse.json({ 
+        error: 'Failed to send email', 
+        details: error.message || 'Unknown Resend error' 
+      }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, messageId: data?.id });
   } catch (error) {
     console.error('Error sending email:', error);
     return NextResponse.json(
-      { error: 'Failed to send email' },
+      { 
+        error: 'Failed to send email', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
       { status: 500 }
     );
   }
