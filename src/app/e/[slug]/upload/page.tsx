@@ -103,8 +103,12 @@ export default function UploadPage() {
         <div className="max-w-4xl mx-auto px-6 py-12">
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mb-6 shadow-lg">
-              <Camera className="w-12 h-12 text-indigo-600" />
+            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mb-6 shadow-lg p-4">
+              <img 
+                src="/snapworxx logo (1).png" 
+                alt="Snapworxx Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">

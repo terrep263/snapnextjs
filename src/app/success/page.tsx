@@ -96,7 +96,11 @@ function SuccessContent() {
       <header className="border-b border-border bg-white px-4 py-4">
         <div className="container mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Camera className="h-6 w-6 text-primary" />
+            <img 
+              src="/snapworxx logo (1).png" 
+              alt="Snapworxx Logo" 
+              className="h-8 w-auto"
+            />
             <span className="text-xl font-bold text-primary">SnapWorxx</span>
           </Link>
         </div>

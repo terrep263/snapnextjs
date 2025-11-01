@@ -10,10 +10,11 @@ export default function Home() {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Camera className="h-10 w-10 text-white" strokeWidth={1.5} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-3 w-3 rounded-full bg-white"></div>
-              </div>
+              <img 
+                src="/snapworxx logo (1).png" 
+                alt="Snapworxx Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <div className="text-white">
               <div className="text-xl font-bold tracking-wide">SNAPWORXX</div>

@@ -34,7 +34,11 @@ export default function TempNavigation() {
       <div className="fixed left-4 top-1/2 z-40 hidden -translate-y-1/2 transform md:block">
         <div className="rounded-lg bg-white/90 p-4 shadow-lg backdrop-blur-sm">
           <div className="mb-4 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-purple-600" />
+            <img 
+              src="/snapworxx logo (1).png" 
+              alt="Snapworxx Logo" 
+              className="h-6 w-auto"
+            />
             <span className="text-sm font-semibold text-gray-800">Dev Nav</span>
           </div>
           <nav className="space-y-2">
@@ -61,7 +65,11 @@ export default function TempNavigation() {
           <div className="fixed bottom-0 left-0 right-0 rounded-t-lg bg-white p-6">
             <div className="mb-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Camera className="h-6 w-6 text-purple-600" />
+                <img 
+                  src="/snapworxx logo (1).png" 
+                  alt="Snapworxx Logo" 
+                  className="h-6 w-auto"
+                />
                 <span className="text-lg font-semibold text-gray-800">Dev Navigation</span>
               </div>
               <button
