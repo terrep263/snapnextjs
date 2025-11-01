@@ -16,10 +16,10 @@ export default function Home() {
             />
           </div>
 
-          {/* Create Event Button */}
-          <Link 
+          {/* Create Event Button - Purple Style */}
+          <Link
             href="/create"
-            className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-purple-600 shadow-lg transition-all hover:shadow-xl hover:scale-105"
+            className="rounded-full bg-purple-600 px-8 py-3 text-lg font-semibold text-white shadow-2xl transition-all hover:bg-purple-700 hover:scale-105"
           >
             Create My Event
           </Link>
@@ -44,7 +44,16 @@ export default function Home() {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-6 text-center text-white">
+        <div className="relative z-10 container mx-auto px-6 text-center text-white mt-16">
+          {/* White Logo Above Text */}
+          <div className="mb-8">
+            <img 
+              src="/purple logo/whitelogo.png" 
+              alt="Snapworxx Logo" 
+              className="h-32 md:h-40 lg:h-48 w-auto mx-auto"
+            />
+          </div>
+          
           <h1 className="mb-6 text-5xl md:text-7xl font-bold leading-tight">
             Every Moment Captured.<br />
             Every Memory<br />
@@ -54,12 +63,6 @@ export default function Home() {
             Use a simple QR code to collect all photos and videos taken by guests at<br />
             your event, so you never miss a single memory.
           </p>
-          <Link
-            href="/create"
-            className="inline-block rounded-full bg-purple-600 px-10 py-4 text-lg font-semibold text-white shadow-2xl transition-all hover:bg-purple-700 hover:scale-105"
-          >
-            Create My Event
-          </Link>
         </div>
       </section>
 
