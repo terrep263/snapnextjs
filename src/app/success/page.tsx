@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, CheckCircle, Loader2 } from 'lucide-react';
+import { getEventUrl, getDashboardUrl } from '@/lib/utils';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -22,8 +23,8 @@ function SuccessContent() {
           id: 'mock_event_id',
           name: 'Mock Event for Development',
           slug: 'mock-event-dev',
-          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/mock_event_id`,
-          eventUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/mock-event-dev`
+          dashboardUrl: getDashboardUrl('mock_event_id'),
+          eventUrl: getEventUrl('mock-event-dev')
         };
         
         setEventId(mockEvent.id);
@@ -70,8 +71,8 @@ function SuccessContent() {
           id: 'fallback_event_id',
           name: 'Event (Verification Failed)',
           slug: 'fallback-event',
-          dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/fallback_event_id`,
-          eventUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/fallback-event`
+          dashboardUrl: getDashboardUrl('fallback_event_id'),
+          eventUrl: getEventUrl('fallback-event')
         };
         setEventId(mockEvent.id);
         setEventData(mockEvent);

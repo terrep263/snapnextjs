@@ -58,6 +58,14 @@ export default function EventPage() {
         // Real event found
         console.log('✅ Real event loaded:', event);
         setEventData(event);
+        
+        // Load images from database
+        if (event.header_image) {
+          setHeaderImage(event.header_image);
+        }
+        if (event.profile_image) {
+          setProfileImage(event.profile_image);
+        }
       } else {
         // Event not found
         console.log('❌ Event not found:', slug);

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, QrCode, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getEventUrl } from '@/lib/utils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import MasonryGallery from '@/components/MasonryGallery';
 
@@ -21,7 +22,7 @@ export default function Dashboard() {
   const [editingEventName, setEditingEventName] = useState(false);
   const [eventName, setEventName] = useState('');
 
-  const eventUrl = eventData ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/e/${eventData.slug}` : '';
+  const eventUrl = eventData ? getEventUrl(eventData.slug) : '';
 
   useEffect(() => {
     loadEventData();
@@ -86,6 +87,13 @@ export default function Dashboard() {
         setEventData(mockEvent);
       } else {
         setEventData(event);
+        // Load images from database
+        if (event.header_image) {
+          setHeaderImage(event.header_image);
+        }
+        if (event.profile_image) {
+          setProfileImage(event.profile_image);
+        }
       }
     } catch (error) {
       console.error('Error loading event data:', error);
@@ -176,26 +184,47 @@ export default function Dashboard() {
     }
   };
 
-  const handleImageUpload = (type: 'header' | 'profile') => {
+  const handleImageUpload = async (type: 'header' | 'profile') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
           const result = e.target?.result as string;
+          
+          // Update local state first
           if (type === 'header') {
             setHeaderImage(result);
             setEditingHeader(false);
-            // Save to localStorage for persistence
-            localStorage.setItem(`headerImage_${eventId}`, result);
           } else {
             setProfileImage(result);
             setEditingProfile(false);
-            // Save to localStorage for persistence
-            localStorage.setItem(`profileImage_${eventId}`, result);
+          }
+          
+          // Save to database
+          try {
+            const updateData = type === 'header' 
+              ? { header_image: result }
+              : { profile_image: result };
+              
+            const { error } = await supabase
+              .from('events')
+              .update(updateData)
+              .eq('id', eventId);
+              
+            if (error && error.code !== 'PGRST116') {
+              console.error('Database update failed:', error);
+            }
+            
+            // Also save to localStorage as backup
+            localStorage.setItem(`${type}Image_${eventId}`, result);
+          } catch (error) {
+            console.error('Error updating image:', error);
+            // Save to localStorage as fallback
+            localStorage.setItem(`${type}Image_${eventId}`, result);
           }
         };
         reader.readAsDataURL(file);
@@ -204,16 +233,36 @@ export default function Dashboard() {
     input.click();
   };
 
-  const removeImage = (type: 'header' | 'profile') => {
+  const removeImage = async (type: 'header' | 'profile') => {
+    // Update local state first
     if (type === 'header') {
       setHeaderImage(null);
       setEditingHeader(false);
-      localStorage.removeItem(`headerImage_${eventId}`);
     } else {
       setProfileImage(null);
       setEditingProfile(false);
-      localStorage.removeItem(`profileImage_${eventId}`);
     }
+    
+    // Remove from database
+    try {
+      const updateData = type === 'header' 
+        ? { header_image: null }
+        : { profile_image: null };
+        
+      const { error } = await supabase
+        .from('events')
+        .update(updateData)
+        .eq('id', eventId);
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Database update failed:', error);
+      }
+    } catch (error) {
+      console.error('Error removing image:', error);
+    }
+    
+    // Also remove from localStorage
+    localStorage.removeItem(`${type}Image_${eventId}`);
   };
 
   // Load saved images from localStorage
