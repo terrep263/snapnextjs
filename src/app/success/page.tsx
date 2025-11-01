@@ -95,13 +95,12 @@ function SuccessContent() {
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-border bg-white px-6 py-6">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-4">
+          <Link href="/" className="flex items-center">
             <img 
               src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
-              className="h-24 w-auto"
+              className="h-12 w-auto"
             />
-            <span className="text-2xl font-bold text-primary">SnapWorxx</span>
           </Link>
         </div>
       </header>

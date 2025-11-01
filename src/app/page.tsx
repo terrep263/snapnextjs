@@ -8,18 +8,12 @@ export default function Home() {
       <header className="absolute top-0 left-0 right-0 z-50 px-6 py-6">
         <div className="container mx-auto flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <img 
-                src="/purple logo/whitelogo.png" 
-                alt="Snapworxx Logo" 
-                className="h-16 w-auto"
-              />
-            </div>
-            <div className="text-white">
-              <div className="text-2xl font-bold tracking-wide">SNAPWORXX</div>
-              <div className="text-sm tracking-widest opacity-90">PHOTOGRAPHY</div>
-            </div>
+          <div className="flex items-center">
+            <img 
+              src="/purple logo/whitelogo.png" 
+              alt="Snapworxx Logo" 
+              className="h-14 w-auto"
+            />
           </div>
 
           {/* Create Event Button */}
