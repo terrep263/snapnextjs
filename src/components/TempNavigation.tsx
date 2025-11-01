@@ -37,7 +37,7 @@ export default function TempNavigation() {
             <img 
               src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
-              className="h-16 w-auto"
+              className="h-20 md:h-24 w-auto"
             />
             <span className="text-sm font-semibold text-gray-800">Dev Nav</span>
           </div>

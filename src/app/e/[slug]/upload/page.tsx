@@ -93,7 +93,7 @@ export default function UploadPage() {
                 <img 
                   src="/purple logo/purplelogo.png" 
                   alt="Snapworxx Logo" 
-                  className="h-16 w-auto"
+                  className="h-20 md:h-24 lg:h-28 w-auto"
                 />
                 <div className="text-center">
                   <h1 className="text-xl font-semibold text-gray-900">{eventData.name}</h1>

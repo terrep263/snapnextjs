@@ -350,10 +350,13 @@ export default function Dashboard() {
 
         {/* Navigation Bar */}
         <div className="bg-white/90 backdrop-blur-sm border-b border-gray-200">
-          <div className="container mx-auto flex items-center justify-between px-4 py-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Camera className="h-6 w-6 text-purple-600" />
-              <span className="text-xl font-bold text-purple-600">SnapWorxx</span>
+          <div className="container mx-auto flex items-center justify-between px-4 py-6">
+            <Link href="/" className="flex items-center">
+              <img 
+                src="/purple logo/purplelogo.png" 
+                alt="Snapworxx Logo" 
+                className="h-16 md:h-20 lg:h-24 w-auto"
+              />
             </Link>
             <div className="text-sm text-gray-600">
               <span className="font-medium">Dashboard</span>

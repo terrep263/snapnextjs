@@ -12,7 +12,7 @@ export default function Home() {
             <img 
               src="/purple logo/whitelogo.png" 
               alt="Snapworxx Logo" 
-              className="h-14 w-auto"
+              className="h-20 md:h-24 lg:h-28 w-auto"
             />
           </div>
 
