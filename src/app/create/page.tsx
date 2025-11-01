@@ -68,15 +68,15 @@ export default function CreateEvent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-white px-4 py-4">
+      <header className="border-b border-border bg-white px-6 py-6">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-4">
             <img 
-              src="/snapworxx logo (1).png" 
+              src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
-              className="h-8 w-auto"
+              className="h-24 w-auto"
             />
-            <span className="text-xl font-bold text-primary">SnapWorxx</span>
+            <span className="text-2xl font-bold text-primary">SnapWorxx</span>
           </Link>
         </div>
       </header>

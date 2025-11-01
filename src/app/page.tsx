@@ -8,17 +8,17 @@ export default function Home() {
       <header className="absolute top-0 left-0 right-0 z-50 px-6 py-6">
         <div className="container mx-auto flex items-center justify-between">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="relative">
               <img 
-                src="/snapworxx logo (1).png" 
+                src="/purple logo/whitelogo.png" 
                 alt="Snapworxx Logo" 
-                className="h-12 w-auto"
+                className="h-16 w-auto"
               />
             </div>
             <div className="text-white">
-              <div className="text-xl font-bold tracking-wide">SNAPWORXX</div>
-              <div className="text-[10px] tracking-widest opacity-90">PHOTOGRAPHY</div>
+              <div className="text-2xl font-bold tracking-wide">SNAPWORXX</div>
+              <div className="text-sm tracking-widest opacity-90">PHOTOGRAPHY</div>
             </div>
           </div>
 
@@ -294,7 +294,7 @@ export default function Home() {
             </div>
 
             {/* Premium Event */}
-            <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+            <div className="rounded-3xl p-8 shadow-2xl relative overflow-hidden" style={{backgroundColor: '#5d1ba6'}}>
               <div className="absolute top-4 right-4 bg-yellow-400 text-purple-900 text-xs font-bold px-3 py-1 rounded-full">
                 Most Popular
               </div>

@@ -32,14 +32,14 @@ export default function TempNavigation() {
 
       {/* Desktop Navigation - Fixed Left Sidebar */}
       <div className="fixed left-4 top-1/2 z-40 hidden -translate-y-1/2 transform md:block">
-        <div className="rounded-lg bg-white/90 p-4 shadow-lg backdrop-blur-sm">
-          <div className="mb-4 flex items-center gap-2">
+        <div className="rounded-lg bg-white/95 p-6 shadow-lg backdrop-blur-sm">
+          <div className="mb-6 flex items-center gap-3">
             <img 
-              src="/snapworxx logo (1).png" 
+              src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
-              className="h-6 w-auto"
+              className="h-18 w-auto"
             />
-            <span className="text-sm font-semibold text-gray-800">Dev Nav</span>
+            <span className="text-base font-semibold text-gray-800">Dev Nav</span>
           </div>
           <nav className="space-y-2">
             {navItems.map((item) => {
@@ -62,15 +62,15 @@ export default function TempNavigation() {
       {/* Mobile Navigation - Full Screen Overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 md:hidden">
-          <div className="fixed bottom-0 left-0 right-0 rounded-t-lg bg-white p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div className="fixed bottom-0 left-0 right-0 rounded-t-lg bg-white p-8">
+            <div className="mb-8 flex items-center justify-between">
+              <div className="flex items-center gap-4">
                 <img 
-                  src="/snapworxx logo (1).png" 
+                  src="/purple logo/purplelogo.png" 
                   alt="Snapworxx Logo" 
-                  className="h-6 w-auto"
+                  className="h-20 w-auto"
                 />
-                <span className="text-lg font-semibold text-gray-800">Dev Navigation</span>
+                <span className="text-xl font-semibold text-gray-800">Dev Navigation</span>
               </div>
               <button
                 onClick={() => setIsOpen(false)}

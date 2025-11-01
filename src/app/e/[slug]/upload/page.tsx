@@ -68,7 +68,7 @@ export default function UploadPage() {
 
   if (loading || !eventData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
       </div>
     );
@@ -76,10 +76,10 @@ export default function UploadPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+      <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-40">
-          <div className="max-w-4xl mx-auto px-6 py-4">
+        <div className="bg-white/95 backdrop-blur-md border-b border-white/20 sticky top-0 z-40">
+          <div className="max-w-4xl mx-auto px-6 py-6">
             <div className="flex items-center justify-between">
               <Link 
                 href={`/e/${slug}`}
@@ -89,9 +89,16 @@ export default function UploadPage() {
                 <span>Back to Gallery</span>
               </Link>
               
-              <div className="text-center">
-                <h1 className="text-xl font-semibold text-gray-900">{eventData.name}</h1>
-                <p className="text-sm text-gray-500">Upload Photos & Videos</p>
+              <div className="flex items-center gap-4">
+                <img 
+                  src="/purple logo/purplelogo.png" 
+                  alt="Snapworxx Logo" 
+                  className="h-16 w-auto"
+                />
+                <div className="text-center">
+                  <h1 className="text-xl font-semibold text-gray-900">{eventData.name}</h1>
+                  <p className="text-sm text-gray-500">Upload Photos & Videos</p>
+                </div>
               </div>
 
               <div className="w-24"></div> {/* Spacer for centering */}
@@ -103,7 +110,7 @@ export default function UploadPage() {
         <div className="max-w-4xl mx-auto px-6 py-12">
           {/* Hero Section */}
           <div className="text-center mb-12">
-            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mb-6 shadow-lg p-4">
+            <div className="w-24 h-24 mx-auto bg-purple-50 rounded-3xl flex items-center justify-center mb-6 shadow-lg p-4">
               <img 
                 src="/snapworxx logo (1).png" 
                 alt="Snapworxx Logo" 
@@ -111,7 +118,7 @@ export default function UploadPage() {
               />
             </div>
             
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{color: '#5d1ba6'}}>
               Share Your Moments
             </h1>
             
