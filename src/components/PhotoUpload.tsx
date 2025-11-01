@@ -606,7 +606,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
                 <div>
                   <h4 className="text-lg font-semibold text-green-900 mb-2">Storage Ready</h4>
                   <p className="text-green-800 leading-relaxed">
-                    Your Supabase storage is properly configured and ready to securely store uploaded photos and videos.
+                    Your Snapworxx storage is properly configured and ready to securely store uploaded photos and videos.
                   </p>
                   <div className="mt-3 text-sm text-green-700 flex items-center gap-4">
                     <span className="flex items-center gap-1">
