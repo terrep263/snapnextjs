@@ -12,6 +12,6 @@
   "crons": [],
   "regions": ["iad1"],
   "env": {
-    "NEXT_PUBLIC_APP_URL": "https://snapnextjs.vercel.app"
+    "NEXT_PUBLIC_APP_URL": "https://snapworxx.com"
   }
 }

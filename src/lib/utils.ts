@@ -5,7 +5,7 @@
 export const getBaseUrl = (): string => {
   // In production, use the production URL
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return 'https://snapnextjs.vercel.app';
+    return 'https://snapworxx.com';
   }
   
   // In development, use the environment variable or localhost
