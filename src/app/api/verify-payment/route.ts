@@ -64,27 +64,34 @@ export async function POST(request: NextRequest) {
       .replace(/^-+|-+$/g, '') + '-' + Math.random().toString(36).substr(2, 6);
 
     // Create event in database
+    const insertData = {
+      id: eventId,
+      name: eventName,
+      slug: eventSlug,
+      stripe_session_id: sessionId,
+      created_at: new Date().toISOString(),
+      status: 'active'
+    };
+    
+    console.log('📊 About to insert event with data:', JSON.stringify(insertData, null, 2));
+    
     const { data: event, error } = await supabase
       .from('events')
-      .insert([
-        {
-          id: eventId,
-          name: eventName,
-          slug: eventSlug,
-          stripe_session_id: sessionId,
-          created_at: new Date().toISOString(),
-          status: 'active'
-        }
-      ])
-      .select()
+      .insert([insertData])
+      .select('*') // Select all columns to see exactly what was inserted
       .single();
 
+    console.log('💾 Database insertion result:', { event, error });
+    console.log('💾 Full event object returned:', JSON.stringify(event, null, 2));
+
     if (error) {
-      console.error('Database error:', error);
+      console.error('❌ Database error creating event:', error);
+      console.error('❌ Error code:', error.code);
+      console.error('❌ Error message:', error.message);
       
       // If database fails, still return success for development
       if (process.env.NODE_ENV === 'development') {
-        console.log('Database not available, returning mock success');
+        console.log('⚠️ Database not available, returning mock success (status will be inactive)');
         return NextResponse.json({
           event: {
             id: eventId,
@@ -105,6 +112,20 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Event created successfully in database
+    console.log('✅ Event created successfully with status:', event?.status);
+    console.log('✅ Event ID:', event?.id);
+    
+    // Double-check the event status by querying it back from the database
+    const { data: verifyEvent, error: verifyError } = await supabase
+      .from('events')
+      .select('id, name, slug, status, created_at')
+      .eq('id', eventId)
+      .single();
+    
+    console.log('🔍 Verification query result:', { verifyEvent, verifyError });
+    console.log('🔍 Actual status in database:', verifyEvent?.status);
 
     // Event created successfully - now send confirmation email
     const eventDetails = {
