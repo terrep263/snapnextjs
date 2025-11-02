@@ -5,8 +5,10 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json();
+    console.log('🔍 Verify-payment called with sessionId:', sessionId);
 
     if (!sessionId) {
+      console.log('❌ No session ID provided');
       return NextResponse.json(
         { error: 'Session ID is required' },
         { status: 400 }
@@ -39,11 +41,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Retrieve the checkout session
+    console.log('💳 Retrieving Stripe session...');
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log('📊 Session payment status:', session.payment_status);
+    console.log('📧 Customer email:', session.customer_details?.email);
 
     if (session.payment_status !== 'paid') {
+      console.log('❌ Payment not completed, status:', session.payment_status);
       return NextResponse.json(
-        { error: 'Payment not completed' },
+        { error: 'Payment not completed', payment_status: session.payment_status },
         { status: 400 }
       );
     }

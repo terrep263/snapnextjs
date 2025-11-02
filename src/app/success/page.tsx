@@ -41,6 +41,7 @@ function SuccessContent() {
 
   const verifyPayment = async (sessionId: string) => {
     try {
+      console.log('🔍 Verifying payment with session ID:', sessionId);
       const response = await fetch('/api/verify-payment', {
         method: 'POST',
         headers: {
@@ -51,8 +52,11 @@ function SuccessContent() {
 
       const result = await response.json();
 
+      console.log('📄 Verify payment response:', result);
+      console.log('✅ Response status:', response.status, response.ok);
+
       if (!response.ok) {
-        console.error('Payment verification failed:', result);
+        console.error('❌ Payment verification failed:', result);
         throw new Error(result.details || result.error || 'Payment verification failed');
       }
 
