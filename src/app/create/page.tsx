@@ -11,11 +11,17 @@ export default function CreateEvent() {
     eventName: '',
     eventDate: '',
     emailAddress: '',
-    yourName: ''
+    yourName: '',
+    discountCode: ''
   });
   const [selectedPackage, setSelectedPackage] = useState('premium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [discountStatus, setDiscountStatus] = useState<{
+    applied: boolean;
+    percent: number;
+    message: string;
+  } | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -23,6 +29,70 @@ export default function CreateEvent() {
       ...prev,
       [name]: value
     }));
+    
+    // Reset discount status when discount code changes
+    if (name === 'discountCode') {
+      setDiscountStatus(null);
+    }
+  };
+
+  const getDisplayPrice = () => {
+    const basePrice = selectedPackage === 'premium' ? 49 : 29;
+    if (discountStatus?.applied) {
+      const discountedPrice = Math.round(basePrice * (1 - discountStatus.percent / 100));
+      return {
+        original: basePrice,
+        discounted: discountedPrice,
+        savings: basePrice - discountedPrice
+      };
+    }
+    return { original: basePrice, discounted: basePrice, savings: 0 };
+  };
+
+  const validateDiscountCode = async () => {
+    if (!formData.discountCode.trim()) {
+      setDiscountStatus(null);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventName: 'test',
+          emailAddress: 'test@example.com',
+          package: selectedPackage,
+          price: selectedPackage === 'premium' ? 4900 : 2900,
+          discountCode: formData.discountCode,
+          validateOnly: true
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.discountApplied) {
+        setDiscountStatus({
+          applied: true,
+          percent: result.discountPercent,
+          message: `${result.discountPercent}% discount will be applied!`
+        });
+      } else {
+        setDiscountStatus({
+          applied: false,
+          percent: 0,
+          message: result.error || 'Invalid discount code'
+        });
+      }
+    } catch (error) {
+      setDiscountStatus({
+        applied: false,
+        percent: 0,
+        message: 'Error validating discount code'
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +115,8 @@ export default function CreateEvent() {
           emailAddress: formData.emailAddress,
           yourName: formData.yourName,
           package: selectedPackage,
-          price: packagePrice
+          price: packagePrice,
+          discountCode: formData.discountCode
         }),
       });
 
@@ -55,7 +126,16 @@ export default function CreateEvent() {
         throw new Error(result.details || result.error || 'Failed to create checkout session');
       }
 
-      const { url } = result;
+      const { url, discountApplied, discountPercent } = result;
+      
+      // Update discount status if discount was applied
+      if (discountApplied) {
+        setDiscountStatus({
+          applied: true,
+          percent: discountPercent,
+          message: `${discountPercent}% discount applied successfully!`
+        });
+      }
       
       // Redirect to checkout (could be Stripe or mock)
       window.location.href = url;
@@ -157,6 +237,54 @@ export default function CreateEvent() {
                     className="w-full rounded-md border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Discount Code Section */}
+            <div className="rounded-lg bg-white p-8 shadow-sm">
+              <h2 className="mb-6 text-xl font-bold text-gray-900">Discount Code</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Have a discount code?
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="discountCode"
+                      value={formData.discountCode}
+                      onChange={handleInputChange}
+                      placeholder="SNAP1234"
+                      className="flex-1 rounded-md border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={validateDiscountCode}
+                      disabled={!formData.discountCode.trim()}
+                      className="px-4 py-3 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Don't have one? <a href="/get-discount" className="text-purple-600 hover:text-purple-700 underline">Get a discount code here</a>
+                  </p>
+                </div>
+
+                {discountStatus && (
+                  <div className={`rounded-lg border p-4 ${
+                    discountStatus.applied 
+                      ? 'border-green-200 bg-green-50' 
+                      : 'border-red-200 bg-red-50'
+                  }`}>
+                    <p className={`text-sm font-medium ${
+                      discountStatus.applied ? 'text-green-800' : 'text-red-800'
+                    }`}>
+                      {discountStatus.message}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -279,6 +407,27 @@ export default function CreateEvent() {
 
             {/* Submit Button */}
             <div className="text-center">
+              {discountStatus?.applied && (
+                <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-4">
+                  <div className="text-center">
+                    <p className="text-sm text-green-800 mb-2">
+                      🎉 <strong>{discountStatus.percent}% discount applied!</strong>
+                    </p>
+                    <div className="flex items-center justify-center gap-4">
+                      <span className="text-lg text-gray-500 line-through">
+                        ${getDisplayPrice().original}
+                      </span>
+                      <span className="text-2xl font-bold text-green-600">
+                        ${getDisplayPrice().discounted}
+                      </span>
+                      <span className="text-sm text-green-700 bg-green-100 px-2 py-1 rounded">
+                        Save ${getDisplayPrice().savings}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <button
                 type="submit"
                 disabled={loading || !formData.eventName.trim() || !formData.emailAddress.trim()}
@@ -286,7 +435,7 @@ export default function CreateEvent() {
               >
                 {loading 
                   ? 'Creating...' 
-                  : `Create My Event - $${selectedPackage === 'premium' ? '49' : '29'}`
+                  : `Create My Event - $${getDisplayPrice().discounted}`
                 }
               </button>
               <p className="mt-2 text-sm text-gray-500">
