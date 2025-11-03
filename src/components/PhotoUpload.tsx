@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon, Minimize2, Zap, Settings, HelpCircle, Smartphone } from 'lucide-react';
+import { ChunkedUploader } from '@/lib/chunkedUploader';
+import { VideoCompressor } from '@/lib/videoCompressor';
+import { SmartphoneVideoOptimizer } from '@/lib/smartphoneVideoOptimizer';
+import VideoCompressionHelp from './VideoCompressionHelp';
 
 interface PhotoUploadProps {
   eventData: any;
@@ -14,7 +18,19 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, 'success' | 'error'>>({});
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [compressionEnabled, setCompressionEnabled] = useState(true);
+  const [chunkingEnabled, setChunkingEnabled] = useState(true);
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState(60); // Optimized for 3-minute 1080p videos
+  const [showCompressionHelp, setShowCompressionHelp] = useState<File | null>(null);
+  
+  // Get smartphone-optimized limits
+  const smartphoneOptimized = SmartphoneVideoOptimizer.getOptimizedSizeLimit();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Initialize utilities
+  const chunkedUploader = new ChunkedUploader();
+  const videoCompressor = new VideoCompressor();
 
   // Validate eventData on component mount
   console.log('🔍 PhotoUpload initialized with eventData:', eventData);
@@ -64,12 +80,57 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
       try {
         console.log(`🚀 Starting upload for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         
-        // Check file size limit (50MB for videos, 10MB for images)
+        // Enhanced file size handling with smartphone optimization
         const isVideo = file.type.startsWith('video/');
-        const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB for video, 10MB for images
+        const currentSizeMB = file.size / (1024 * 1024);
         
-        if (file.size > maxSize) {
-          console.error(`❌ File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        // Analyze if this is likely a smartphone video
+        let smartphoneAnalysis = null;
+        if (isVideo) {
+          smartphoneAnalysis = SmartphoneVideoOptimizer.isLikelySmartphoneVideo(file);
+          console.log(`📱 Smartphone analysis for ${file.name}:`, smartphoneAnalysis);
+        }
+        
+        // Try compression first if enabled and file is too large
+        let processedFile = file;
+        
+        if (compressionEnabled && !isVideo && currentSizeMB > 10) {
+          console.log(`🗜️ Attempting to compress image: ${file.name}`);
+          progress[key] = 5;
+          setUploadProgress({ ...progress });
+          
+          const compressionResult = await videoCompressor.compressVideo(file, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.8,
+            maxSizeMB: Math.min(50, maxFileSizeMB)
+          });
+          
+          if (compressionResult.success && compressionResult.file) {
+            processedFile = compressionResult.file;
+            console.log(`✅ Compressed ${file.name}: ${currentSizeMB.toFixed(1)}MB → ${(processedFile.size / (1024 * 1024)).toFixed(1)}MB`);
+          } else {
+            console.warn(`⚠️ Compression failed for ${file.name}: ${compressionResult.error}`);
+          }
+        }
+        
+        const finalSizeMB = processedFile.size / (1024 * 1024);
+        
+        // Check if we should use chunked upload or reject
+        if (finalSizeMB > maxFileSizeMB) {
+          if (isVideo) {
+            // Show smartphone-optimized compression help for large videos
+            if (smartphoneAnalysis?.isLikely) {
+              console.error(`📱 Smartphone video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+              const optimizations = SmartphoneVideoOptimizer.getSmartphoneOptimizations(file);
+              console.log('📱 Smartphone optimizations:', optimizations);
+            } else {
+              console.error(`❌ Video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+            }
+            setShowCompressionHelp(file);
+          } else {
+            console.error(`❌ File too large: ${file.name} (${finalSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+          }
           results[key] = 'error';
           setUploadResults({ ...results });
           continue;
@@ -78,7 +139,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         // Generate unique filename
         const timestamp = Date.now();
         const randomStr = Math.random().toString(36).substr(2, 9);
-        const fileExt = file.name.split('.').pop();
+        const fileExt = processedFile.name.split('.').pop();
         const filename = `${timestamp}_${randomStr}.${fileExt}`;
         const filePath = `events/${eventData.id}/${filename}`;
 
@@ -86,54 +147,74 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 10;
         setUploadProgress({ ...progress });
 
-        console.log(`📤 Uploading to Supabase: ${filePath}`);
+        console.log(`📤 Uploading to Supabase: ${filePath} (${finalSizeMB.toFixed(1)}MB)`);
 
-        // Create upload promise with timeout
-        const uploadPromise = supabase.storage
-          .from('photos')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        let uploadResult;
+        let filePublicUrl: string;
 
-        // Set timeout for large files (5 minutes for videos, 2 minutes for images)
-        const timeoutMs = isVideo ? 5 * 60 * 1000 : 2 * 60 * 1000;
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Upload timeout')), timeoutMs)
-        );
-
-        // Progress simulation for large files
-        const progressInterval = setInterval(() => {
-          if (progress[key] < 50) {
-            progress[key] = Math.min(progress[key] + (isVideo ? 2 : 5), 50);
-            setUploadProgress({ ...progress });
+        // Choose upload method based on file size and settings (optimized for mobile)
+        const useChunkedUpload = chunkingEnabled && finalSizeMB > 15; // Use chunking for files > 15MB (mobile-friendly)
+        
+        if (useChunkedUpload) {
+          console.log(`🔄 Using chunked upload for large file: ${processedFile.name}`);
+          
+          uploadResult = await chunkedUploader.uploadFile(
+            processedFile,
+            filePath,
+            supabase,
+            (progressPercent) => {
+              progress[key] = Math.min(10 + (progressPercent * 0.8), 90);
+              setUploadProgress({ ...progress });
+            }
+          );
+          
+          if (!uploadResult.success) {
+            throw new Error(uploadResult.error || 'Chunked upload failed');
           }
-        }, 1000);
+          
+          filePublicUrl = uploadResult.url!;
+          
+        } else {
+          // Standard upload for smaller files
+          const standardUploadPromise = supabase.storage
+            .from('photos')
+            .upload(filePath, processedFile, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
-        // Race between upload and timeout
-        const { data: uploadData, error: uploadError } = await Promise.race([
-          uploadPromise,
-          timeoutPromise
-        ]) as any;
+          // Enhanced timeout based on file size
+          const uploadTimeoutMs = Math.max(2 * 60 * 1000, finalSizeMB * 30 * 1000); // At least 2min, or 30s per MB
+          const uploadTimeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Upload timeout')), uploadTimeoutMs)
+          );
 
-        clearInterval(progressInterval);
+          // Progress simulation
+          const uploadProgressInterval = setInterval(() => {
+            if (progress[key] < 70) {
+              progress[key] = Math.min(progress[key] + (isVideo ? 3 : 8), 70);
+              setUploadProgress({ ...progress });
+            }
+          }, 1000);
 
-        if (uploadError) {
-          console.error('❌ Upload error:', uploadError.message);
-          results[key] = 'error';
-          setUploadResults({ ...results });
-          continue;
+          const { data: uploadData, error: uploadError } = await Promise.race([standardUploadPromise, uploadTimeoutPromise]) as any;
+          clearInterval(uploadProgressInterval);
+
+          if (uploadError) {
+            console.error('❌ Upload error:', uploadError.message);
+            results[key] = 'error';
+            setUploadResults({ ...results });
+            continue;
+          }
+
+          const { data: { publicUrl: standardUrl } } = supabase.storage
+            .from('photos')
+            .getPublicUrl(filePath);
+            
+          filePublicUrl = standardUrl;
         }
 
-        console.log(`✅ Upload successful: ${file.name}`);
-        progress[key] = 70;
-        setUploadProgress({ ...progress });
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('photos')
-          .getPublicUrl(filePath);
-
+        console.log(`✅ Upload successful: ${processedFile.name}`);
         progress[key] = 80;
         setUploadProgress({ ...progress });
 
@@ -222,7 +303,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         const photoRecord = {
           event_id: eventData.id,
           filename: file.name,
-          url: publicUrl,
+          url: filePublicUrl,
           file_path: filePath,
           size: file.size,
           type: file.type,
@@ -411,6 +492,128 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
 
   return (
     <div className="space-y-6">
+      {/* Advanced Options Panel */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            Smartphone Video Options
+          </h3>
+          <button
+            onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+          >
+            {showAdvancedOptions ? 'Hide Options' : 'Show Options'}
+          </button>
+        </div>
+
+        {/* Quick Settings Preview */}
+        <div className="flex flex-wrap gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <Zap className={`h-4 w-4 ${compressionEnabled ? 'text-green-600' : 'text-gray-400'}`} />
+            <span className={compressionEnabled ? 'text-green-700' : 'text-gray-600'}>
+              Compression: {compressionEnabled ? 'ON' : 'OFF'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Minimize2 className={`h-4 w-4 ${chunkingEnabled ? 'text-blue-600' : 'text-gray-400'}`} />
+            <span className={chunkingEnabled ? 'text-blue-700' : 'text-gray-600'}>
+              Chunked Upload: {chunkingEnabled ? 'ON' : 'OFF'}
+            </span>
+          </div>
+          <div className="text-gray-600">
+            Max Size: {maxFileSizeMB}MB (📱 3-min videos)
+          </div>
+        </div>
+
+        {showAdvancedOptions && (
+          <div className="mt-4 space-y-4 pt-4 border-t border-blue-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={compressionEnabled}
+                    onChange={(e) => setCompressionEnabled(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="font-medium">Smart Phone Optimization</span>
+                </label>
+                <p className="text-sm text-gray-600">
+                  Automatically optimize images and detect smartphone videos
+                </p>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={chunkingEnabled}
+                    onChange={(e) => setChunkingEnabled(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <span className="font-medium">Enable Chunked Upload</span>
+                </label>
+                <p className="text-sm text-gray-600">
+                  Split large files into chunks for reliable upload
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-medium mb-2">
+                  Maximum File Size (MB)
+                </label>
+                <select
+                  value={maxFileSizeMB}
+                  onChange={(e) => setMaxFileSizeMB(parseInt(e.target.value))}
+                  className="w-full rounded border-gray-300 text-sm"
+                >
+                  <option value={30}>30MB (720p clips)</option>
+                  <option value={60}>60MB (📱 1080p 3-min - Recommended)</option>
+                  <option value={80}>80MB (📱 1080p high bitrate)</option>
+                  <option value={100}>100MB (Maximum allowed)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Maximum resolution: 1080p Full HD. {smartphoneOptimized.reasoning}
+                </p>
+              </div>
+
+              <div className="bg-green-50 p-3 rounded border border-green-200">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-medium text-green-800 flex items-center gap-1">
+                    <Smartphone className="h-4 w-4" />
+                    📱 Smartphone Video Tips:
+                  </h4>
+                  <button
+                    onClick={() => {
+                      // Create a dummy smartphone file to show compression help
+                      const dummyFile = new File([''], 'smartphone-video.mp4', { 
+                        type: 'video/mp4',
+                        lastModified: Date.now()
+                      });
+                      // Override size property for 3-minute smartphone video
+                      Object.defineProperty(dummyFile, 'size', { value: 120 * 1024 * 1024, writable: false });
+                      setShowCompressionHelp(dummyFile);
+                    }}
+                    className="text-green-700 hover:text-green-900 flex items-center gap-1 text-sm"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                    Mobile Guide
+                  </button>
+                </div>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• 📱 Record in 1080p MAXIMUM (Full HD limit)</li>
+                  <li>• ⏱️ Keep videos under 3 minutes for quick sharing</li>
+                  <li>• 📶 Use Wi-Fi for faster, more reliable uploads</li>
+                  <li>• ✂️ Trim to highlights using your phone's built-in editor</li>
+                  <li>• 🚫 4K videos not supported - reduce to 1080p</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Enhanced Upload Area */}
       <div
         className={`group relative cursor-pointer rounded-3xl border-2 border-dashed transition-all duration-300 ${
@@ -438,7 +641,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/mov,video/avi"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/mov,video/avi,video/quicktime"
           onChange={handleFileInputChange}
           disabled={disabled || uploading}
           className="hidden"
@@ -497,11 +700,26 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
               </div>
             )}
             
-            {/* Helpful hints */}
-            <div className="text-sm text-gray-500 space-y-1">
-              <p>✨ Support for JPG, PNG, GIF, MP4, MOV files</p>
-              <p>📱 Upload directly from your phone or computer</p>
-              <p>🔒 Your photos are securely stored and processed</p>
+            {/* Enhanced File Support Information */}
+            <div className="text-sm text-gray-500 space-y-2">
+              <div className="flex items-center justify-center gap-6">
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">📸 Photos</p>
+                  <p>JPG, PNG, GIF, WebP</p>
+                  <p className="text-xs">Up to {compressionEnabled ? maxFileSizeMB : 10}MB</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-gray-600">📱 Videos</p>
+                  <p>MP4, MOV (1080p max, 3 min)</p>
+                  <p className="text-xs">Up to {maxFileSizeMB}MB</p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-gray-200">
+                <p>📱 Optimized for smartphone uploads</p>
+                <p>⚡ Smart detection and compression</p>
+                <p>🔒 Secure {chunkingEnabled ? 'chunked' : 'direct'} upload</p>
+                {compressionEnabled && <p>🎯 Automatic smartphone optimization</p>}
+              </div>
             </div>
           </div>
         </div>
@@ -624,6 +842,14 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           );
         }
       })()}
+
+      {/* Video Compression Help Modal */}
+      {showCompressionHelp && (
+        <VideoCompressionHelp 
+          file={showCompressionHelp} 
+          onClose={() => setShowCompressionHelp(null)} 
+        />
+      )}
     </div>
   );
 }

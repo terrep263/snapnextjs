@@ -7,10 +7,10 @@ VALUES (
   'photos',
   'photos',
   true,
-  52428800, -- 50MB limit
+  104857600, -- 100MB limit (optimized for 3-minute 1080p videos maximum)
   ARRAY[
     'image/jpeg','image/jpg','image/png','image/gif','image/webp',
-    'video/mp4','video/mov','video/avi'
+    'video/mp4','video/mov','video/avi','video/quicktime','video/x-msvideo'
   ]::text[]
 )
 ON CONFLICT (id) DO UPDATE
