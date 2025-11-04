@@ -54,11 +54,12 @@ export default function GetDiscountPage() {
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <a href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">SnapWorxx</span>
+            <a href="/" className="flex items-center">
+              <img 
+                src="/purple logo/purplelogo.png" 
+                alt="SnapWorxx Logo" 
+                className="h-12 md:h-14 lg:h-16 w-auto"
+              />
             </a>
             <div className="flex gap-4">
               <a href="/create" className="text-gray-600 hover:text-purple-600 transition-colors">
@@ -226,11 +227,12 @@ export default function GetDiscountPage() {
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8 mt-16">
         <div className="container mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-6 h-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xs">S</span>
-            </div>
-            <span className="font-bold">SnapWorxx</span>
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src="/purple logo/purplelogo.png" 
+              alt="SnapWorxx Logo" 
+              className="h-8 w-auto filter brightness-0 invert"
+            />
           </div>
           <p className="text-gray-400 text-sm mb-4">
             Powered by SnapWorxx - Never miss the moments
