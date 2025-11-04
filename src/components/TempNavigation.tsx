@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Camera, Home, Plus, BarChart3, Image, CheckCircle } from 'lucide-react';
+import { Menu, X, Camera, Home, Plus, BarChart3, Image, CheckCircle, Users, DollarSign } from 'lucide-react';
 
 export default function TempNavigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +13,9 @@ export default function TempNavigation() {
     { href: '/success?session_id=temp', label: 'Success Page', icon: CheckCircle },
     { href: '/dashboard/sample-event-id', label: 'Dashboard', icon: BarChart3 },
     { href: '/e/sample-event-slug', label: 'Event Gallery', icon: Image },
+    { href: '/affiliate/register', label: '💼 Join Affiliates', icon: Users },
+    { href: '/affiliate/dashboard', label: '📊 Affiliate Dashboard', icon: DollarSign },
+    { href: '/create?ref=TEST1234', label: '🔗 Test Referral Link', icon: CheckCircle },
     { href: '/test-upload', label: '🧪 Test Upload', icon: Camera },
   ];
 

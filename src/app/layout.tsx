@@ -17,8 +17,14 @@ export const metadata: Metadata = {
   title: "SnapWorxx - Event Photo Sharing Made Easy",
   description: "Create custom photo sharing links for your events. Guests scan a QR code, upload photos, and everyone can view and download the gallery.",
   icons: {
-    icon: "/purple logo/purplelogo.png",
-    apple: "/purple logo/purplelogo.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/purple logo/purplelogo.png", sizes: "32x32", type: "image/png" },
+      { url: "/purple logo/purplelogo.png", sizes: "16x16", type: "image/png" }
+    ],
+    apple: [
+      { url: "/purple logo/purplelogo.png", sizes: "180x180", type: "image/png" }
+    ],
   },
 };
 
@@ -29,6 +35,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/purple logo/purplelogo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/purple logo/purplelogo.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

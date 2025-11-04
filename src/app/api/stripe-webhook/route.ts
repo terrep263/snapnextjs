@@ -36,14 +36,51 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-
-        // TODO: Create event in database
         console.log('Payment successful:', session.id);
-        console.log('Event name:', session.metadata?.eventName);
 
-        // TODO: Generate unique slug for event
-        // TODO: Store event details in Supabase
-        // TODO: Send email with dashboard link and QR code
+        // Extract metadata
+        const metadata = session.metadata;
+        if (metadata) {
+          // Handle affiliate referral if this was an affiliate sale
+          if (metadata.isAffiliateReferral === 'true' && metadata.affiliateId) {
+            try {
+              const saleAmount = (session.amount_total || 0) / 100; // Convert from cents
+              const commissionRate = 20; // 20% commission
+              const commissionAmount = Math.round(saleAmount * (commissionRate / 100) * 100) / 100;
+
+              // Create affiliate referral record
+              const supabase = getServiceRoleClient();
+              const { error: referralError } = await supabase
+                .from('affiliate_referrals')
+                .insert({
+                  affiliate_id: metadata.affiliateId,
+                  event_id: session.id, // Using Stripe session ID as event ID for now
+                  customer_email: metadata.emailAddress,
+                  referral_code: metadata.affiliateReferralCode,
+                  sale_amount: saleAmount,
+                  commission_amount: commissionAmount,
+                  commission_rate: commissionRate,
+                  status: 'confirmed',
+                  stripe_session_id: session.id,
+                  confirmed_at: new Date().toISOString()
+                });
+
+              if (referralError) {
+                console.error('Error creating affiliate referral:', referralError);
+              } else {
+                console.log(`Affiliate commission created: $${commissionAmount} for affiliate ${metadata.affiliateId}`);
+              }
+            } catch (error) {
+              console.error('Error processing affiliate referral:', error);
+            }
+          }
+
+          // TODO: Create event in database
+          console.log('Event name:', metadata.eventName);
+          // TODO: Generate unique slug for event
+          // TODO: Store event details in Supabase
+          // TODO: Send email with dashboard link and QR code
+        }
 
         break;
       }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, ArrowLeft, Check } from 'lucide-react';
 
 export default function CreateEvent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     eventName: '',
     eventDate: '',
@@ -21,7 +22,46 @@ export default function CreateEvent() {
     applied: boolean;
     percent: number;
     message: string;
+    isAffiliate?: boolean;
   } | null>(null);
+
+  // Check for affiliate referral code in URL
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setFormData(prev => ({
+        ...prev,
+        discountCode: refCode
+      }));
+      // Auto-validate affiliate code
+      validateAffiliateCode(refCode);
+    }
+  }, [searchParams]);
+
+  const validateAffiliateCode = async (code: string) => {
+    try {
+      const response = await fetch('/api/affiliate/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ referralCode: code }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.valid) {
+        setDiscountStatus({
+          applied: true,
+          percent: 10, // Affiliate referrals get 10% discount
+          message: `Affiliate discount applied! You get 10% off.`,
+          isAffiliate: true
+        });
+      }
+    } catch (error) {
+      console.error('Error validating affiliate code:', error);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,8 +70,8 @@ export default function CreateEvent() {
       [name]: value
     }));
     
-    // Reset discount status when discount code changes
-    if (name === 'discountCode') {
+    // Reset discount status when discount code changes manually
+    if (name === 'discountCode' && !searchParams.get('ref')) {
       setDiscountStatus(null);
     }
   };
@@ -50,23 +90,38 @@ export default function CreateEvent() {
   };
 
   const validateDiscountCode = async () => {
-    if (!formData.discountCode.trim()) {
-      setDiscountStatus(null);
-      return;
-    }
+    if (!formData.discountCode.trim()) return;
 
     try {
+      // First try affiliate validation
+      const affiliateResponse = await fetch('/api/affiliate/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ referralCode: formData.discountCode.trim() }),
+      });
+
+      const affiliateResult = await affiliateResponse.json();
+
+      if (affiliateResponse.ok && affiliateResult.valid) {
+        setDiscountStatus({
+          applied: true,
+          percent: 10,
+          message: 'Affiliate discount applied! You get 10% off.',
+          isAffiliate: true
+        });
+        return;
+      }
+
+      // Fall back to regular discount validation
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          eventName: 'test',
-          emailAddress: 'test@example.com',
-          package: selectedPackage,
-          price: selectedPackage === 'premium' ? 4900 : 2900,
-          discountCode: formData.discountCode,
+        body: JSON.stringify({ 
+          discountCode: formData.discountCode.trim(),
           validateOnly: true
         }),
       });
@@ -77,20 +132,22 @@ export default function CreateEvent() {
         setDiscountStatus({
           applied: true,
           percent: result.discountPercent,
-          message: `${result.discountPercent}% discount will be applied!`
+          message: `${result.discountPercent}% discount applied!`,
+          isAffiliate: false
         });
       } else {
         setDiscountStatus({
           applied: false,
           percent: 0,
-          message: result.error || 'Invalid discount code'
+          message: 'Invalid discount code'
         });
       }
     } catch (error) {
+      console.error('Error validating discount:', error);
       setDiscountStatus({
         applied: false,
         percent: 0,
-        message: 'Error validating discount code'
+        message: 'Error validating code'
       });
     }
   };
@@ -101,9 +158,8 @@ export default function CreateEvent() {
     setError(null);
 
     try {
-      const packagePrice = selectedPackage === 'premium' ? 4900 : 2900; // $49 or $29 in cents
-      
-      // Create Stripe checkout session
+      const packagePrice = getDisplayPrice().discounted * 100; // Convert to cents
+
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -116,7 +172,8 @@ export default function CreateEvent() {
           yourName: formData.yourName,
           package: selectedPackage,
           price: packagePrice,
-          discountCode: formData.discountCode
+          discountCode: formData.discountCode,
+          isAffiliateReferral: discountStatus?.isAffiliate || false
         }),
       });
 
@@ -133,7 +190,8 @@ export default function CreateEvent() {
         setDiscountStatus({
           applied: true,
           percent: discountPercent,
-          message: `${discountPercent}% discount applied successfully!`
+          message: `${discountPercent}% discount applied successfully!`,
+          isAffiliate: discountStatus?.isAffiliate || false
         });
       }
       
@@ -142,6 +200,7 @@ export default function CreateEvent() {
     } catch (error) {
       console.error('Error creating event:', error);
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
       setLoading(false);
     }
   };
@@ -170,6 +229,12 @@ export default function CreateEvent() {
             <p className="text-gray-600">
               Set up your photo sharing in under 2 minutes
             </p>
+            {discountStatus?.applied && (
+              <div className="mt-4 inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium">
+                <Check className="h-4 w-4" />
+                {discountStatus.message}
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
@@ -272,17 +337,23 @@ export default function CreateEvent() {
                   </p>
                 </div>
 
+                {/* Discount Status */}
                 {discountStatus && (
-                  <div className={`rounded-lg border p-4 ${
+                  <div className={`mt-3 p-3 rounded-lg ${
                     discountStatus.applied 
-                      ? 'border-green-200 bg-green-50' 
-                      : 'border-red-200 bg-red-50'
+                      ? 'bg-green-50 border border-green-200' 
+                      : 'bg-red-50 border border-red-200'
                   }`}>
-                    <p className={`text-sm font-medium ${
+                    <div className={`text-sm ${
                       discountStatus.applied ? 'text-green-800' : 'text-red-800'
                     }`}>
                       {discountStatus.message}
-                    </p>
+                      {discountStatus.isAffiliate && discountStatus.applied && (
+                        <div className="text-xs mt-1 text-green-700">
+                          Thanks for using a referral link! 🎉
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
