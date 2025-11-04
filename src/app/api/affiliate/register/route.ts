@@ -25,13 +25,14 @@ function getAffiliateWelcomeEmail(affiliate: any) {
           .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
           .code-box { background: #f3f4f6; border: 2px solid #9333ea; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0; }
           .button { display: inline-block; background: #9333ea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+          .alert { background: #fef08a; border-left: 4px solid #eab308; padding: 15px; margin: 15px 0; border-radius: 4px; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>Welcome to SnapWorxx Affiliates! 🎉</h1>
-            <p>Start earning 20% commission on every referral</p>
+            <p>Start earning 60% commission on every referral</p>
           </div>
           <div class="content">
             <h2>Hi ${affiliate.name}!</h2>
@@ -40,19 +41,23 @@ function getAffiliateWelcomeEmail(affiliate: any) {
             <div class="code-box">
               <h3>Your Affiliate Code</h3>
               <div style="font-size: 24px; font-weight: bold; color: #9333ea;">${affiliate.referral_code}</div>
-              <p style="margin: 10px 0 0 0; color: #6b7280;">Share this code to earn 20% commission</p>
+              <p style="margin: 10px 0 0 0; color: #6b7280;">Share this code to earn 60% commission</p>
+            </div>
+
+            <div class="alert">
+              <strong>⏰ Program Duration:</strong> This affiliate program is valid for 90 days from registration. After 90 days, your account will expire and you won't be able to earn new commissions. You'll still be able to track and receive payment for all earned commissions.
             </div>
 
             <h3>🚀 How It Works</h3>
             <ol>
               <li>Share your referral link: <strong>snapworxx.com/create?ref=${affiliate.referral_code}</strong></li>
               <li>When someone creates an event using your link, they get 10% off</li>
-              <li>You earn 20% commission on their purchase</li>
-              <li>Get paid monthly via PayPal or direct deposit</li>
+              <li>You earn 60% commission on their purchase</li>
+              <li>Get paid at the end of your 90-day program period</li>
             </ol>
 
             <h3>📊 Track Your Earnings</h3>
-            <p>Access your affiliate dashboard anytime:</p>
+            <p>Access your affiliate dashboard anytime to monitor your referrals and earnings:</p>
             <a href="https://snapworxx.com/affiliate/dashboard" class="button">View Dashboard</a>
 
             <h3>🎯 Marketing Materials</h3>
@@ -67,7 +72,7 @@ function getAffiliateWelcomeEmail(affiliate: any) {
 
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h4>💰 Earning Potential</h4>
-              <p>Our top affiliates earn $500-2000+ per month by sharing SnapWorxx with their networks!</p>
+              <p>With a 60% commission rate and 90-day program period, you could earn significant revenue by actively promoting SnapWorxx to your network!</p>
             </div>
           </div>
         </div>
@@ -119,7 +124,10 @@ export async function POST(request: NextRequest) {
       attempts++;
     }
 
-    // Create affiliate record
+    // Create affiliate record with 90-day program expiration
+    const expirationDate = new Date();
+    expirationDate.setDate(expirationDate.getDate() + 90);
+
     const { data: affiliate, error: createError } = await supabase
       .from('affiliates')
       .insert([{
@@ -127,7 +135,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.toLowerCase(),
         referral_code: referralCode,
-        commission_rate: 20.00,
+        commission_rate: 60.00, // 60% commission rate
+        program_expires_at: expirationDate.toISOString(),
         status: 'active'
       }])
       .select()

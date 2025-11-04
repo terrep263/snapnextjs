@@ -45,11 +45,38 @@ export async function POST(request: NextRequest) {
           if (metadata.isAffiliateReferral === 'true' && metadata.affiliateId) {
             try {
               const saleAmount = (session.amount_total || 0) / 100; // Convert from cents
-              const commissionRate = 20; // 20% commission
+              const commissionRate = 60; // 60% commission
               const commissionAmount = Math.round(saleAmount * (commissionRate / 100) * 100) / 100;
 
               // Create affiliate referral record
               const supabase = getServiceRoleClient();
+              
+              // First, check if affiliate is still active and within 90-day program
+              const { data: affiliate, error: affiliateError } = await supabase
+                .from('affiliates')
+                .select('id, status, program_expires_at')
+                .eq('id', metadata.affiliateId)
+                .single();
+
+              if (affiliateError || !affiliate) {
+                console.error('Affiliate not found:', metadata.affiliateId);
+                break;
+              }
+
+              // Check if affiliate program has expired
+              const expirationDate = new Date(affiliate.program_expires_at);
+              const isExpired = expirationDate < new Date();
+              
+              if (affiliate.status !== 'active' && !isExpired) {
+                console.log(`Affiliate ${metadata.affiliateId} is not active, skipping commission`);
+                break;
+              }
+
+              if (isExpired) {
+                console.log(`Affiliate ${metadata.affiliateId} program has expired, skipping commission`);
+                break;
+              }
+
               const { error: referralError } = await supabase
                 .from('affiliate_referrals')
                 .insert({

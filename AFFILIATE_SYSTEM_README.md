@@ -7,9 +7,10 @@ A complete affiliate marketing system built for SnapWorxx event photo sharing pl
 ### For Affiliates
 - **Easy Registration**: Simple signup process with auto-generated referral codes
 - **Real-time Tracking**: Monitor earnings, referrals, and performance metrics
-- **Automatic Commissions**: 20% commission on every successful referral
+- **Automatic Commissions**: 60% commission on every successful referral
+- **90-Day Program**: Limited-time affiliate programs with expiration tracking
 - **Customer Benefits**: Referrals get 10% off their first event
-- **Professional Dashboard**: View earnings, referral history, and analytics
+- **Professional Dashboard**: View earnings, referral history, expiration date, and analytics
 - **Marketing Tools**: Ready-to-use referral links and tracking
 
 ### For Business
@@ -59,10 +60,11 @@ The system uses Resend for affiliate welcome emails. Make sure your Resend accou
 3. Discount automatically applied (10% off)
 4. Customer completes purchase
 5. Stripe webhook creates commission record
-6. Affiliate earns 20% commission automatically
+6. Affiliate earns 60% commission automatically (valid for 90 days from registration)
 
 ### Dashboard Features
 - **Earnings Summary**: Total, pending, and paid earnings
+- **Program Status**: 90-day expiration tracking with countdown timer
 - **Referral History**: All referrals with status and amounts  
 - **Performance Metrics**: Conversion rates and analytics
 - **Marketing Tools**: Copy referral links, test links
@@ -86,11 +88,12 @@ The system uses Resend for affiliate welcome emails. Make sure your Resend accou
 - `name`: Affiliate name
 - `email`: Affiliate email (unique)
 - `referral_code`: Unique referral code
-- `commission_rate`: Commission percentage (default 20%)
+- `commission_rate`: Commission percentage (default 60%)
+- `program_expires_at`: Timestamp when 90-day program expires
 - `total_earnings`: Total lifetime earnings
 - `pending_earnings`: Unpaid earnings
 - `paid_earnings`: Already paid earnings
-- `status`: active/inactive/suspended
+- `status`: active/inactive/suspended/expired
 
 ### Affiliate Referrals Table  
 - `id`: UUID primary key
@@ -105,10 +108,11 @@ The system uses Resend for affiliate welcome emails. Make sure your Resend accou
 
 ## 🔧 Configuration
 
-### Commission Rates
-- Default: 20% for affiliates
-- Customer Discount: 10% off first purchase
-- Configurable per affiliate in database
+### Commission Rates & Program Duration
+- **Commission Rate**: 60% for all affiliates
+- **Program Duration**: 90 days from registration
+- **Customer Discount**: 10% off first purchase
+- **Program Expiration**: Affiliates cannot generate new referrals after 90 days, but can still track and receive payment for earned commissions
 
 ### Code Generation
 - Format: `{NAME_PREFIX}{4_DIGIT_NUMBER}`
@@ -116,9 +120,10 @@ The system uses Resend for affiliate welcome emails. Make sure your Resend accou
 - Automatic uniqueness validation
 
 ### Payment Processing  
-- Commissions calculated automatically on successful Stripe payments
+- Commissions calculated automatically on successful Stripe payments (60% of sale amount)
 - Status tracking: pending → confirmed → paid
 - Earnings updated via database triggers
+- Program expiration validation: only active affiliates within 90-day window can earn new commissions
 
 ## 🎨 UI Components
 

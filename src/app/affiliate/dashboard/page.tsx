@@ -26,6 +26,7 @@ interface Affiliate {
   paid_earnings: number;
   status: string;
   created_at: string;
+  program_expires_at?: string;
 }
 
 interface Referral {
@@ -102,6 +103,23 @@ export default function AffiliateDashboard() {
     const pendingReferrals = referrals.filter(r => r.status === 'pending').length;
     
     return { totalReferrals, confirmedReferrals, pendingReferrals };
+  };
+
+  const getProgramStatus = () => {
+    if (!affiliate?.program_expires_at) {
+      return { daysRemaining: null, expirationDate: null, isExpired: false };
+    }
+
+    const expirationDate = new Date(affiliate.program_expires_at);
+    const now = new Date();
+    const daysRemaining = Math.ceil((expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const isExpired = daysRemaining <= 0;
+
+    return { 
+      daysRemaining: Math.max(0, daysRemaining), 
+      expirationDate: expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      isExpired 
+    };
   };
 
   if (loading && !affiliate) {
@@ -250,7 +268,27 @@ export default function AffiliateDashboard() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        {/* Program Status Alert */}
+        {affiliate?.program_expires_at && (
+          <div className={`mt-8 rounded-lg p-6 border-2 ${getProgramStatus().isExpired ? 'bg-red-50 border-red-300' : getProgramStatus().daysRemaining! <= 14 ? 'bg-yellow-50 border-yellow-300' : 'bg-green-50 border-green-300'}`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className={`font-semibold mb-2 ${getProgramStatus().isExpired ? 'text-red-800' : getProgramStatus().daysRemaining! <= 14 ? 'text-yellow-800' : 'text-green-800'}`}>
+                  {getProgramStatus().isExpired ? '⏰ Program Expired' : getProgramStatus().daysRemaining! <= 14 ? '⏰ Program Expiring Soon' : '✅ Program Active'}
+                </h3>
+                <p className={`text-sm ${getProgramStatus().isExpired ? 'text-red-700' : getProgramStatus().daysRemaining! <= 14 ? 'text-yellow-700' : 'text-green-700'}`}>
+                  {getProgramStatus().isExpired 
+                    ? `Your 90-day affiliate program ended on ${getProgramStatus().expirationDate}. You can still track and receive payments for earned commissions, but cannot generate new referrals.`
+                    : `Your 90-day program expires on ${getProgramStatus().expirationDate}. ${getProgramStatus().daysRemaining} days remaining.`
+                  }
+                </p>
+              </div>
+              <Calendar className={`h-8 w-8 flex-shrink-0 ${getProgramStatus().isExpired ? 'text-red-600' : getProgramStatus().daysRemaining! <= 14 ? 'text-yellow-600' : 'text-green-600'}`} />
+            </div>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-3 gap-8 mt-8">
           {/* Referral Tools */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">

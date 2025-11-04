@@ -8,11 +8,12 @@ CREATE TABLE IF NOT EXISTS affiliates (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     referral_code TEXT UNIQUE NOT NULL,
-    commission_rate DECIMAL(5,2) DEFAULT 20.00, -- 20% default commission
+    commission_rate DECIMAL(5,2) DEFAULT 60.00, -- 60% commission rate
+    program_expires_at TIMESTAMP WITH TIME ZONE, -- Program expires 90 days after registration
     total_earnings DECIMAL(10,2) DEFAULT 0.00,
     pending_earnings DECIMAL(10,2) DEFAULT 0.00,
     paid_earnings DECIMAL(10,2) DEFAULT 0.00,
-    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'inactive')),
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'inactive', 'expired')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
