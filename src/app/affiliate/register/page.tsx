@@ -76,52 +76,53 @@ export default function AffiliateRegister() {
                 Your affiliate account has been created successfully!
               </p>
 
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-semibold text-purple-900 mb-2">Your Affiliate Code</h3>
-                <div className="text-2xl font-bold text-purple-600 mb-2">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-2">🚀 Your Affiliate Code</h3>
+                <div className="text-3xl font-bold mb-3">
                   {affiliateData?.referral_code}
                 </div>
-                <p className="text-sm text-purple-700">
-                  Share this code to earn 20% commission on every referral!
+                <p className="text-purple-100 mb-4">
+                  Earn 60% commission on every sale during our launch!
                 </p>
               </div>
 
               <div className="grid md:grid-cols-3 gap-4 mb-6 text-sm">
-                <div className="bg-green-50 p-4 rounded-lg">
+                <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
                   <DollarSign className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                  <div className="font-semibold text-green-900">20% Commission</div>
-                  <div className="text-green-700">On every sale</div>
+                  <div className="font-semibold text-green-900">60% Commission</div>
+                  <div className="text-green-700 text-xs">Launch exclusive rate</div>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600 mx-auto mb-2" />
-                  <div className="font-semibold text-blue-900">Customer Discount</div>
-                  <div className="text-blue-700">10% off for referrals</div>
+                <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                  <TrendingUp className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                  <div className="font-semibold text-blue-900">90-Day Program</div>
+                  <div className="text-blue-700 text-xs">Limited time only</div>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-600 mx-auto mb-2" />
-                  <div className="font-semibold text-purple-900">Monthly Payouts</div>
-                  <div className="text-purple-700">Via PayPal</div>
+                <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-200">
+                  <Users className="h-6 w-6 text-purple-600 mx-auto mb-2" />
+                  <div className="font-semibold text-purple-900">Customer 10% Off</div>
+                  <div className="text-purple-700 text-xs">Referral incentive</div>
                 </div>
+              </div>
+
+              <div className="bg-yellow-50 border-2 border-yellow-400 p-4 rounded-lg mb-6">
+                <p className="text-sm text-yellow-900">
+                  <strong>⏰ Important:</strong> This is a 90-day limited-time program starting today. 
+                  You can only sign up once. Make the most of this launch opportunity!
+                </p>
               </div>
 
               <div className="space-y-4">
                 <p className="text-gray-600">
                   <strong>Next steps:</strong> Check your email for your affiliate welcome package 
-                  with marketing materials and detailed instructions.
+                  with marketing materials and your referral link.
                 </p>
                 
                 <div className="flex gap-4 justify-center">
                   <Link
                     href="/affiliate/dashboard"
-                    className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+                    className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-semibold"
                   >
                     View Dashboard
-                  </Link>
-                  <Link
-                    href="/create"
-                    className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Create Event
                   </Link>
                 </div>
               </div>
@@ -148,24 +149,38 @@ export default function AffiliateRegister() {
 
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
+          {/* Launch Alert */}
+          <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white rounded-xl p-6 mb-12 border-2 border-white shadow-lg">
+            <div className="flex items-start gap-3">
+              <span className="text-3xl">🚀</span>
+              <div>
+                <h2 className="text-xl font-bold mb-2">Exclusive Launch Affiliate Program</h2>
+                <p className="text-purple-100">
+                  Join our 90-day launch initiative and earn <strong>60% commission</strong> on every referral. 
+                  This is a limited-time opportunity available only during launch. <strong>One-time signup only.</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Hero Section */}
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Join SnapWorxx Affiliates
+              Join SnapWorxx Launch Affiliates
             </h1>
             <p className="text-xl text-gray-600 mb-6">
-              Earn 20% commission by referring customers to SnapWorxx
+              Earn 60% commission by referring customers during our 90-day launch window
             </p>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Join hundreds of content creators, event planners, and photographers 
-              earning passive income by sharing SnapWorxx with their audience.
+              This is a limited-time affiliate program exclusively for our launch phase. 
+              Earn the highest commission rates available and help us grow while we're just starting.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Benefits */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Why Join Our Program?</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Launch Program Details</h2>
               
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
@@ -173,10 +188,24 @@ export default function AffiliateRegister() {
                     <DollarSign className="h-6 w-6 text-green-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">High Commission Rate</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">60% Commission Rate</h3>
                     <p className="text-gray-600">
-                      Earn 20% commission on every successful referral. With our $29-49 packages, 
-                      that's $5.80-9.80 per sale.
+                      Earn 60% on every successful referral. This premium rate is exclusive to our launch window. 
+                      On $50 events, that's $30 per sale!
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xl">⏰</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">90-Day Limited Window</h3>
+                    <p className="text-gray-600">
+                      Your 90-day program starts immediately upon registration. After 90 days, 
+                      the program closes and new referrals cannot be generated. Perfect for maximizing 
+                      this launch opportunity!
                     </p>
                   </div>
                 </div>
@@ -189,7 +218,7 @@ export default function AffiliateRegister() {
                     <h3 className="font-semibold text-gray-900 mb-2">Win-Win for Everyone</h3>
                     <p className="text-gray-600">
                       Your referrals get 10% off their first event, making it easy to convert 
-                      your audience while you earn.
+                      your audience while you earn 60% commission.
                     </p>
                   </div>
                 </div>
@@ -199,20 +228,24 @@ export default function AffiliateRegister() {
                     <TrendingUp className="h-6 w-6 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Growing Market</h3>
+                    <h3 className="font-semibold text-gray-900 mb-2">One-Time Signup</h3>
                     <p className="text-gray-600">
-                      Events are happening every day. From weddings to birthdays, corporate events 
-                      to family gatherings - huge opportunity for recurring income.
+                      You can only sign up once during the 90-day launch window. After your program 
+                      expires or the launch ends, new registrations are not accepted.
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-xl">
-                  <h3 className="font-bold text-lg mb-2">💰 Top Affiliate Earnings</h3>
-                  <p className="text-purple-100">
-                    Our best affiliates earn $500-2000+ per month by sharing SnapWorxx 
-                    with event planners, photographers, and their social networks.
+                  <h3 className="font-bold text-lg mb-2">💰 Earning Potential</h3>
+                  <p className="text-purple-100 mb-3">
+                    With 60% commission during a 90-day launch window, top affiliates could earn:
                   </p>
+                  <ul className="text-sm text-purple-100 space-y-1">
+                    <li>• 10 referrals/month = $1,500+ for 90 days</li>
+                    <li>• 25 referrals/month = $3,750+ for 90 days</li>
+                    <li>• 50 referrals/month = $7,500+ for 90 days</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -224,8 +257,8 @@ export default function AffiliateRegister() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
                   Start Earning Today
                 </h2>
-                <p className="text-gray-600">
-                  Join our affiliate program in under 2 minutes
+                <p className="text-gray-600 text-sm">
+                  Join our 90-day launch affiliate program in under 2 minutes
                 </p>
               </div>
 
@@ -266,18 +299,23 @@ export default function AffiliateRegister() {
                   />
                 </div>
 
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg text-sm text-blue-900 mb-4">
+                  <strong>Important:</strong> By signing up, you'll be enrolled in the 90-day launch affiliate program. 
+                  You can only join once. Your 90-day countdown starts immediately.
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading || !formData.name.trim() || !formData.email.trim()}
                   className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 >
-                  {loading ? 'Creating Account...' : 'Join Affiliate Program'}
+                  {loading ? 'Creating Account...' : 'Join 90-Day Launch Program'}
                 </button>
               </form>
 
               <p className="text-xs text-gray-500 mt-4 text-center">
-                By joining, you agree to our affiliate terms and conditions. 
-                We'll send you a welcome email with your unique referral code.
+                By joining, you agree to our affiliate terms. Limited to 90 days from registration. 
+                One signup per person. We'll send you a welcome email with your referral code.
               </p>
             </div>
           </div>

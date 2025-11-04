@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 
 export default function CreateEventContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isAffiliate, setIsAffiliate] = useState(false);
+  const [affiliateName, setAffiliateName] = useState('');
   const [formData, setFormData] = useState({
     eventName: '',
     eventDate: '',

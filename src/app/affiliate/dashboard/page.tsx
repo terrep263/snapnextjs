@@ -288,6 +288,29 @@ export default function AffiliateDashboard() {
           </div>
         )}
 
+        {/* Launch Program Information */}
+        <div className="mt-8 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg p-6">
+          <h3 className="text-lg font-bold mb-3">🚀 SnapWorxx Launch Affiliate Program</h3>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <div className="font-semibold mb-1">60% Commission</div>
+              <p className="text-purple-100">Exclusive launch rate on all referrals</p>
+            </div>
+            <div>
+              <div className="font-semibold mb-1">90-Day Duration</div>
+              <p className="text-purple-100">Limited-time program from registration</p>
+            </div>
+            <div>
+              <div className="font-semibold mb-1">10% Customer Discount</div>
+              <p className="text-purple-100">Your referrals get 10% off first event</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-purple-400 text-xs text-purple-100">
+            <strong>Note:</strong> This is a limited-time launch initiative available only for 90 days from registration. 
+            After your 90-day window closes, you can still track earnings but cannot generate new referrals.
+          </div>
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-8 mt-8">
           {/* Referral Tools */}
           <div className="lg:col-span-1">
