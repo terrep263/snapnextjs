@@ -127,13 +127,14 @@ export async function POST(request: NextRequest) {
     ];
 
     // Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/create`,
       customer_email: emailAddress,
+      allow_promotion_codes: true, // Enable customers to enter Stripe promotion codes
       metadata: {
         eventName,
         eventDate: eventDate || '',
@@ -146,7 +147,9 @@ export async function POST(request: NextRequest) {
         affiliateReferralCode: affiliateInfo?.referral_code || '',
         isAffiliateReferral: isAffiliateReferral ? 'true' : 'false',
       },
-    });
+    };
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return NextResponse.json({ 
       sessionId: session.id, 
