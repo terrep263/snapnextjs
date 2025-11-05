@@ -5,6 +5,7 @@ import { Upload, X, CheckCircle, AlertCircle, Image as ImageIcon, Minimize2, Zap
 import { ChunkedUploader } from '@/lib/chunkedUploader';
 import { VideoCompressor } from '@/lib/videoCompressor';
 import { SmartphoneVideoOptimizer } from '@/lib/smartphoneVideoOptimizer';
+import { AdaptiveUploadLimits } from '@/lib/adaptiveUploadLimits';
 import VideoCompressionHelp from './VideoCompressionHelp';
 
 interface PhotoUploadProps {
@@ -21,8 +22,13 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [compressionEnabled, setCompressionEnabled] = useState(true);
   const [chunkingEnabled, setChunkingEnabled] = useState(true);
-  const [maxFileSizeMB, setMaxFileSizeMB] = useState(60); // Optimized for 3-minute 1080p videos
+  const [globalMaxFileSizeMB, setGlobalMaxFileSizeMB] = useState(AdaptiveUploadLimits.getGlobalHardLimit()); // 2GB hard limit
   const [showCompressionHelp, setShowCompressionHelp] = useState<File | null>(null);
+  const [adaptiveLimitInfo, setAdaptiveLimitInfo] = useState<{
+    file: File;
+    config: ReturnType<typeof AdaptiveUploadLimits.getAdaptiveLimits>;
+    status: 'accepted' | 'warning' | 'rejected';
+  } | null>(null);
   
   // Get smartphone-optimized limits
   const smartphoneOptimized = SmartphoneVideoOptimizer.getOptimizedSizeLimit();
@@ -94,6 +100,16 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         // Try compression first if enabled and file is too large
         let processedFile = file;
         
+        // Get adaptive limits for this specific file
+        const adaptiveConfig = AdaptiveUploadLimits.getAdaptiveLimits(file);
+        const uploadStatus = AdaptiveUploadLimits.getUploadStatus(adaptiveConfig, currentSizeMB);
+        
+        if (uploadStatus === 'warning') {
+          console.warn(`⚠️ File size warning for ${file.name}: ${currentSizeMB.toFixed(1)}MB`);
+          console.log(`📊 Adaptive limits: ${adaptiveConfig.reason}`);
+          setAdaptiveLimitInfo({ file, config: adaptiveConfig, status: uploadStatus });
+        }
+        
         if (compressionEnabled && !isVideo && currentSizeMB > 10) {
           console.log(`🗜️ Attempting to compress image: ${file.name}`);
           progress[key] = 5;
@@ -103,7 +119,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             maxWidth: 1920,
             maxHeight: 1080,
             quality: 0.8,
-            maxSizeMB: Math.min(50, maxFileSizeMB)
+            maxSizeMB: Math.min(100, adaptiveConfig.recommendedMaxMB)
           });
           
           if (compressionResult.success && compressionResult.file) {
@@ -116,20 +132,20 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         
         const finalSizeMB = processedFile.size / (1024 * 1024);
         
-        // Check if we should use chunked upload or reject
-        if (finalSizeMB > maxFileSizeMB) {
+        // Check if we should use chunked upload or reject using adaptive limits
+        if (finalSizeMB > adaptiveConfig.allowedMaxMB) {
           if (isVideo) {
             // Show smartphone-optimized compression help for large videos
             if (smartphoneAnalysis?.isLikely) {
-              console.error(`📱 Smartphone video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+              console.error(`📱 Smartphone video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${adaptiveConfig.allowedMaxMB}MB)`);
               const optimizations = SmartphoneVideoOptimizer.getSmartphoneOptimizations(file);
               console.log('📱 Smartphone optimizations:', optimizations);
             } else {
-              console.error(`❌ Video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+              console.error(`❌ Video too large: ${file.name} (${currentSizeMB.toFixed(1)}MB > ${adaptiveConfig.allowedMaxMB}MB). ${adaptiveConfig.reason}`);
             }
             setShowCompressionHelp(file);
           } else {
-            console.error(`❌ File too large: ${file.name} (${finalSizeMB.toFixed(1)}MB > ${maxFileSizeMB}MB)`);
+            console.error(`❌ File too large: ${file.name} (${finalSizeMB.toFixed(1)}MB > ${adaptiveConfig.allowedMaxMB}MB)`);
           }
           results[key] = 'error';
           setUploadResults({ ...results });
@@ -522,7 +538,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             </span>
           </div>
           <div className="text-gray-600">
-            Max Size: {maxFileSizeMB}MB (📱 3-min videos)
+            Max Size: {globalMaxFileSizeMB}MB (Adaptive limits per file type)
           </div>
         </div>
 
@@ -561,20 +577,20 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
 
               <div>
                 <label className="block font-medium mb-2">
-                  Maximum File Size (MB)
+                  Global Hard Limit (MB)
                 </label>
                 <select
-                  value={maxFileSizeMB}
-                  onChange={(e) => setMaxFileSizeMB(parseInt(e.target.value))}
+                  value={globalMaxFileSizeMB}
+                  onChange={(e) => setGlobalMaxFileSizeMB(parseInt(e.target.value))}
                   className="w-full rounded border-gray-300 text-sm"
                 >
-                  <option value={30}>30MB (720p clips)</option>
-                  <option value={60}>60MB (📱 1080p 3-min - Recommended)</option>
-                  <option value={80}>80MB (📱 1080p high bitrate)</option>
-                  <option value={100}>100MB (Maximum allowed)</option>
+                  <option value={500}>500MB (Most videos)</option>
+                  <option value={1000}>1000MB (Large files)</option>
+                  <option value={1500}>1500MB (4K content)</option>
+                  <option value={2000}>2000MB (Maximum allowed)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Maximum resolution: 1080p Full HD. {smartphoneOptimized.reasoning}
+                  Adaptive limits per file type. This sets the absolute maximum we'll accept.
                 </p>
               </div>
 
@@ -706,19 +722,19 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
                 <div className="text-center">
                   <p className="font-medium text-gray-600">📸 Photos</p>
                   <p>JPG, PNG, GIF, WebP</p>
-                  <p className="text-xs">Up to {compressionEnabled ? maxFileSizeMB : 10}MB</p>
+                  <p className="text-xs">Up to {compressionEnabled ? '200MB' : '50MB'}</p>
                 </div>
                 <div className="text-center">
-                  <p className="font-medium text-gray-600">📱 Videos</p>
-                  <p>MP4, MOV (1080p max, 3 min)</p>
-                  <p className="text-xs">Up to {maxFileSizeMB}MB</p>
+                  <p className="font-medium text-gray-600">� Videos</p>
+                  <p>MP4, MOV (Adaptive limits)</p>
+                  <p className="text-xs">Duration-based sizing</p>
                 </div>
               </div>
               <div className="pt-2 border-t border-gray-200">
-                <p>📱 Optimized for smartphone uploads</p>
+                <p>� Adaptive limits based on quality/duration</p>
                 <p>⚡ Smart detection and compression</p>
                 <p>🔒 Secure {chunkingEnabled ? 'chunked' : 'direct'} upload</p>
-                {compressionEnabled && <p>🎯 Automatic smartphone optimization</p>}
+                {compressionEnabled && <p>🎯 Automatic quality optimization</p>}
               </div>
             </div>
           </div>
