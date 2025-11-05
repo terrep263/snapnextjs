@@ -7,10 +7,11 @@ VALUES (
   'photos',
   'photos',
   true,
-  104857600, -- 100MB limit (optimized for 3-minute 1080p videos maximum)
+  5368709120, -- 5GB limit (5242880 * 1024 bytes) - supports 4K/HD videos, large file uploads
   ARRAY[
     'image/jpeg','image/jpg','image/png','image/gif','image/webp',
-    'video/mp4','video/mov','video/avi','video/quicktime','video/x-msvideo'
+    'video/mp4','video/mov','video/avi','video/quicktime','video/x-msvideo',
+    'audio/mpeg','audio/wav','audio/ogg','audio/aac'
   ]::text[]
 )
 ON CONFLICT (id) DO UPDATE
