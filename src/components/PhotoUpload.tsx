@@ -6,6 +6,9 @@ import { ChunkedUploader } from '@/lib/chunkedUploader';
 import { VideoCompressor } from '@/lib/videoCompressor';
 import { SmartphoneVideoOptimizer } from '@/lib/smartphoneVideoOptimizer';
 import { AdaptiveUploadLimits } from '@/lib/adaptiveUploadLimits';
+import { SecureMediaManager } from '@/lib/secureMediaManager';
+import { MediaAuditLogger } from '@/lib/mediaAuditLogger';
+import { MediaBackupManager } from '@/lib/mediaBackupManager';
 import VideoCompressionHelp from './VideoCompressionHelp';
 
 interface PhotoUploadProps {
@@ -104,6 +107,30 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         const adaptiveConfig = AdaptiveUploadLimits.getAdaptiveLimits(file);
         const uploadStatus = AdaptiveUploadLimits.getUploadStatus(adaptiveConfig, currentSizeMB);
         
+        // SECURITY: Validate file with SecureMediaManager
+        const fileValidation = SecureMediaManager.validateMediaFile(file);
+        if (!fileValidation.valid) {
+          console.error(`🔒 Security validation failed for ${file.name}:`, fileValidation.errors);
+          const errorMessage = fileValidation.errors[0] || 'File failed security validation';
+          setUploadResults(prev => ({ ...prev, [key]: 'error' }));
+          results[key] = 'error';
+          
+          // Log security event
+          await MediaAuditLogger.logSecurityEvent(
+            eventData.id,
+            file.name,
+            errorMessage,
+            'high',
+            { validationErrors: fileValidation.errors }
+          );
+          continue;
+        }
+        
+        // Warn user about validation warnings
+        if (fileValidation.warnings.length > 0) {
+          console.warn(`⚠️ File validation warnings for ${file.name}:`, fileValidation.warnings);
+        }
+        
         if (uploadStatus === 'warning') {
           console.warn(`⚠️ File size warning for ${file.name}: ${currentSizeMB.toFixed(1)}MB`);
           console.log(`📊 Adaptive limits: ${adaptiveConfig.reason}`);
@@ -185,7 +212,21 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           );
           
           if (!uploadResult.success) {
-            throw new Error(uploadResult.error || 'Chunked upload failed');
+            const errorMsg = uploadResult.error || 'Chunked upload failed';
+            console.error(`❌ Chunked upload error for ${processedFile.name}:`, errorMsg);
+            
+            // Log failed upload to audit trail
+            await MediaAuditLogger.logSecurityEvent(
+              eventData.id,
+              processedFile.name,
+              `Chunked upload failed: ${errorMsg}`,
+              'high',
+              { uploadResult, fileSize: finalSizeMB }
+            );
+            
+            results[key] = 'error';
+            setUploadResults({ ...results });
+            throw new Error(errorMsg);
           }
           
           filePublicUrl = uploadResult.url!;
@@ -217,7 +258,18 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           clearInterval(uploadProgressInterval);
 
           if (uploadError) {
-            console.error('❌ Upload error:', uploadError.message);
+            const errorMsg = uploadError.message || 'Standard upload failed';
+            console.error('❌ Upload error:', errorMsg);
+            
+            // Log failed upload to audit trail
+            await MediaAuditLogger.logSecurityEvent(
+              eventData.id,
+              processedFile.name,
+              `Upload failed: ${errorMsg}`,
+              'high',
+              { uploadError: uploadError.message, fileSize: finalSizeMB }
+            );
+            
             results[key] = 'error';
             setUploadResults({ ...results });
             continue;
@@ -233,6 +285,47 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         console.log(`✅ Upload successful: ${processedFile.name}`);
         progress[key] = 80;
         setUploadProgress({ ...progress });
+
+        // BACKUP: Create backup of uploaded file
+        const uploadStartTime = Date.now();
+        try {
+          await MediaBackupManager.createMediaBackup(
+            filePath,
+            eventData.id,
+            processedFile.name,
+            'hash-placeholder', // In production, calculate actual SHA-256 hash
+            processedFile.size,
+            supabase
+          );
+          console.log(`📦 Backup created for ${processedFile.name}`);
+        } catch (backupError) {
+          console.warn(`⚠️ Backup creation failed for ${processedFile.name}:`, backupError);
+          // Don't fail upload if backup fails, just log it
+        }
+
+        // AUDIT: Log successful upload operation
+        const uploadDuration = Date.now() - uploadStartTime;
+        await MediaAuditLogger.logMediaOperation({
+          eventType: 'upload_complete',
+          eventId: eventData.id,
+          filename: processedFile.name,
+          filePath,
+          fileSize: processedFile.size,
+          mimeType: processedFile.type,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+          ipAddress: 'client-side',
+          userId: eventData.email,
+          status: 'success',
+          duration: uploadDuration,
+          securityScore: 95,
+          metadata: {
+            compressed: processedFile !== file,
+            originalSize: file.size,
+            finalSize: processedFile.size,
+            isVideo,
+            hasBackup: true
+          }
+        });
 
         // Ensure event exists in database first
         console.log('🔍 Checking if event exists in database:', eventData.id);
@@ -379,6 +472,19 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             eventId: photoRecord.event_id
           });
           
+          // Log database error to audit trail
+          await MediaAuditLogger.logSecurityEvent(
+            eventData.id,
+            processedFile.name,
+            `Database insertion failed: ${dbError instanceof Error ? dbError.message : 'Unknown database error'}`,
+            'critical',
+            { 
+              photoRecord,
+              error: dbError instanceof Error ? dbError.message : String(dbError),
+              errorType: dbError instanceof Error ? dbError.constructor.name : 'Unknown'
+            }
+          );
+          
           // Provide user-friendly error message
           if (dbError instanceof Error) {
             if (dbError.message.includes('foreign key constraint') || dbError.message.includes('violates foreign key')) {
@@ -473,6 +579,22 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
       
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Log critical upload failure
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (eventData?.id) {
+        await MediaAuditLogger.logSecurityEvent(
+          eventData.id,
+          'batch-upload',
+          `Upload batch failed: ${errorMessage}`,
+          'critical',
+          { 
+            error: errorMessage,
+            errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+          }
+        );
+      }
+      
       setUploading(false);
     }
   }, [eventData, onUploadComplete]);

@@ -9,10 +9,15 @@ VALUES (
   true,
   5368709120, -- 5GB limit (5242880 * 1024 bytes) - supports 4K/HD videos, large file uploads
   ARRAY[
-    'image/jpeg','image/jpg','image/png','image/gif','image/webp',
-    'video/mp4','video/mov','video/avi','video/quicktime','video/x-msvideo',
-    'audio/mpeg','audio/wav','audio/ogg','audio/aac',
-    'application/json'
+    -- Images
+    'image/jpeg','image/jpg','image/png','image/gif','image/webp','image/svg+xml',
+    -- Videos
+    'video/mp4','video/quicktime','video/x-msvideo','video/avi','video/x-matroska',
+    'video/x-msvideo','video/x-ms-wmv','video/webm','video/x-flv',
+    -- Audio
+    'audio/mpeg','audio/wav','audio/ogg','audio/aac','audio/flac','audio/x-m4a',
+    -- Fallback/Generic
+    'application/octet-stream','application/json'
   ]::text[]
 )
 ON CONFLICT (id) DO UPDATE

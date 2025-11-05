@@ -56,14 +56,42 @@ export class ChunkedUploader {
 
         while (!success && retries < this.maxRetries) {
           try {
-            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath}) with MIME: ${file.type}...`);
+            // Determine MIME type with fallback
+            let mimeType = file.type;
+            
+            // If file.type is empty or octet-stream, try to infer from filename
+            if (!mimeType || mimeType === 'application/octet-stream') {
+              const ext = file.name.split('.').pop()?.toLowerCase();
+              const mimeMap: Record<string, string> = {
+                'mp4': 'video/mp4',
+                'mov': 'video/quicktime',
+                'avi': 'video/x-msvideo',
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'png': 'image/png',
+                'gif': 'image/gif',
+                'webp': 'image/webp',
+                'wav': 'audio/wav',
+                'mp3': 'audio/mpeg',
+                'ogg': 'audio/ogg',
+                'aac': 'audio/aac'
+              };
+              if (ext && mimeMap[ext]) {
+                mimeType = mimeMap[ext];
+              } else {
+                // Default to video/mp4 for video files, application/octet-stream otherwise
+                mimeType = file.name.match(/\.(mp4|mov|avi|quicktime|mkv|flv|wmv|webm)$/i) ? 'video/mp4' : 'application/octet-stream';
+              }
+            }
+            
+            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath}) with MIME: ${mimeType}...`);
             
             const { data, error } = await supabaseClient.storage
               .from('photos')
               .upload(chunkPath, chunks[i], {
                 cacheControl: '3600',
                 upsert: true, // Allow overwrite for retries
-                contentType: file.type // Preserve original file MIME type for chunks
+                contentType: mimeType // Preserve or inferred MIME type for chunks
               });
               
             if (error) throw error;
