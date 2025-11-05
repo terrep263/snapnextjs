@@ -152,6 +152,12 @@ export async function POST(request: NextRequest) {
     console.log('Creating Stripe session with allow_promotion_codes:', sessionConfig.allow_promotion_codes);
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
+    
+    console.log('Session created:', {
+      id: session.id,
+      url: session.url,
+      allow_promotion_codes: (session as any).allow_promotion_codes
+    });
 
     return NextResponse.json({ 
       sessionId: session.id, 
