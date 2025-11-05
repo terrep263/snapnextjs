@@ -88,24 +88,24 @@ export class AdaptiveUploadLimits {
 
     if (estimatedBitrateMbps >= 40) {
       // 4K - large files expected
-      recommendedMaxMB = 1000;   // ~60 min 4K or ~120 min 1080p equivalent
-      warningThresholdMB = 1500;
-      allowedMaxMB = 2000;       // Hard limit for 4K
+      recommendedMaxMB = 1024;   // Display 1GB to users
+      warningThresholdMB = 2048; // Warning at 2GB
+      allowedMaxMB = 5120;       // Actually allow 5GB in backend
     } else if (estimatedBitrateMbps >= 12) {
-      // 1080p - moderate files
-      recommendedMaxMB = 300;    // ~30 min 1080p
-      warningThresholdMB = 500;
-      allowedMaxMB = 750;        // ~75 min 1080p
+      // 1080p - moderate to large files (typical smartphone/camera videos)
+      recommendedMaxMB = 1024;   // Display 1GB to users
+      warningThresholdMB = 2048; // Warning at 2GB
+      allowedMaxMB = 5120;       // Actually allow 5GB in backend
     } else if (estimatedBitrateMbps >= 6) {
       // 720p - smaller files
-      recommendedMaxMB = 200;    // ~25 min 720p
-      warningThresholdMB = 400;
-      allowedMaxMB = 600;        // ~75 min 720p
+      recommendedMaxMB = 1024;   // Display 1GB to users
+      warningThresholdMB = 2048; // Warning at 2GB
+      allowedMaxMB = 5120;       // Actually allow 5GB in backend
     } else {
       // Low quality - very small files
-      recommendedMaxMB = 100;
-      warningThresholdMB = 200;
-      allowedMaxMB = 300;
+      recommendedMaxMB = 1024;   // Display 1GB to users
+      warningThresholdMB = 2048; // Warning at 2GB
+      allowedMaxMB = 5120;       // Actually allow 5GB in backend
     }
 
     return {
@@ -131,9 +131,9 @@ export class AdaptiveUploadLimits {
     else quality = 'Low Quality';
 
     return {
-      recommendedMaxMB: 500,   // ~90 min audio
-      warningThresholdMB: 800,
-      allowedMaxMB: 1000,      // ~180 min audio
+      recommendedMaxMB: 1024,   // Display 1GB to users
+      warningThresholdMB: 2048, // Warning at 2GB
+      allowedMaxMB: 5120,       // Actually allow 5GB in backend
       estimatedDurationMinutes: Math.round(durationMinutes),
       reason: `Audio detected (${quality}, ~${estimatedBitrateMbps.toFixed(1)} kbps, estimated ${Math.round(durationMinutes)} min)`
     };
@@ -150,9 +150,9 @@ export class AdaptiveUploadLimits {
     else quality = 'Normal Resolution';
 
     return {
-      recommendedMaxMB: 50,
-      warningThresholdMB: 100,
-      allowedMaxMB: 200,
+      recommendedMaxMB: 1024,   // Display 1GB to users
+      warningThresholdMB: 2048, // Warning at 2GB
+      allowedMaxMB: 5120,       // Actually allow 5GB in backend
       estimatedDurationMinutes: 0,
       reason: `Image detected (${quality})`
     };
@@ -232,6 +232,22 @@ export class AdaptiveUploadLimits {
   }
 
   /**
+   * Get user-friendly display limits (what we show to users)
+   * These are DISPLAYED limits - always show as 1GB max
+   */
+  static getDisplayLimits(): number {
+    return 1024; // Always display 1GB to users (even though backend accepts 5GB)
+  }
+
+  /**
+   * Get actual backend hard limits (hidden from users)
+   * Internal limits are much higher to handle edge cases
+   */
+  static getActualHardLimit(): number {
+    return 5120; // 5GB - actual hard limit in backend
+  }
+
+  /**
    * Determine if file should be blocked, warned, or accepted
    */
   static getUploadStatus(config: UploadLimitConfig, fileSizeMB: number): 'accepted' | 'warning' | 'rejected' {
@@ -245,13 +261,13 @@ export class AdaptiveUploadLimits {
    * This is NOT a strict per-file limit, but a reasonable maximum
    */
   static getGlobalHardLimit(): number {
-    return 2000; // 2GB - very permissive, actual limits based on file type
+    return 5120; // 5GB - actual backend limit (hidden from users)
   }
 
   /**
    * Get default recommended limit (what we suggest to users)
    */
   static getGlobalRecommendedLimit(): number {
-    return 500; // 500MB - reasonable for most videos
+    return 1024; // 1GB - displayed to users (actual limit is 5GB)
   }
 }

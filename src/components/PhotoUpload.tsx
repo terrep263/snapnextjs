@@ -538,7 +538,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             </span>
           </div>
           <div className="text-gray-600">
-            Max Size: {globalMaxFileSizeMB}MB (Adaptive limits per file type)
+            Max Size: {AdaptiveUploadLimits.getDisplayLimits()}MB (Adaptive limits per file type)
           </div>
         </div>
 
@@ -584,13 +584,13 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
                   onChange={(e) => setGlobalMaxFileSizeMB(parseInt(e.target.value))}
                   className="w-full rounded border-gray-300 text-sm"
                 >
-                  <option value={500}>500MB (Most videos)</option>
-                  <option value={1000}>1000MB (Large files)</option>
-                  <option value={1500}>1500MB (4K content)</option>
-                  <option value={2000}>2000MB (Maximum allowed)</option>
+                  <option value={1024}>1GB (Recommended)</option>
+                  <option value={2048}>2GB</option>
+                  <option value={3072}>3GB</option>
+                  <option value={5120}>5GB (Maximum)</option>
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Adaptive limits per file type. This sets the absolute maximum we'll accept.
+                  Adaptive limits per file type. 1GB is recommended for most users.
                 </p>
               </div>
 
@@ -722,12 +722,12 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
                 <div className="text-center">
                   <p className="font-medium text-gray-600">📸 Photos</p>
                   <p>JPG, PNG, GIF, WebP</p>
-                  <p className="text-xs">Up to {compressionEnabled ? '200MB' : '50MB'}</p>
+                  <p className="text-xs">Up to 1GB</p>
                 </div>
                 <div className="text-center">
                   <p className="font-medium text-gray-600">� Videos</p>
                   <p>MP4, MOV (Adaptive limits)</p>
-                  <p className="text-xs">Duration-based sizing</p>
+                  <p className="text-xs">Up to 1GB</p>
                 </div>
               </div>
               <div className="pt-2 border-t border-gray-200">
