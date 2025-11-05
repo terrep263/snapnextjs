@@ -17,14 +17,52 @@ export class ChunkedUploader {
     const totalChunks = Math.ceil(file.size / this.chunkSize);
     let uploadedBytes = 0;
     
+    // Determine correct MIME type upfront
+    let mimeType = file.type;
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      const mimeMap: Record<string, string> = {
+        'mp4': 'video/mp4',
+        'mov': 'video/quicktime',
+        'avi': 'video/x-msvideo',
+        'mkv': 'video/x-matroska',
+        'webm': 'video/webm',
+        'flv': 'video/x-flv',
+        'wmv': 'video/x-ms-wmv',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'wav': 'audio/wav',
+        'mp3': 'audio/mpeg',
+        'aac': 'audio/aac',
+        'ogg': 'audio/ogg',
+        'flac': 'audio/flac'
+      };
+      if (ext && mimeMap[ext]) {
+        mimeType = mimeMap[ext];
+      } else {
+        mimeType = file.name.match(/\.(mp4|mov|avi|quicktime|mkv|flv|wmv|webm)$/i) ? 'video/mp4' : 'video/mp4';
+      }
+    }
+    
+    console.log(`📤 Starting upload: ${file.name} (${file.size} bytes, MIME: ${mimeType})`);
+    
     try {
       // For files smaller than chunk size, use direct upload
       if (file.size <= this.chunkSize) {
+        console.log(`📁 File is small (${(file.size / 1024 / 1024).toFixed(2)}MB), using direct upload with MIME: ${mimeType}`);
+        
+        // Create a blob with explicit MIME type
+        const blob = new Blob([file], { type: mimeType });
+        
         const { data, error } = await supabaseClient.storage
           .from('photos')
-          .upload(uploadPath, file, {
+          .upload(uploadPath, blob, {
             cacheControl: '3600',
-            upsert: false
+            upsert: false,
+            contentType: mimeType
           });
           
         if (error) throw error;
@@ -56,42 +94,17 @@ export class ChunkedUploader {
 
         while (!success && retries < this.maxRetries) {
           try {
-            // Determine MIME type with fallback
-            let mimeType = file.type;
+            // Create chunk blob with correct MIME type
+            const chunkBlob = new Blob([chunks[i]], { type: mimeType });
             
-            // If file.type is empty or octet-stream, try to infer from filename
-            if (!mimeType || mimeType === 'application/octet-stream') {
-              const ext = file.name.split('.').pop()?.toLowerCase();
-              const mimeMap: Record<string, string> = {
-                'mp4': 'video/mp4',
-                'mov': 'video/quicktime',
-                'avi': 'video/x-msvideo',
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'png': 'image/png',
-                'gif': 'image/gif',
-                'webp': 'image/webp',
-                'wav': 'audio/wav',
-                'mp3': 'audio/mpeg',
-                'ogg': 'audio/ogg',
-                'aac': 'audio/aac'
-              };
-              if (ext && mimeMap[ext]) {
-                mimeType = mimeMap[ext];
-              } else {
-                // Default to video/mp4 for video files, application/octet-stream otherwise
-                mimeType = file.name.match(/\.(mp4|mov|avi|quicktime|mkv|flv|wmv|webm)$/i) ? 'video/mp4' : 'application/octet-stream';
-              }
-            }
-            
-            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath}) with MIME: ${mimeType}...`);
+            console.log(`🔄 Uploading chunk ${i + 1}/${chunks.length} (${(chunks[i].size / 1024 / 1024).toFixed(2)}MB) to ${chunkPath} with MIME: ${mimeType}...`);
             
             const { data, error } = await supabaseClient.storage
               .from('photos')
-              .upload(chunkPath, chunks[i], {
+              .upload(chunkPath, chunkBlob, {
                 cacheControl: '3600',
                 upsert: true, // Allow overwrite for retries
-                contentType: mimeType // Preserve or inferred MIME type for chunks
+                contentType: mimeType
               });
               
             if (error) throw error;
