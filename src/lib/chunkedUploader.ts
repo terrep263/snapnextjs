@@ -56,13 +56,14 @@ export class ChunkedUploader {
 
         while (!success && retries < this.maxRetries) {
           try {
-            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath})...`);
+            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath}) with MIME: ${file.type}...`);
             
             const { data, error } = await supabaseClient.storage
               .from('photos')
               .upload(chunkPath, chunks[i], {
                 cacheControl: '3600',
-                upsert: true // Allow overwrite for retries
+                upsert: true, // Allow overwrite for retries
+                contentType: file.type // Preserve original file MIME type for chunks
               });
               
             if (error) throw error;
@@ -112,7 +113,8 @@ export class ChunkedUploader {
         .from('photos')
         .upload(metadataPath, metadataBlob, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
+          contentType: 'application/json'
         });
 
       if (metadataError) {

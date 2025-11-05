@@ -11,7 +11,8 @@ VALUES (
   ARRAY[
     'image/jpeg','image/jpg','image/png','image/gif','image/webp',
     'video/mp4','video/mov','video/avi','video/quicktime','video/x-msvideo',
-    'audio/mpeg','audio/wav','audio/ogg','audio/aac'
+    'audio/mpeg','audio/wav','audio/ogg','audio/aac',
+    'application/json'
   ]::text[]
 )
 ON CONFLICT (id) DO UPDATE
