@@ -127,15 +127,14 @@ export async function POST(request: NextRequest) {
     ];
 
     // Create Stripe checkout session
-    const sessionConfig: any = {
+    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
-      line_items: lineItems,
+      line_items: lineItems as any,
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/create`,
       customer_email: emailAddress,
-      allow_promotion_codes: true, // Enable customers to enter Stripe promotion codes
-      billing_address_collection: 'auto', // Required for some Stripe features
+      allow_promotion_codes: true,
       metadata: {
         eventName,
         eventDate: eventDate || '',
@@ -150,19 +149,16 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log('Creating Stripe session with config:', {
+    console.log('Session config being sent to Stripe:', JSON.stringify({
       allow_promotion_codes: sessionConfig.allow_promotion_codes,
       mode: sessionConfig.mode,
-      lineItems: sessionConfig.line_items.length,
-    });
+    }));
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
     
-    console.log('Session created successfully:', {
+    console.log('Session response from Stripe:', {
       id: session.id,
-      url: session.url,
-      mode: session.mode,
-      allow_promotion_codes_from_response: (session as any).allow_promotion_codes
+      allow_promotion_codes: (session as any).allow_promotion_codes
     });
 
     return NextResponse.json({ 
