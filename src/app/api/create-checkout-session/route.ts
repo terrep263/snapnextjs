@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
       emailAddress, 
       yourName, 
       package: selectedPackage, 
-      price
+      price,
+      promoCodeId
     } = await request.json();
 
     if (!eventName || !emailAddress) {
@@ -24,7 +25,6 @@ export async function POST(request: NextRequest) {
     // Check if Stripe is properly configured
     if (!stripeSecretKey || stripeSecretKey === 'sk_test_your-stripe-secret-key') {
       console.log('Stripe not configured, returning mock success URL');
-      // Return a mock success URL for development
       return NextResponse.json({ 
         sessionId: 'mock_session_id',
         url: `${process.env.NEXT_PUBLIC_APP_URL}/success?session_id=mock_session_id&mock=true`
@@ -71,11 +71,21 @@ export async function POST(request: NextRequest) {
       },
     };
 
+    // Add promotion code if provided
+    if (promoCodeId) {
+      (sessionConfig as any).discounts = [
+        {
+          promotion_code: promoCodeId,
+        }
+      ];
+    }
+
     const session = await stripe.checkout.sessions.create(sessionConfig);
     
     console.log('Checkout session created:', {
       id: session.id,
       allow_promotion_codes: (session as any).allow_promotion_codes,
+      promoCodeId: promoCodeId || 'none',
     });
 
     return NextResponse.json({ 
