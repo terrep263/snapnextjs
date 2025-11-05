@@ -78,14 +78,6 @@ export default function CreateEventContent() {
 
   const getDisplayPrice = () => {
     const basePrice = selectedPackage === 'premium' ? 49 : 29;
-    if (discountStatus?.applied) {
-      const discountedPrice = Math.round(basePrice * (1 - discountStatus.percent / 100));
-      return {
-        original: basePrice,
-        discounted: discountedPrice,
-        savings: basePrice - discountedPrice
-      };
-    }
     return { original: basePrice, discounted: basePrice, savings: 0 };
   };
 
@@ -156,7 +148,7 @@ export default function CreateEventContent() {
     setError(null);
 
     try {
-      const packagePrice = getDisplayPrice().discounted * 100;
+      const basePrice = selectedPackage === 'premium' ? 4900 : 2900;
 
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -169,9 +161,7 @@ export default function CreateEventContent() {
           emailAddress: formData.emailAddress,
           yourName: formData.yourName,
           package: selectedPackage,
-          price: packagePrice,
-          discountCode: formData.discountCode,
-          isAffiliateReferral: discountStatus?.isAffiliate || false
+          price: basePrice,
         }),
       });
 

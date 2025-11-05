@@ -35,10 +35,7 @@ export async function POST(request: NextRequest) {
         referralCode: affiliate.referral_code,
         commissionRate: affiliate.commission_rate
       },
-      discount: {
-        percent: 10,
-        description: 'Affiliate referral discount'
-      }
+      message: 'Valid affiliate code - Stripe coupon will be applied in checkout'
     });
 
   } catch (error) {
