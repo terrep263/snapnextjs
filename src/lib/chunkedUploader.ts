@@ -56,6 +56,8 @@ export class ChunkedUploader {
 
         while (!success && retries < this.maxRetries) {
           try {
+            console.log(`Uploading chunk ${i} of ${chunks.length} (${chunks[i].size} bytes to ${chunkPath})...`);
+            
             const { data, error } = await supabaseClient.storage
               .from('photos')
               .upload(chunkPath, chunks[i], {
@@ -76,12 +78,13 @@ export class ChunkedUploader {
             
           } catch (error) {
             retries++;
-            console.warn(`Chunk ${i} upload failed, retry ${retries}/${this.maxRetries}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(`Chunk ${i} upload failed (${chunks[i].size} bytes), retry ${retries}/${this.maxRetries}:`, errorMessage);
             
             if (retries >= this.maxRetries) {
               // Clean up partial uploads
               await this.cleanupChunks(supabaseClient, uploadedChunks);
-              throw new Error(`Failed to upload chunk ${i} after ${this.maxRetries} retries`);
+              throw new Error(`Failed to upload chunk ${i} (${chunks[i].size} bytes) after ${this.maxRetries} retries: ${errorMessage}`);
             }
             
             // Wait before retry
