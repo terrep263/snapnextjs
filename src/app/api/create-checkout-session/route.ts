@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/create`,
       customer_email: emailAddress,
       allow_promotion_codes: true, // Enable customers to enter Stripe promotion codes
+      billing_address_collection: 'auto', // Required for some Stripe features
       metadata: {
         eventName,
         eventDate: eventDate || '',
@@ -149,14 +150,19 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log('Creating Stripe session with allow_promotion_codes:', sessionConfig.allow_promotion_codes);
+    console.log('Creating Stripe session with config:', {
+      allow_promotion_codes: sessionConfig.allow_promotion_codes,
+      mode: sessionConfig.mode,
+      lineItems: sessionConfig.line_items.length,
+    });
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
     
-    console.log('Session created:', {
+    console.log('Session created successfully:', {
       id: session.id,
       url: session.url,
-      allow_promotion_codes: (session as any).allow_promotion_codes
+      mode: session.mode,
+      allow_promotion_codes_from_response: (session as any).allow_promotion_codes
     });
 
     return NextResponse.json({ 
