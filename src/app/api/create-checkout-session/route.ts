@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // Create Stripe checkout session
-    const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    const sessionConfig: any = {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
@@ -148,6 +148,8 @@ export async function POST(request: NextRequest) {
         isAffiliateReferral: isAffiliateReferral ? 'true' : 'false',
       },
     };
+
+    console.log('Creating Stripe session with allow_promotion_codes:', sessionConfig.allow_promotion_codes);
 
     const session = await stripe.checkout.sessions.create(sessionConfig);
 
