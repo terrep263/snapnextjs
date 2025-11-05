@@ -35,21 +35,22 @@ DROP POLICY IF EXISTS "Anyone can upload photos" ON storage.objects;
 DROP POLICY IF EXISTS "Anyone can delete photos" ON storage.objects;
 DROP POLICY IF EXISTS "Anyone can update photos" ON storage.objects;
 
--- Allow public read access to photos
-CREATE POLICY "Public Access" ON storage.objects 
+-- For public photo galleries, allow all operations on photos bucket
+-- Anyone can SELECT (read/download)
+CREATE POLICY "photos_select_policy" ON storage.objects 
 FOR SELECT USING (bucket_id = 'photos');
 
--- Allow anyone to upload photos (you can restrict this later if needed)
-CREATE POLICY "Anyone can upload photos" ON storage.objects 
+-- Anyone can INSERT (upload files and chunks)
+CREATE POLICY "photos_insert_policy" ON storage.objects 
 FOR INSERT WITH CHECK (bucket_id = 'photos');
 
--- Allow anyone to delete photos (you can restrict this later if needed)
-CREATE POLICY "Anyone can delete photos" ON storage.objects 
-FOR DELETE USING (bucket_id = 'photos');
+-- Anyone can UPDATE (essential for chunked upload retries, upserts, and part file overwrites)
+CREATE POLICY "photos_update_policy" ON storage.objects 
+FOR UPDATE USING (bucket_id = 'photos') WITH CHECK (bucket_id = 'photos');
 
--- Allow anyone to update photos (you can restrict this later if needed)
-CREATE POLICY "Anyone can update photos" ON storage.objects 
-FOR UPDATE USING (bucket_id = 'photos');
+-- Anyone can DELETE (cleanup)
+CREATE POLICY "photos_delete_policy" ON storage.objects 
+FOR DELETE USING (bucket_id = 'photos');
 
 -- Verify the bucket was created
 SELECT * FROM storage.buckets WHERE id = 'photos';
