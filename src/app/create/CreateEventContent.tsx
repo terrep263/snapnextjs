@@ -20,6 +20,7 @@ export default function CreateEventContent() {
   const [selectedPackage, setSelectedPackage] = useState('premium');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoCodeId, setPromoCodeId] = useState<string | null>(null);
   const [discountStatus, setDiscountStatus] = useState<{
     applied: boolean;
     percent: number;
@@ -73,6 +74,7 @@ export default function CreateEventContent() {
     
     if (name === 'discountCode' && !searchParams.get('ref')) {
       setDiscountStatus(null);
+      setPromoCodeId(null);
     }
   };
 
@@ -85,6 +87,29 @@ export default function CreateEventContent() {
     if (!formData.discountCode.trim()) return;
 
     try {
+      // First try to validate as a promotion code
+      const promoResponse = await fetch('/api/validate-promo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: formData.discountCode.trim() }),
+      });
+
+      const promoResult = await promoResponse.json();
+
+      if (promoResponse.ok && promoResult.valid) {
+        setPromoCodeId(promoResult.promoCode.id);
+        setDiscountStatus({
+          applied: true,
+          percent: promoResult.promoCode.percentOff || 0,
+          message: `Promotion code applied! ${promoResult.promoCode.percentOff ? promoResult.promoCode.percentOff + '% off' : 'Discount applied'}`,
+          isAffiliate: false
+        });
+        return;
+      }
+
+      // Then try as affiliate code
       const affiliateResponse = await fetch('/api/affiliate/validate', {
         method: 'POST',
         headers: {
@@ -105,35 +130,14 @@ export default function CreateEventContent() {
         return;
       }
 
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          discountCode: formData.discountCode.trim(),
-          validateOnly: true
-        }),
+      // If neither worked, show error
+      setDiscountStatus({
+        applied: false,
+        percent: 0,
+        message: 'Invalid promotion code'
       });
-
-      const result = await response.json();
-
-      if (response.ok && result.discountApplied) {
-        setDiscountStatus({
-          applied: true,
-          percent: result.discountPercent,
-          message: `${result.discountPercent}% discount applied!`,
-          isAffiliate: false
-        });
-      } else {
-        setDiscountStatus({
-          applied: false,
-          percent: 0,
-          message: 'Invalid discount code'
-        });
-      }
     } catch (error) {
-      console.error('Error validating discount:', error);
+      console.error('Error validating code:', error);
       setDiscountStatus({
         applied: false,
         percent: 0,
@@ -162,6 +166,7 @@ export default function CreateEventContent() {
           yourName: formData.yourName,
           package: selectedPackage,
           price: basePrice,
+          promoCodeId: promoCodeId || undefined,
         }),
       });
 
