@@ -53,6 +53,13 @@ export async function POST(request: NextRequest) {
       }
     ];
 
+    console.log('Line items for checkout:', JSON.stringify(lineItems, null, 2));
+    console.log('Package details:', {
+      packageName,
+      packagePrice,
+      currency: 'usd'
+    });
+
     // Create Stripe checkout session with promotion codes enabled
     const sessionConfig: Stripe.Checkout.SessionCreateParams = {
       payment_method_types: ['card'],
@@ -80,12 +87,21 @@ export async function POST(request: NextRequest) {
       ];
     }
 
+    console.log('Session config:', {
+      mode: sessionConfig.mode,
+      allow_promotion_codes: sessionConfig.allow_promotion_codes,
+      has_discounts: !!promoCodeId,
+      discounts: promoCodeId ? [{ promotion_code: promoCodeId }] : undefined,
+      line_items_count: lineItems.length,
+    });
+
     const session = await stripe.checkout.sessions.create(sessionConfig);
     
-    console.log('Checkout session created:', {
-      id: session.id,
+    console.log('Checkout session created successfully:', {
+      session_id: session.id,
+      url: session.url,
       allow_promotion_codes: (session as any).allow_promotion_codes,
-      promoCodeId: promoCodeId || 'none',
+      discounts_applied: (session as any).discounts,
     });
 
     return NextResponse.json({ 
