@@ -10,6 +10,7 @@ import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import VideoThumbnail from './VideoThumbnail';
 
 interface GalleryPhoto {
   id: string;
@@ -140,27 +141,34 @@ export default function ProfessionalGallery({
                   : 'hover:ring-2 hover:ring-gray-600'
               }`}
             >
-              {/* Thumbnail Image */}
-              {photo.thumbnail || photo.url ? (
-                <img
-                  src={photo.thumbnail || photo.url}
-                  alt={photo.title || 'Photo'}
+              {/* Thumbnail Image - Different handling for videos and photos */}
+              {photo.isVideo ? (
+                // Videos: Extract thumbnail from video frame
+                <VideoThumbnail
+                  videoUrl={photo.url}
+                  alt={photo.title || 'Video'}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    console.warn(`Failed to load thumbnail for ${photo.title || 'unknown'}`);
-                    (e.target as HTMLImageElement).style.display = 'none';
+                  onError={(err) => {
+                    console.warn(`Failed to generate video thumbnail for ${photo.title || 'unknown'}:`, err.message);
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-700">
-                  <div className="text-center">
-                    {photo.isVideo ? (
-                      <span className="text-2xl">🎥</span>
-                    ) : (
-                      <span className="text-2xl">📸</span>
-                    )}
+                // Photos: Use regular image
+                photo.thumbnail || photo.url ? (
+                  <img
+                    src={photo.thumbnail || photo.url}
+                    alt={photo.title || 'Photo'}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.warn(`Failed to load photo thumbnail for ${photo.title || 'unknown'}`);
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                    <span className="text-2xl">📸</span>
                   </div>
-                </div>
+                )
               )}
 
               {/* Video Badge */}
