@@ -9,7 +9,7 @@ import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Trash2, Download, CheckSquare, Square } from 'lucide-react';
 import VideoThumbnail from './VideoThumbnail';
 
 interface GalleryPhoto {
@@ -44,6 +44,9 @@ export default function ProfessionalGallery({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [hoveredThumb, setHoveredThumb] = useState<string | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState<'select' | 'all' | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +95,96 @@ export default function ProfessionalGallery({
       }
     }
   }, [selectedIndex]);
+
+  // Delete photo handler
+  const handleDeletePhoto = useCallback(async (photoId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!window.confirm('Are you sure you want to delete this photo?')) {
+      return;
+    }
+
+    setDeleting(photoId);
+    try {
+      const response = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+
+      console.log('✅ Photo deleted:', photoId);
+      // Refresh page to reload photos
+      window.location.reload();
+    } catch (err) {
+      console.error('❌ Error deleting photo:', err);
+      alert('Failed to delete photo');
+    } finally {
+      setDeleting(null);
+    }
+  }, []);
+
+  // Toggle photo selection
+  const handleToggleSelection = useCallback((photoId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPhotos(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(photoId)) {
+        newSet.delete(photoId);
+      } else {
+        newSet.add(photoId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Select/Deselect all
+  const handleSelectAll = useCallback(() => {
+    if (selectedPhotos.size === photos.length) {
+      setSelectedPhotos(new Set());
+    } else {
+      setSelectedPhotos(new Set(photos.map(p => p.id)));
+    }
+  }, [photos, selectedPhotos.size]);
+
+  // Bulk download handler
+  const handleBulkDownload = useCallback(async () => {
+    const idsToDownload = bulkMode === 'all' 
+      ? photos.map(p => p.id)
+      : Array.from(selectedPhotos);
+
+    if (idsToDownload.length === 0) {
+      alert('No items selected');
+      return;
+    }
+
+    // Download multiple files
+    for (const photoId of idsToDownload) {
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo) continue;
+
+      try {
+        const response = await fetch(photo.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = photo.title || `photo-${photoId}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        // Small delay between downloads to prevent browser blocking
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (err) {
+        console.error('Error downloading photo:', err);
+      }
+    }
+
+    setBulkMode(null);
+    setSelectedPhotos(new Set());
+  }, [photos, selectedPhotos, bulkMode]);
 
   if (photos.length === 0) {
     return (
@@ -177,6 +270,31 @@ export default function ProfessionalGallery({
                   <Play className="w-4 h-4 text-white" fill="white" />
                 </div>
               )}
+
+              {/* Selection Checkbox - Top Left */}
+              <button
+                onClick={(e) => handleToggleSelection(photo.id, e)}
+                className="absolute top-2 left-2 z-10 bg-black/60 hover:bg-blue-600 p-2 rounded transition-colors opacity-0 group-hover:opacity-100"
+              >
+                {selectedPhotos.has(photo.id) ? (
+                  <CheckSquare className="w-4 h-4 text-blue-400" />
+                ) : (
+                  <Square className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+
+              {/* Delete Button - Top Right */}
+              <button
+                onClick={(e) => handleDeletePhoto(photo.id, e)}
+                disabled={deleting === photo.id}
+                className="absolute top-2 right-2 z-10 bg-red-600/80 hover:bg-red-700 disabled:bg-gray-600 p-2 rounded transition-colors opacity-0 group-hover:opacity-100"
+              >
+                {deleting === photo.id ? (
+                  <div className="w-4 h-4 animate-spin rounded-full border border-white border-t-transparent" />
+                ) : (
+                  <Trash2 className="w-4 h-4 text-white" />
+                )}
+              </button>
 
               {/* Hover Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">

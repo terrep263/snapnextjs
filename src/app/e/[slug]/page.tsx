@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Menu, X, Play, Pause } from 'lucide-react';
+import { Loader2, Menu, X, Play, Pause, Download, CheckSquare, Square } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ProfessionalGallery from '@/components/ProfessionalGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -24,6 +24,8 @@ export default function EventPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [bulkMode, setBulkMode] = useState<'select' | 'all' | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
 
   // Load real event from database
   useEffect(() => {
@@ -162,6 +164,53 @@ export default function EventPage() {
     }
   };
 
+  // Toggle photo selection
+  const handleSelectAll = () => {
+    if (selectedPhotos.size === photos.length) {
+      setSelectedPhotos(new Set());
+    } else {
+      setSelectedPhotos(new Set(photos.map(p => p.id)));
+    }
+  };
+
+  // Bulk download handler
+  const handleBulkDownload = async () => {
+    const idsToDownload = bulkMode === 'all' 
+      ? photos.map(p => p.id)
+      : Array.from(selectedPhotos);
+
+    if (idsToDownload.length === 0) {
+      alert('No items selected');
+      return;
+    }
+
+    // Download multiple files
+    for (const photoId of idsToDownload) {
+      const photo = photos.find(p => p.id === photoId);
+      if (!photo) continue;
+
+      try {
+        const response = await fetch(photo.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = photo.title || photo.filename || `photo-${photoId}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        // Small delay between downloads to prevent browser blocking
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (err) {
+        console.error('Error downloading photo:', err);
+      }
+    }
+
+    setBulkMode(null);
+    setSelectedPhotos(new Set());
+  };
+
   // Load saved images from localStorage (read-only)
   useEffect(() => {
     if (eventData?.id) {
@@ -257,39 +306,110 @@ export default function EventPage() {
             </div>
 
             {/* Actions */}
-            <div className="border-t border-gray-800 pt-6 space-y-2">
+            <div className="border-t border-gray-800 pt-6 space-y-3">
+              {/* Slideshow Button */}
               <button
                 onClick={() => setSlideshowActive(!slideshowActive)}
-                className={`w-full flex items-center justify-center gap-2 font-medium py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-lg transition-all duration-200 ${
                   slideshowActive
-                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg shadow-blue-500/30'
                 }`}
               >
                 {slideshowActive ? (
                   <>
-                    <Pause className="w-4 h-4" />
+                    <Pause className="w-5 h-5" />
                     Stop Slideshow
                   </>
                 ) : (
                   <>
-                    <Play className="w-4 h-4" />
+                    <Play className="w-5 h-5" />
                     Start Slideshow
                   </>
                 )}
               </button>
+
+              {/* Upload Button */}
               <Link 
                 href={`/e/${slug}/upload`}
-                className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-3 rounded-lg transition-colors"
+                className="block w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-center font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/30"
               >
                 + Upload Photos
               </Link>
-              <button 
-                onClick={() => window.print()}
-                className="w-full bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition-colors text-sm"
-              >
-                Print Gallery
-              </button>
+
+              {/* Bulk Download Mode Selection */}
+              <div className="space-y-2">
+                {bulkMode === null ? (
+                  <button 
+                    onClick={() => setBulkMode('select')}
+                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    Bulk Download
+                  </button>
+                ) : (
+                  <>
+                    {/* Selection Mode Buttons */}
+                    <div className="space-y-2">
+                      <button 
+                        onClick={() => setBulkMode(null)}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                      
+                      {bulkMode === 'select' && (
+                        <>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={handleSelectAll}
+                              className={`flex-1 flex items-center justify-center gap-2 font-semibold py-2 rounded-lg transition-colors text-sm ${
+                                selectedPhotos.size === photos.length
+                                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                  : 'bg-gray-700 hover:bg-gray-600 text-white'
+                              }`}
+                            >
+                              {selectedPhotos.size === photos.length ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <Square className="w-4 h-4" />
+                              )}
+                              All
+                            </button>
+                            <button 
+                              onClick={() => setSelectedPhotos(new Set())}
+                              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          
+                          <button 
+                            onClick={handleBulkDownload}
+                            disabled={selectedPhotos.size === 0}
+                            className={`w-full font-semibold py-2 rounded-lg transition-colors text-sm ${
+                              selectedPhotos.size === 0
+                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                            }`}
+                          >
+                            Download {selectedPhotos.size > 0 && `(${selectedPhotos.size})`}
+                          </button>
+                        </>
+                      )}
+
+                      {bulkMode === 'all' && (
+                        <button 
+                          onClick={handleBulkDownload}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                        >
+                          Download All {photos.length} Items
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
