@@ -36,11 +36,13 @@ export async function POST(req: Request) {
 
     const slugBase = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const slug = `${slugBase}-${Date.now()}`;
+    const eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const { data: newEvent, error: insertError } = await supabase
       .from('events')
       .insert([
         {
+          id: eventId,
           name: eventName,
           slug,
           email,
