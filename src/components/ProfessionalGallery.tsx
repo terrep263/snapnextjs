@@ -50,7 +50,10 @@ export default function ProfessionalGallery({
 
   const handleThumbnailClick = useCallback((index: number) => {
     setSelectedIndex(index);
-    setShowLightbox(true);
+    // Only open lightbox for photos, not videos (videos play inline)
+    if (!photos[index]?.isVideo) {
+      setShowLightbox(true);
+    }
     onPhotoSelect?.(photos[index], index);
   }, [photos, onPhotoSelect]);
 
@@ -165,30 +168,36 @@ export default function ProfessionalGallery({
       <div className="flex-1 relative overflow-hidden">
         {selectedIndex >= 0 && !showLightbox && (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black relative group cursor-pointer"
-            onClick={() => setShowLightbox(true)}
+            onClick={() => !photos[selectedIndex]?.isVideo && setShowLightbox(true)}
           >
             {/* Main Image Display */}
             <div className="relative w-full h-full overflow-hidden">
               {photos[selectedIndex]?.isVideo ? (
                 <video
+                  key={`video-${photos[selectedIndex].id}`}
                   src={photos[selectedIndex].url}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain bg-black"
                   controls
+                  autoPlay
+                  crossOrigin="anonymous"
                 />
               ) : (
                 <img
+                  key={`image-${photos[selectedIndex].id}`}
                   src={photos[selectedIndex].url}
                   alt={photos[selectedIndex].title || 'Photo'}
                   className="w-full h-full object-contain"
                 />
               )}
 
-              {/* Hover Hint */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-white">
-                  Click for fullscreen
+              {/* Hover Hint - Only for images */}
+              {!photos[selectedIndex]?.isVideo && (
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <div className="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm text-white">
+                    Click for fullscreen
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Navigation Arrows */}
@@ -218,19 +227,21 @@ export default function ProfessionalGallery({
             )}
 
             {/* Info Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <h3 className="text-lg font-light text-white mb-2">
-                {photos[selectedIndex]?.title || 'Untitled'}
-              </h3>
-              {photos[selectedIndex]?.description && (
-                <p className="text-sm text-gray-300">
-                  {photos[selectedIndex].description}
+            {!photos[selectedIndex]?.isVideo && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <h3 className="text-lg font-light text-white mb-2">
+                  {photos[selectedIndex]?.title || 'Untitled'}
+                </h3>
+                {photos[selectedIndex]?.description && (
+                  <p className="text-sm text-gray-300">
+                    {photos[selectedIndex].description}
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  {new Date(photos[selectedIndex]?.uploadedAt).toLocaleDateString()}
                 </p>
-              )}
-              <p className="text-xs text-gray-500 mt-2">
-                {new Date(photos[selectedIndex]?.uploadedAt).toLocaleDateString()}
-              </p>
-            </div>
+              </div>
+            )}
           </div>
         )}
 
