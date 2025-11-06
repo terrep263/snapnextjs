@@ -24,9 +24,11 @@ CREATE TABLE IF NOT EXISTS public.photos (
   filename text NOT NULL,
   url text NOT NULL,
   file_path text NOT NULL,
+  thumbnail_url text,
   size bigint,
   type text,
   is_video boolean DEFAULT false,
+  duration integer,
   created_at timestamptz DEFAULT now()
 );
 

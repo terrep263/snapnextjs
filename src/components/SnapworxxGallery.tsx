@@ -234,23 +234,32 @@ export default function SnapworxxGallery({
       }}
     >
       {photo.isVideo ? (
-        <div className="relative">
+        <div className="relative bg-gray-900">
           <video
             src={photo.url}
+            poster={photo.thumbnail}
             className="w-full h-auto object-cover"
-            muted={videoMuted}
-            preload="metadata"
+            muted
+            preload="auto"
             playsInline
             crossOrigin="anonymous"
+            onLoadedData={(e) => {
+              // Seek to 1 second to get a better thumbnail frame
+              const video = e.currentTarget as HTMLVideoElement;
+              if (video.duration > 1) {
+                video.currentTime = 1;
+              }
+            }}
             onPlay={() => setPlayingVideo(photo.id)}
             onPause={() => setPlayingVideo(null)}
             onError={(e) => {
-              console.error('Video error:', e);
+              console.error('Video thumbnail error:', e);
               console.log('Video URL:', photo.url);
             }}
           >
             <source src={photo.url} type="video/mp4" />
             <source src={photo.url} type="video/quicktime" />
+            <source src={photo.url} type="video/webm" />
             Your browser does not support the video tag.
           </video>
           <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
