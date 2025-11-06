@@ -263,7 +263,27 @@ export default function EventPage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex h-screen bg-black overflow-hidden">
+      <div 
+        className="flex h-screen bg-black overflow-hidden"
+        style={{
+          backgroundImage: `url('/snapworxx logo (1).png')`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '200px 200px',
+          backgroundPosition: '0 0',
+          backgroundColor: '#000000'
+        }}
+      >
+        {/* Background overlay with opacity to ensure logo visibility at 15% */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: `url('/snapworxx logo (1).png')`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: '200px 200px',
+            opacity: 0.15,
+            zIndex: 0
+          }}
+        />
         {/* SIDEBAR MENU - MOBILE OVERLAY */}
         {sidebarOpen && (
           <div 
@@ -273,7 +293,7 @@ export default function EventPage() {
         )}
 
         {/* LEFT SIDEBAR - MOBILE MENU */}
-        <div className={`fixed lg:static left-0 top-0 h-screen w-64 bg-gray-950 border-r border-gray-800 transform transition-transform duration-300 z-40 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
+        <div className={`fixed lg:static left-0 top-0 h-screen w-64 bg-gray-950 border-r border-gray-800 transform transition-transform duration-300 z-40 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col relative`}>
           {/* Close Button (Mobile) */}
           <div className="p-4 border-b border-gray-800 flex items-center justify-between lg:hidden">
             <h2 className="font-light tracking-widest text-gray-300">MENU</h2>
@@ -312,8 +332,8 @@ export default function EventPage() {
                 onClick={() => setSlideshowActive(!slideshowActive)}
                 className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-lg transition-all duration-200 ${
                   slideshowActive
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/30'
-                    : 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg shadow-blue-500/30'
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30'
                 }`}
               >
                 {slideshowActive ? (
@@ -332,7 +352,7 @@ export default function EventPage() {
               {/* Upload Button */}
               <Link 
                 href={`/e/${slug}/upload`}
-                className="block w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-center font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-emerald-500/30"
+                className="block w-full bg-purple-600 hover:bg-purple-700 text-white text-center font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-purple-500/30"
               >
                 + Upload Photos
               </Link>
@@ -342,7 +362,7 @@ export default function EventPage() {
                 {bulkMode === null ? (
                   <button 
                     onClick={() => setBulkMode('select')}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
                   >
                     <Download className="w-5 h-5" />
                     Bulk Download
@@ -353,7 +373,7 @@ export default function EventPage() {
                     <div className="space-y-2">
                       <button 
                         onClick={() => setBulkMode(null)}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
                       >
                         Cancel
                       </button>
@@ -365,7 +385,7 @@ export default function EventPage() {
                               onClick={handleSelectAll}
                               className={`flex-1 flex items-center justify-center gap-2 font-semibold py-2 rounded-lg transition-colors text-sm ${
                                 selectedPhotos.size === photos.length
-                                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
                                   : 'bg-gray-700 hover:bg-gray-600 text-white'
                               }`}
                             >
@@ -390,7 +410,7 @@ export default function EventPage() {
                             className={`w-full font-semibold py-2 rounded-lg transition-colors text-sm ${
                               selectedPhotos.size === 0
                                 ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                : 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'bg-purple-600 hover:bg-purple-700 text-white'
                             }`}
                           >
                             Download {selectedPhotos.size > 0 && `(${selectedPhotos.size})`}
@@ -401,7 +421,7 @@ export default function EventPage() {
                       {bulkMode === 'all' && (
                         <button 
                           onClick={handleBulkDownload}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
                         >
                           Download All {photos.length} Items
                         </button>
@@ -425,7 +445,7 @@ export default function EventPage() {
         </div>
 
         {/* MAIN CONTENT */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative z-10">
           {/* TOP BAR */}
           <div className="bg-gradient-to-r from-gray-900 to-black border-b border-gray-800 px-6 py-4 flex items-center justify-between z-40">
             {/* Mobile Menu Toggle */}
