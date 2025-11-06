@@ -44,7 +44,6 @@ export async function POST(req: Request) {
           name: eventName,
           slug,
           email,
-          stripe_session_id: null,
           status: 'active',
           is_free: true,
           promo_type: 'FREE_BASIC',
