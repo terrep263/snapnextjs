@@ -240,10 +240,25 @@ export default function SnapworxxGallery({
             className="w-full h-auto object-cover"
             muted={videoMuted}
             preload="metadata"
+            playsInline
+            crossOrigin="anonymous"
             onPlay={() => setPlayingVideo(photo.id)}
             onPause={() => setPlayingVideo(null)}
-          />
+            onError={(e) => {
+              console.error('Video error:', e);
+              console.log('Video URL:', photo.url);
+            }}
+          >
+            <source src={photo.url} type="video/mp4" />
+            <source src={photo.url} type="video/quicktime" />
+            Your browser does not support the video tag.
+          </video>
           <div className="absolute inset-0 bg-black bg-opacity-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white/20 backdrop-blur-sm rounded-full p-4">
+                <Play size={32} className="text-white" />
+              </div>
+            </div>
             <div className="absolute top-2 left-2">
               <button
                 onClick={(e) => {
@@ -279,6 +294,11 @@ export default function SnapworxxGallery({
               {Math.floor(photo.duration / 60)}:{(photo.duration % 60).toString().padStart(2, '0')}
             </div>
           )}
+          {/* Video badge */}
+          <div className="absolute top-2 left-2 px-2 py-1 bg-black bg-opacity-60 text-white text-xs rounded flex items-center gap-1">
+            <Play size={12} />
+            <span>VIDEO</span>
+          </div>
         </div>
       ) : (
         <img
@@ -540,12 +560,19 @@ export default function SnapworxxGallery({
 
       {/* Custom Video Modal */}
       {selectedVideoPhoto && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center">
-          <div className="relative max-w-7xl max-h-[90vh] w-full mx-4">
+        <div
+          className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center"
+          onClick={() => setSelectedVideoPhoto(null)}
+        >
+          <div
+            className="relative max-w-7xl max-h-[90vh] w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Close button */}
             <button
               onClick={() => setSelectedVideoPhoto(null)}
-              className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+              className="absolute -top-12 right-0 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+              title="Close (Esc)"
             >
               <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -554,18 +581,30 @@ export default function SnapworxxGallery({
 
             {/* Video Player */}
             <video
+              key={selectedVideoPhoto.url}
               src={selectedVideoPhoto.url}
-              poster={selectedVideoPhoto.thumbnail || selectedVideoPhoto.url}
-              className="w-full max-h-[90vh] object-contain rounded-lg"
+              className="w-full max-h-[90vh] object-contain rounded-lg bg-black"
               controls
+              controlsList="nodownload"
               autoPlay
               playsInline
-              preload="metadata"
-            />
+              preload="auto"
+              crossOrigin="anonymous"
+              onError={(e) => {
+                console.error('Video playback error:', e);
+                console.log('Video URL:', selectedVideoPhoto.url);
+                console.log('Video type:', selectedVideoPhoto.url.split('.').pop());
+              }}
+            >
+              <source src={selectedVideoPhoto.url} type="video/mp4" />
+              <source src={selectedVideoPhoto.url} type="video/quicktime" />
+              <source src={selectedVideoPhoto.url} type="video/webm" />
+              Your browser does not support video playback.
+            </video>
 
             {/* Video Info */}
             {(selectedVideoPhoto.title || selectedVideoPhoto.description) && (
-              <div className="absolute bottom-4 left-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg p-4">
+              <div className="mt-4 bg-black/50 backdrop-blur-sm rounded-lg p-4">
                 {selectedVideoPhoto.title && (
                   <h3 className="text-white font-semibold text-lg mb-1">
                     {selectedVideoPhoto.title}
@@ -576,8 +615,20 @@ export default function SnapworxxGallery({
                     {selectedVideoPhoto.description}
                   </p>
                 )}
+                {selectedVideoPhoto.size && (
+                  <p className="text-gray-400 text-xs mt-2">
+                    Size: {(selectedVideoPhoto.size / (1024 * 1024)).toFixed(1)} MB
+                  </p>
+                )}
               </div>
             )}
+
+            {/* Helpful hint */}
+            <div className="mt-2 text-center">
+              <p className="text-gray-400 text-sm">
+                Click outside or press ESC to close
+              </p>
+            </div>
           </div>
         </div>
       )}
