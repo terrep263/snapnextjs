@@ -68,53 +68,111 @@ export default function SimplePhotoUpload({
         setProgress({ ...newProgress });
 
         console.log(`📤 Starting upload: ${fileName} (${sizeMB.toFixed(1)}MB)`);
+        console.log(`📍 Upload path: ${filePath}`);
 
-        // Step 3: Upload to Supabase Storage with timeout and progress
+        // Step 3: Upload to Supabase Storage with retry logic
         const uploadTimeout = Math.max(120000, sizeMB * 2000); // 2 seconds per MB, minimum 2 minutes
-        console.log(`⏱️ Upload timeout set to: ${(uploadTimeout / 1000).toFixed(0)} seconds`);
+        console.log(`⏱️ Upload timeout: ${(uploadTimeout / 1000).toFixed(0)} seconds`);
 
-        // Simulate progress during upload
+        let uploadSuccess = false;
+        let uploadAttempts = 0;
+        const maxAttempts = 3;
+        let lastError: any = null;
+
+        // Progress simulation
         const progressInterval = setInterval(() => {
-          if (newProgress[fileName] < 55) {
-            newProgress[fileName] = Math.min(newProgress[fileName] + 5, 55);
+          if (newProgress[fileName] < 60) {
+            newProgress[fileName] = Math.min(newProgress[fileName] + 3, 60);
             setProgress({ ...newProgress });
           }
-        }, 2000);
+        }, 1500);
 
         try {
-          const uploadPromise = supabase.storage
-            .from('photos')
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
+          while (!uploadSuccess && uploadAttempts < maxAttempts) {
+            uploadAttempts++;
+            console.log(`🔄 Upload attempt ${uploadAttempts}/${maxAttempts}`);
 
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`Upload timeout after ${(uploadTimeout / 1000).toFixed(0)} seconds`)), uploadTimeout)
-          );
+            try {
+              // Create upload promise
+              const uploadPromise = supabase.storage
+                .from('photos')
+                .upload(filePath, file, {
+                  cacheControl: '3600',
+                  upsert: false
+                });
 
-          const { data: uploadData, error: uploadError } = await Promise.race([
-            uploadPromise,
-            timeoutPromise
-          ]);
+              // Create timeout promise
+              const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => {
+                  reject(new Error(`Upload timeout after ${(uploadTimeout / 1000).toFixed(0)} seconds`));
+                }, uploadTimeout);
+              });
+
+              // Race between upload and timeout
+              const result = await Promise.race([
+                uploadPromise,
+                timeoutPromise
+              ]) as any;
+
+              // Check for error in result
+              if (result.error) {
+                lastError = result.error;
+                console.error(`❌ Attempt ${uploadAttempts} failed:`, result.error.message);
+
+                // If it's a permanent error (not network), don't retry
+                if (result.error.message?.includes('already exists') ||
+                    result.error.message?.includes('not found') ||
+                    result.error.message?.includes('permission')) {
+                  throw new Error(result.error.message);
+                }
+
+                // Wait before retry (exponential backoff)
+                if (uploadAttempts < maxAttempts) {
+                  const waitTime = Math.min(1000 * Math.pow(2, uploadAttempts - 1), 5000);
+                  console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+                }
+                continue;
+              }
+
+              // Success!
+              uploadSuccess = true;
+              console.log(`✅ Upload successful on attempt ${uploadAttempts}`);
+
+            } catch (attemptError: any) {
+              lastError = attemptError;
+              console.error(`❌ Attempt ${uploadAttempts} error:`, attemptError.message);
+
+              // If timeout or network error, retry
+              if (uploadAttempts < maxAttempts &&
+                  (attemptError.message?.includes('timeout') ||
+                   attemptError.message?.includes('network') ||
+                   attemptError.message?.includes('fetch'))) {
+                const waitTime = Math.min(1000 * Math.pow(2, uploadAttempts - 1), 5000);
+                console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                continue;
+              }
+
+              // Otherwise, fail immediately
+              throw attemptError;
+            }
+          }
 
           clearInterval(progressInterval);
 
-          if (uploadError) {
-            console.error('❌ Upload error:', uploadError);
-            console.error('Error details:', {
-              message: uploadError.message,
-              statusCode: (uploadError as any).statusCode,
-              fileName: fileName,
-              fileSize: sizeMB.toFixed(1) + 'MB'
-            });
-            throw new Error(uploadError.message || 'Upload failed');
+          // If we exhausted all attempts without success
+          if (!uploadSuccess) {
+            throw new Error(
+              `Upload failed after ${maxAttempts} attempts. Last error: ${
+                lastError?.message || 'Unknown error'
+              }`
+            );
           }
-
-          console.log('✅ Upload complete:', fileName);
 
         } catch (error) {
           clearInterval(progressInterval);
+          console.error('❌ Upload completely failed:', error);
           throw error;
         }
 
