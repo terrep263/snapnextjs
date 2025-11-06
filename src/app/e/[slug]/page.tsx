@@ -115,6 +115,7 @@ export default function EventPage() {
       }
 
       console.log('✅ Loaded photos:', data?.length || 0);
+      console.log('📸 First photo:', data?.[0]); // Log first photo structure
       setPhotos(data || []);
       
     } catch (err) {
@@ -324,16 +325,27 @@ export default function EventPage() {
             <div className="flex-1 overflow-hidden">
               <ProfessionalGallery 
                 photos={photos.map(photo => {
+                  // Try multiple URL field names
+                  const photoUrl = photo.url || photo.file_path || photo.storage_path || '';
+                  
                   // Detect if video based on multiple factors
                   const isVideoFromDb = photo.is_video === true;
-                  const isVideoFromMime = photo.mime_type?.startsWith('video/') || false;
-                  const isVideoFromFilename = /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(photo.filename || photo.url);
+                  const isVideoFromMime = photo.mime_type?.startsWith('video/') || photo.type?.startsWith('video/') || false;
+                  const isVideoFromFilename = /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(photo.filename || photoUrl);
                   const isVideo = isVideoFromDb || isVideoFromMime || isVideoFromFilename;
+                  
+                  console.log(`📸 Photo: ${photo.filename}`, {
+                    url: photoUrl,
+                    has_url: !!photoUrl,
+                    is_video: isVideo,
+                    type: photo.type,
+                    mime_type: photo.mime_type
+                  });
                   
                   return {
                     id: photo.id,
-                    url: photo.url,
-                    thumbnail: photo.thumbnail_url || photo.url,
+                    url: photoUrl,
+                    thumbnail: photoUrl, // Use same URL for thumbnail (fallback)
                     title: photo.title || photo.filename,
                     description: photo.description,
                     uploadedAt: photo.created_at,

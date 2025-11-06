@@ -134,18 +134,34 @@ export default function ProfessionalGallery({
               onClick={() => handleThumbnailClick(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`w-full aspect-square rounded-lg overflow-hidden group relative transition-all duration-300 ${
+              className={`w-full aspect-square rounded-lg overflow-hidden group relative transition-all duration-300 bg-gray-800 ${
                 selectedIndex === index
                   ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/50'
                   : 'hover:ring-2 hover:ring-gray-600'
               }`}
             >
               {/* Thumbnail Image */}
-              <img
-                src={photo.thumbnail || photo.url}
-                alt={photo.title || 'Photo'}
-                className="w-full h-full object-cover"
-              />
+              {photo.thumbnail || photo.url ? (
+                <img
+                  src={photo.thumbnail || photo.url}
+                  alt={photo.title || 'Photo'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.warn(`Failed to load thumbnail for ${photo.title || 'unknown'}`);
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                  <div className="text-center">
+                    {photo.isVideo ? (
+                      <span className="text-2xl">🎥</span>
+                    ) : (
+                      <span className="text-2xl">📸</span>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Video Badge */}
               {photo.isVideo && (
