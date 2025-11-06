@@ -492,6 +492,10 @@ export default function EventPage() {
                 eventId={eventData.id}
                 slideshowActive={slideshowActive}
                 currentPhotoIndex={currentPhotoIndex}
+                bulkMode={bulkMode}
+                selectedPhotos={selectedPhotos}
+                onSelectionChange={setSelectedPhotos}
+                onBulkDownload={handleBulkDownload}
               />
             </div>
           ) : (

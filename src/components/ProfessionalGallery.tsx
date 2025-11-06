@@ -30,6 +30,10 @@ interface ProfessionalGalleryProps {
   onPhotoSelect?: (photo: GalleryPhoto, index: number) => void;
   slideshowActive?: boolean;
   currentPhotoIndex?: number;
+  bulkMode?: 'select' | 'all' | null;
+  selectedPhotos?: Set<string>;
+  onSelectionChange?: (photos: Set<string>) => void;
+  onBulkDownload?: () => void;
 }
 
 export default function ProfessionalGallery({
@@ -37,18 +41,34 @@ export default function ProfessionalGallery({
   eventId,
   onPhotoSelect,
   slideshowActive = false,
-  currentPhotoIndex = -1
+  currentPhotoIndex = -1,
+  bulkMode: externalBulkMode,
+  selectedPhotos: externalSelectedPhotos,
+  onSelectionChange,
+  onBulkDownload
 }: ProfessionalGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showLightbox, setShowLightbox] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [hoveredThumb, setHoveredThumb] = useState<string | null>(null);
-  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
-  const [bulkMode, setBulkMode] = useState<'select' | 'all' | null>(null);
+  const [localSelectedPhotos, setLocalSelectedPhotos] = useState<Set<string>>(new Set());
+  const [localBulkMode, setLocalBulkMode] = useState<'select' | 'all' | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Use parent state if provided, otherwise use local state
+  const bulkMode = externalBulkMode ?? localBulkMode;
+  const setBulkMode = (mode: 'select' | 'all' | null) => {
+    setLocalBulkMode(mode);
+  };
+
+  const selectedPhotos = externalSelectedPhotos ?? localSelectedPhotos;
+  const setSelectedPhotos = (photos: Set<string>) => {
+    setLocalSelectedPhotos(photos);
+    onSelectionChange?.(photos);
+  };
 
   // Convert photos to lightbox format
   const slides = photos.map(photo => ({
@@ -128,16 +148,14 @@ export default function ProfessionalGallery({
   // Toggle photo selection
   const handleToggleSelection = useCallback((photoId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSelectedPhotos(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(photoId)) {
-        newSet.delete(photoId);
-      } else {
-        newSet.add(photoId);
-      }
-      return newSet;
-    });
-  }, []);
+    const newSet = new Set(selectedPhotos);
+    if (newSet.has(photoId)) {
+      newSet.delete(photoId);
+    } else {
+      newSet.add(photoId);
+    }
+    setSelectedPhotos(newSet);
+  }, [selectedPhotos]);
 
   // Select/Deselect all
   const handleSelectAll = useCallback(() => {
@@ -346,12 +364,13 @@ export default function ProfessionalGallery({
               {/* Logo Watermark - Lower Right Corner */}
               {!photos[selectedIndex]?.isVideo && (
                 <div className="absolute bottom-6 right-6 opacity-15 pointer-events-none">
-                  <svg width="80" height="80" viewBox="0 0 100 100" className="text-gray-800">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" />
-                    <text x="50" y="58" fontSize="32" fontWeight="bold" textAnchor="middle" fill="currentColor" fontFamily="sans-serif">
-                      S
-                    </text>
-                  </svg>
+                  <img 
+                    src="/snapworxx logo (1).png" 
+                    alt="Snapworxx watermark"
+                    width="100"
+                    height="100"
+                    className="w-24 h-24"
+                  />
                 </div>
               )}
 
