@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import SnapworxxGallery from '@/components/SnapworxxGallery';
+import ProfessionalGallery from '@/components/ProfessionalGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function EventPage() {
@@ -21,6 +21,7 @@ export default function EventPage() {
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [headerImage, setHeaderImage] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Load real event from database
   useEffect(() => {
@@ -189,257 +190,137 @@ export default function EventPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
-      {/* Modern Header with Better Design */}
-      <div className="relative overflow-hidden">
-        {headerImage ? (
-          <div className="relative h-80 w-full">
-            <img 
-              src={headerImage} 
-              alt="Header background"
-              className="w-full h-full object-cover"
-            />
-            {/* Elegant overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-          </div>
-        ) : (
-          <div className="relative h-80 w-full" style={{backgroundColor: '#5d1ba6'}}>
-            {/* Subtle pattern overlay */}
-            <div className="absolute inset-0 opacity-30 bg-gradient-to-br from-white/10 via-transparent to-white/5"></div>
-            {/* Elegant overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-          </div>
+      <div className="flex h-screen bg-black overflow-hidden">
+        {/* SIDEBAR MENU - MOBILE OVERLAY */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
         )}
 
-        {/* Powered by SnapWorxx - More elegant */}
-        <div className="absolute top-6 right-6 z-10">
-          <div className="bg-white/95 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-white/20">
-            <span className="text-xs text-gray-500 font-medium">Powered by</span> 
-            <span className="text-xs font-bold ml-1" style={{color: '#5d1ba6'}}>SnapWorxx</span>
+        {/* LEFT SIDEBAR - MOBILE MENU */}
+        <div className={`fixed lg:static left-0 top-0 h-screen w-64 bg-gray-950 border-r border-gray-800 transform transition-transform duration-300 z-40 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col`}>
+          {/* Close Button (Mobile) */}
+          <div className="p-4 border-b border-gray-800 flex items-center justify-between lg:hidden">
+            <h2 className="font-light tracking-widest text-gray-300">MENU</h2>
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 hover:bg-gray-800 rounded transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        </div>
-      </div>
 
-      {/* Enhanced Hero Section */}
-      <div className="relative -mt-20 pt-20 pb-12">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          {/* Event Profile Image - More elegant */}
-          <div className="mb-8 relative">
-            <div className="w-40 h-40 mx-auto rounded-full p-1.5 shadow-2xl relative" style={{backgroundColor: '#5d1ba6'}}>
-              <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
-                {profileImage ? (
-                  <img 
-                    src={profileImage} 
-                    alt={eventData.name}
-                    className="w-full h-full object-cover rounded-full"
-                  />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-purple-50 flex items-center justify-center">
-                    <svg className="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
+          {/* Sidebar Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Event Info */}
+            <div className="border-b border-gray-800 pb-6">
+              <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Event</h3>
+              <p className="text-white font-light">{eventData?.name}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(eventData?.created_at).toLocaleDateString()}
+              </p>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="space-y-3">
+              <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Stats</h3>
+              <div className="bg-gray-900/50 rounded-lg p-3">
+                <p className="text-sm text-gray-400">Total Photos</p>
+                <p className="text-2xl font-light text-white">{photos.length}</p>
               </div>
-              {/* Glow effect - static to prevent animation loops */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400 opacity-20 blur-xl"></div>
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-gray-800 pt-6 space-y-2">
+              <Link 
+                href={`/e/${slug}/upload`}
+                className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-3 rounded-lg transition-colors"
+              >
+                + Upload Photos
+              </Link>
+              <button 
+                onClick={() => window.print()}
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 rounded-lg transition-colors text-sm"
+              >
+                Print Gallery
+              </button>
             </div>
           </div>
 
-          {/* Event Title with Real Data */}
-          <div className="mb-8">
-            <h1 className="text-5xl md:text-6xl font-bold mb-4 leading-tight" style={{color: '#5d1ba6'}}>
-              {eventData.name}
+          {/* Sidebar Footer */}
+          <div className="border-t border-gray-800 p-6 bg-gray-950/50">
+            <Link 
+              href="/"
+              className="text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              ← Back to Home
+            </Link>
+          </div>
+        </div>
+
+        {/* MAIN CONTENT */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* TOP BAR */}
+          <div className="bg-gradient-to-r from-gray-900 to-black border-b border-gray-800 px-6 py-4 flex items-center justify-between z-40">
+            {/* Mobile Menu Toggle */}
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors lg:hidden"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            {/* Title */}
+            <h1 className="text-lg font-light tracking-wide text-gray-100 flex-1 text-center lg:text-left">
+              {eventData?.name}
             </h1>
-            
-            {/* Show real event details */}
-            <div className="space-y-2">
-              {eventData.event_date && (
-                <p className="text-xl text-gray-600 font-light">
-                  {new Date(eventData.event_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
-              )}
-              <p className="text-xl md:text-2xl text-gray-600 font-light mb-2">Memories that last a lifetime</p>
-              <div className="flex items-center justify-center gap-2 text-lg">
-                <span className="text-2xl">✨</span>
-                <span className="text-gray-500">Share your moments</span>
-                <span className="text-2xl">📸</span>
-              </div>
-            </div>
+
+            {/* Upload Button (Desktop) */}
+            <Link 
+              href={`/e/${slug}/upload`}
+              className="hidden lg:inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+            >
+              + Upload
+            </Link>
           </div>
 
-          {/* Real Event Stats */}
-          <div className="flex justify-center gap-6 mb-8">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-white/20">
-              <div className="text-2xl font-bold text-indigo-600">{photos.length}</div>
-              <div className="text-sm text-gray-600 font-medium">Photos</div>
+          {/* GALLERY CONTENT */}
+          {photos.length > 0 ? (
+            <div className="flex-1 overflow-hidden">
+              <ProfessionalGallery 
+                photos={photos.map(photo => ({
+                  id: photo.id,
+                  url: photo.url,
+                  thumbnail: photo.thumbnail_url || photo.url,
+                  title: photo.title || photo.filename,
+                  description: photo.description,
+                  uploadedAt: photo.created_at,
+                  isVideo: photo.is_video || false,
+                  duration: photo.duration,
+                  size: photo.size
+                }))}
+                eventId={eventData.id}
+              />
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-lg border border-white/20">
-              <div className="text-2xl font-bold text-purple-600">
-                {eventData.status === 'active' ? '🟢' : '🔴'}
-              </div>
-              <div className="text-sm text-gray-600 font-medium capitalize">{eventData.status || 'Active'}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 pb-12">
-        {/* Photo Gallery or Empty State */}
-        {photos.length > 0 ? (
-          <>
-            {/* Layout Switch and Upload Button */}
-            <div className="mb-12 flex flex-col sm:flex-row items-center justify-between gap-6">
-              {/* Layout Switch */}
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-white/20">
-                <button
-                  onClick={() => setLayout('masonry')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    layout === 'masonry'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h8v8H3v-8zm10 3h8v5h-8v-5z"/>
-                  </svg>
-                  Masonry
-                </button>
-                <button
-                  onClick={() => setLayout('grid')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    layout === 'grid'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/>
-                  </svg>
-                  Grid
-                </button>
-              </div>
-
-              {/* Upload Link */}
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
               <div className="text-center">
+                <div className="text-6xl mb-4">📷</div>
+                <h2 className="text-2xl font-light text-gray-300 mb-4">No photos yet</h2>
+                <p className="text-gray-500 mb-6">Be the first to share your moments</p>
                 <Link 
                   href={`/e/${slug}/upload`}
-                  className="group relative text-white font-semibold px-10 py-4 rounded-2xl shadow-xl transition-colors duration-300 inline-block hover:opacity-90"
-                  style={{backgroundColor: '#5d1ba6'}}
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
                 >
-                  <span className="relative z-10 flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    Upload Photos & Videos
-                  </span>
-                  {/* Glow effect */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 opacity-50 blur-xl group-hover:opacity-70 transition-opacity duration-300"></div>
+                  Upload Photos
                 </Link>
               </div>
             </div>
-            
-
-            
-            <SnapworxxGallery 
-              photos={photos.map(photo => ({
-                id: photo.id,
-                url: photo.url,
-                thumbnail: photo.thumbnail_url || photo.url,
-                title: photo.title || photo.filename,
-                description: photo.description,
-                uploadedAt: photo.created_at,
-                isVideo: photo.is_video || false,
-                duration: photo.duration,
-                size: photo.size,
-                likes: photo.likes || 0,
-                isFavorite: photo.is_favorite || false
-              }))}
-              eventId={eventData.id}
-
-              onDelete={(photoId: string) => {
-                console.log('Delete photo:', photoId);
-                // TODO: Implement delete functionality
-              }}
-              onToggleFavorite={(photoId: string) => {
-                console.log('Toggle favorite:', photoId);
-                // TODO: Implement favorite toggle
-              }}
-            />
-          </>
-        ) : (
-          /* Enhanced Empty State */
-          <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-16 text-center max-w-2xl mx-auto border border-white/20">
-            {/* Beautiful Upload Illustration */}
-            <div className="mb-12">
-              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mb-6 shadow-lg">
-                <svg className="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              
-              {/* Elegant floating elements - static to prevent loops */}
-              <div className="flex justify-center items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-indigo-200 to-purple-200 rounded-2xl flex items-center justify-center shadow-md">
-                  <span className="text-lg">📸</span>
-                </div>
-                <div className="w-2 h-2 bg-indigo-300 rounded-full"></div>
-                <div className="w-2 h-2 bg-purple-300 rounded-full"></div>
-                <div className="w-2 h-2 bg-pink-300 rounded-full"></div>
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-200 to-pink-200 rounded-2xl flex items-center justify-center shadow-md">
-                  <span className="text-lg">✨</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Inspiring Empty State Text for Real Events */}
-            <h3 className="text-3xl font-bold mb-4" style={{color: '#5d1ba6'}}>
-              Let's Create Magic Together
-            </h3>
-            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Be the first to share your amazing moments from <strong>{eventData.name}</strong>.<br/>
-              Your photos will inspire others to join and contribute! 🌟
-            </p>
-
-            {/* Upload Link */}
-            <Link 
-              href={`/e/${slug}/upload`}
-              className="group relative text-white font-bold px-12 py-5 rounded-2xl shadow-xl transition-colors duration-300 inline-block hover:opacity-90"
-              style={{backgroundColor: '#5d1ba6'}}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3 text-lg">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Upload Your First Photo
-              </span>
-              {/* Animated glow - static to prevent loops */}
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 opacity-50 blur-xl"></div>
-            </Link>
-
-
-          </div>
-        )}
-
-        {/* Enhanced Back Navigation */}
-        <div className="mt-16 text-center">
-          <Link 
-            href="/" 
-            className="group inline-flex items-center gap-3 text-gray-600 hover:text-indigo-600 transition-colors duration-300 bg-white/80 backdrop-blur-sm px-6 py-3 rounded-2xl shadow-lg border border-white/20"
-          >
-            <svg className="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-medium">Back to Home</span>
-          </Link>
+          )}
         </div>
       </div>
-    </div>
     </ErrorBoundary>
   );
 }
