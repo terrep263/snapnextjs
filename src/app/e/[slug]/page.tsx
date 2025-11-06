@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Menu, X } from 'lucide-react';
+import { Loader2, Menu, X, Play, Pause } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ProfessionalGallery from '@/components/ProfessionalGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -22,6 +22,8 @@ export default function EventPage() {
   const [headerImage, setHeaderImage] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [slideshowActive, setSlideshowActive] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Load real event from database
   useEffect(() => {
@@ -34,6 +36,17 @@ export default function EventPage() {
       loadPhotos();
     }
   }, [eventData]);
+
+  // Slideshow auto-advance effect
+  useEffect(() => {
+    if (!slideshowActive || photos.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+    }, 4000); // Change photo every 4 seconds
+
+    return () => clearInterval(interval);
+  }, [slideshowActive, photos.length]);
 
   const loadEvent = async () => {
     if (!slug) return;
@@ -234,6 +247,26 @@ export default function EventPage() {
 
             {/* Actions */}
             <div className="border-t border-gray-800 pt-6 space-y-2">
+              <button
+                onClick={() => setSlideshowActive(!slideshowActive)}
+                className={`w-full flex items-center justify-center gap-2 font-medium py-3 rounded-lg transition-colors ${
+                  slideshowActive
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
+              >
+                {slideshowActive ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Stop Slideshow
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Start Slideshow
+                  </>
+                )}
+              </button>
               <Link 
                 href={`/e/${slug}/upload`}
                 className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-medium py-3 rounded-lg transition-colors"
@@ -310,6 +343,8 @@ export default function EventPage() {
                   };
                 })}
                 eventId={eventData.id}
+                slideshowActive={slideshowActive}
+                currentPhotoIndex={currentPhotoIndex}
               />
             </div>
           ) : (

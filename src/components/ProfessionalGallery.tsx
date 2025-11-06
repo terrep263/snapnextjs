@@ -27,12 +27,16 @@ interface ProfessionalGalleryProps {
   photos: GalleryPhoto[];
   eventId: string;
   onPhotoSelect?: (photo: GalleryPhoto, index: number) => void;
+  slideshowActive?: boolean;
+  currentPhotoIndex?: number;
 }
 
 export default function ProfessionalGallery({
   photos = [],
   eventId,
-  onPhotoSelect
+  onPhotoSelect,
+  slideshowActive = false,
+  currentPhotoIndex = -1
 }: ProfessionalGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showLightbox, setShowLightbox] = useState(false);
@@ -64,6 +68,13 @@ export default function ProfessionalGallery({
   const handleNext = useCallback(() => {
     setSelectedIndex(prev => (prev + 1) % photos.length);
   }, [photos.length]);
+
+  // Sync with slideshow index when active
+  useEffect(() => {
+    if (slideshowActive && currentPhotoIndex >= 0) {
+      setSelectedIndex(currentPhotoIndex);
+    }
+  }, [slideshowActive, currentPhotoIndex]);
 
   // Scroll selected thumbnail into view
   useEffect(() => {
