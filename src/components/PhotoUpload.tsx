@@ -67,17 +67,55 @@ export default function SimplePhotoUpload({
         newProgress[fileName] = 25;
         setProgress({ ...newProgress });
 
-        // Step 3: Upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('photos')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
+        console.log(`📤 Starting upload: ${fileName} (${sizeMB.toFixed(1)}MB)`);
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(uploadError.message || 'Upload failed');
+        // Step 3: Upload to Supabase Storage with timeout and progress
+        const uploadTimeout = Math.max(120000, sizeMB * 2000); // 2 seconds per MB, minimum 2 minutes
+        console.log(`⏱️ Upload timeout set to: ${(uploadTimeout / 1000).toFixed(0)} seconds`);
+
+        // Simulate progress during upload
+        const progressInterval = setInterval(() => {
+          if (newProgress[fileName] < 55) {
+            newProgress[fileName] = Math.min(newProgress[fileName] + 5, 55);
+            setProgress({ ...newProgress });
+          }
+        }, 2000);
+
+        try {
+          const uploadPromise = supabase.storage
+            .from('photos')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`Upload timeout after ${(uploadTimeout / 1000).toFixed(0)} seconds`)), uploadTimeout)
+          );
+
+          const { data: uploadData, error: uploadError } = await Promise.race([
+            uploadPromise,
+            timeoutPromise
+          ]);
+
+          clearInterval(progressInterval);
+
+          if (uploadError) {
+            console.error('❌ Upload error:', uploadError);
+            console.error('Error details:', {
+              message: uploadError.message,
+              statusCode: (uploadError as any).statusCode,
+              fileName: fileName,
+              fileSize: sizeMB.toFixed(1) + 'MB'
+            });
+            throw new Error(uploadError.message || 'Upload failed');
+          }
+
+          console.log('✅ Upload complete:', fileName);
+
+        } catch (error) {
+          clearInterval(progressInterval);
+          throw error;
         }
 
         newProgress[fileName] = 60;
