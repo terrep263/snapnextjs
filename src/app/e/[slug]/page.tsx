@@ -41,12 +41,22 @@ export default function EventPage() {
   useEffect(() => {
     if (!slideshowActive || photos.length === 0) return;
 
-    const interval = setInterval(() => {
-      setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
-    }, 4000); // Change photo every 4 seconds
+    const advanceSlideshow = () => {
+      setCurrentPhotoIndex((prev) => {
+        let nextIndex = (prev + 1) % photos.length;
+        // Skip videos in slideshow - advance to next photo
+        while (photos[nextIndex]?.isVideo && nextIndex !== prev) {
+          nextIndex = (nextIndex + 1) % photos.length;
+        }
+        return nextIndex;
+      });
+    };
+
+    // Change photo every 6 seconds (gives more time for photos to be viewed)
+    const interval = setInterval(advanceSlideshow, 6000);
 
     return () => clearInterval(interval);
-  }, [slideshowActive, photos.length]);
+  }, [slideshowActive, photos.length, photos]);
 
   const loadEvent = async () => {
     if (!slug) return;
