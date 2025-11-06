@@ -264,26 +264,25 @@ export default function EventPage() {
   return (
     <ErrorBoundary>
       <div 
-        className="flex h-screen bg-black overflow-hidden"
+        className="flex h-screen overflow-hidden relative"
         style={{
-          backgroundImage: `url('/snapworxx logo (1).png')`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '200px 200px',
-          backgroundPosition: '0 0',
-          backgroundColor: '#000000'
+          background: `
+            repeating-linear-gradient(
+              45deg,
+              #0a0a0a 0px,
+              #0a0a0a 10px,
+              #111111 10px,
+              #111111 20px
+            ),
+            linear-gradient(
+              135deg,
+              rgba(147, 51, 234, 0.08) 0%,
+              rgba(147, 51, 234, 0.04) 100%
+            )
+          `,
+          backgroundColor: '#0a0a0a'
         }}
       >
-        {/* Background overlay with opacity to ensure logo visibility at 15% */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: `url('/snapworxx logo (1).png')`,
-            backgroundRepeat: 'repeat',
-            backgroundSize: '200px 200px',
-            opacity: 0.15,
-            zIndex: 0
-          }}
-        />
         {/* SIDEBAR MENU - MOBILE OVERLAY */}
         {sidebarOpen && (
           <div 
