@@ -1,5 +1,5 @@
 
-import { createSupabaseServerClient } from '@/utils/supabaseServer'; // adjust to your import
+import { getServiceRoleClient } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
     }
 
-    const supabase = createSupabaseServerClient();
+    const supabase = getServiceRoleClient();
 
     const { data: existingEvents } = await supabase
       .from('events')
