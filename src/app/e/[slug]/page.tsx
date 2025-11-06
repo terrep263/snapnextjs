@@ -264,23 +264,9 @@ export default function EventPage() {
   return (
     <ErrorBoundary>
       <div 
-        className="flex h-screen overflow-hidden relative"
+        className="flex h-screen overflow-hidden relative bg-white"
         style={{
-          background: `
-            repeating-linear-gradient(
-              45deg,
-              #0a0a0a 0px,
-              #0a0a0a 10px,
-              #111111 10px,
-              #111111 20px
-            ),
-            linear-gradient(
-              135deg,
-              rgba(147, 51, 234, 0.08) 0%,
-              rgba(147, 51, 234, 0.04) 100%
-            )
-          `,
-          backgroundColor: '#0a0a0a'
+          backgroundColor: '#ffffff'
         }}
       >
         {/* SIDEBAR MENU - MOBILE OVERLAY */}
@@ -292,13 +278,13 @@ export default function EventPage() {
         )}
 
         {/* LEFT SIDEBAR - MOBILE MENU */}
-        <div className={`fixed lg:static left-0 top-0 h-screen w-64 bg-gray-950 border-r border-gray-800 transform transition-transform duration-300 z-40 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col relative`}>
+        <div className={`fixed lg:static left-0 top-0 h-screen w-64 bg-gray-50 border-r border-gray-200 transform transition-transform duration-300 z-40 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} flex flex-col relative`}>
           {/* Close Button (Mobile) */}
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between lg:hidden">
-            <h2 className="font-light tracking-widest text-gray-300">MENU</h2>
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between lg:hidden">
+            <h2 className="font-light tracking-widest text-gray-700">MENU</h2>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-2 hover:bg-gray-800 rounded transition-colors"
+              className="p-2 hover:bg-gray-200 rounded transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -307,9 +293,9 @@ export default function EventPage() {
           {/* Sidebar Content */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Event Info */}
-            <div className="border-b border-gray-800 pb-6">
+            <div className="border-b border-gray-200 pb-6">
               <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Event</h3>
-              <p className="text-white font-light">{eventData?.name}</p>
+              <p className="text-gray-900 font-light">{eventData?.name}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {new Date(eventData?.created_at).toLocaleDateString()}
               </p>
@@ -318,9 +304,9 @@ export default function EventPage() {
             {/* Quick Stats */}
             <div className="space-y-3">
               <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Stats</h3>
-              <div className="bg-gray-900/50 rounded-lg p-3">
-                <p className="text-sm text-gray-400">Total Photos</p>
-                <p className="text-2xl font-light text-white">{photos.length}</p>
+              <div className="bg-purple-50 rounded-lg p-3">
+                <p className="text-sm text-gray-600">Total Photos</p>
+                <p className="text-2xl font-light text-gray-900">{photos.length}</p>
               </div>
             </div>
 

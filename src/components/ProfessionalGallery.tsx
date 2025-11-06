@@ -188,10 +188,10 @@ export default function ProfessionalGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-b from-gray-900 to-black">
+      <div className="w-full h-full flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="text-6xl mb-4">📷</div>
-          <h2 className="text-2xl font-light text-gray-300 mb-2">No Photos Yet</h2>
+          <h2 className="text-2xl font-light text-gray-800 mb-2">No Photos Yet</h2>
           <p className="text-gray-500">Upload photos to get started</p>
         </div>
       </div>
@@ -199,19 +199,19 @@ export default function ProfessionalGallery({
   }
 
   return (
-    <div className="flex h-full w-full bg-black">
+    <div className="flex h-full w-full bg-white">
       {/* LEFT SIDEBAR - THUMBNAILS */}
       <motion.div
         ref={sidebarRef}
         initial={{ width: 160 }}
         animate={{ width: sidebarHovered ? 200 : 160 }}
-        className="bg-gradient-to-b from-gray-950 to-black border-r border-gray-800 overflow-hidden flex flex-col"
+        className="bg-gray-50 border-r border-gray-200 overflow-hidden flex flex-col"
         onMouseEnter={() => setSidebarHovered(true)}
         onMouseLeave={() => setSidebarHovered(false)}
       >
         {/* Sidebar Header */}
-        <div className="px-3 py-4 border-b border-gray-800">
-          <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold">
+        <div className="px-3 py-4 border-b border-gray-200">
+          <h3 className="text-xs uppercase tracking-widest text-gray-600 font-semibold">
             {photos.length} {photos.length === 1 ? 'Photo' : 'Photos'}
           </h3>
         </div>
@@ -228,10 +228,10 @@ export default function ProfessionalGallery({
               onClick={() => handleThumbnailClick(index)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className={`w-full aspect-square rounded-lg overflow-hidden group relative transition-all duration-300 bg-gray-800 ${
+              className={`w-full aspect-square rounded-lg overflow-hidden group relative transition-all duration-300 bg-gray-200 ${
                 selectedIndex === index
-                  ? 'ring-2 ring-blue-500 shadow-lg shadow-blue-500/50'
-                  : 'hover:ring-2 hover:ring-gray-600'
+                  ? 'ring-2 ring-purple-600 shadow-lg shadow-purple-600/50'
+                  : 'hover:ring-2 hover:ring-gray-300'
               }`}
             >
               {/* Thumbnail Image - Different handling for videos and photos */}
@@ -308,7 +308,7 @@ export default function ProfessionalGallery({
 
         {/* Sidebar Footer Info */}
         {selectedIndex >= 0 && (
-          <div className="border-t border-gray-800 p-3 bg-gray-950/50 text-xs text-gray-500">
+          <div className="border-t border-gray-200 p-3 bg-gray-100 text-xs text-gray-600">
             <p>{selectedIndex + 1} of {photos.length}</p>
             {photos[selectedIndex]?.size && (
               <p>{(photos[selectedIndex].size / 1024 / 1024).toFixed(1)}MB</p>
@@ -320,7 +320,7 @@ export default function ProfessionalGallery({
       {/* RIGHT MAIN VIEW - LIGHTBOX */}
       <div className="flex-1 relative overflow-hidden">
         {selectedIndex >= 0 && !showLightbox && (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-black relative group cursor-pointer"
+          <div className="w-full h-full flex items-center justify-center bg-white relative group cursor-pointer"
             onClick={() => !photos[selectedIndex]?.isVideo && setShowLightbox(true)}
           >
             {/* Main Image Display */}
@@ -341,6 +341,18 @@ export default function ProfessionalGallery({
                   alt={photos[selectedIndex].title || 'Photo'}
                   className="w-full h-full object-contain"
                 />
+              )}
+
+              {/* Logo Watermark - Lower Right Corner */}
+              {!photos[selectedIndex]?.isVideo && (
+                <div className="absolute bottom-6 right-6 opacity-15 pointer-events-none">
+                  <svg width="80" height="80" viewBox="0 0 100 100" className="text-gray-800">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" />
+                    <text x="50" y="58" fontSize="32" fontWeight="bold" textAnchor="middle" fill="currentColor" fontFamily="sans-serif">
+                      S
+                    </text>
+                  </svg>
+                </div>
               )}
 
               {/* Hover Hint - Only for images */}
