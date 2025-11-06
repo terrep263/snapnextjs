@@ -290,17 +290,25 @@ export default function EventPage() {
           {photos.length > 0 ? (
             <div className="flex-1 overflow-hidden">
               <ProfessionalGallery 
-                photos={photos.map(photo => ({
-                  id: photo.id,
-                  url: photo.url,
-                  thumbnail: photo.thumbnail_url || photo.url,
-                  title: photo.title || photo.filename,
-                  description: photo.description,
-                  uploadedAt: photo.created_at,
-                  isVideo: photo.is_video || false,
-                  duration: photo.duration,
-                  size: photo.size
-                }))}
+                photos={photos.map(photo => {
+                  // Detect if video based on multiple factors
+                  const isVideoFromDb = photo.is_video === true;
+                  const isVideoFromMime = photo.mime_type?.startsWith('video/') || false;
+                  const isVideoFromFilename = /\.(mp4|mov|avi|mkv|webm|m4v)$/i.test(photo.filename || photo.url);
+                  const isVideo = isVideoFromDb || isVideoFromMime || isVideoFromFilename;
+                  
+                  return {
+                    id: photo.id,
+                    url: photo.url,
+                    thumbnail: photo.thumbnail_url || photo.url,
+                    title: photo.title || photo.filename,
+                    description: photo.description,
+                    uploadedAt: photo.created_at,
+                    isVideo,
+                    duration: photo.duration,
+                    size: photo.size
+                  };
+                })}
                 eventId={eventData.id}
               />
             </div>
