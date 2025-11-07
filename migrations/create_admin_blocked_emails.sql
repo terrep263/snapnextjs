@@ -12,7 +12,9 @@ CREATE INDEX IF NOT EXISTS idx_admin_blocked_emails_email ON public.admin_blocke
 -- Enable RLS (Row Level Security)
 ALTER TABLE public.admin_blocked_emails ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Service role can access all
+-- RLS Policy: Service role can access all (drop if exists, then create)
+DROP POLICY IF EXISTS "Service role can manage blocked emails" ON public.admin_blocked_emails;
+
 CREATE POLICY "Service role can manage blocked emails"
   ON public.admin_blocked_emails
   FOR ALL
