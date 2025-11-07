@@ -199,45 +199,40 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white">Loading admin dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900">
-      {/* Top Bar */}
-      <div className="bg-black/20 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Lock className="w-6 h-6 text-white" />
-            <div>
-              <h1 className="text-white font-bold text-lg">Promo Admin</h1>
-              <p className="text-gray-300 text-sm">{adminEmail}</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <div className="border-b border-gray-200 bg-white sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <img src="/snapworxx logo (1).png" alt="Snapworxx" className="w-8 h-8" />
+            <span className="text-lg font-bold text-gray-900">Snapworxx</span>
+          </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/admin/manage"
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors text-sm"
             >
-              <Users className="w-4 h-4" />
               Manage Admins
             </Link>
             <Link
               href="/admin/settings"
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors text-sm"
             >
-              <Zap className="w-4 h-4" />
               Settings
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors text-sm"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -247,153 +242,134 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Welcome Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mb-4">
+            <Lock className="w-6 h-6 text-purple-600" />
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+          <p className="text-xl text-gray-600">Manage your promotional events and settings</p>
+          <p className="text-sm text-gray-500 mt-2">Logged in as: <span className="font-semibold">{adminEmail}</span></p>
+        </div>
+
         {/* Messages */}
         {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-200">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
           </div>
         )}
         {message && (
-          <div className="mb-6 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-200">
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
             {message}
           </div>
         )}
 
         {/* Stats Grid */}
         {stats && (
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-300 text-sm">Total Events</p>
-                  <p className="text-white text-3xl font-bold">{stats.totalEvents}</p>
-                </div>
-                <Zap className="w-8 h-8 text-yellow-400" />
+          <div className="grid md:grid-cols-2 gap-6 mb-12">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border border-blue-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">TOTAL EVENTS</p>
+                <Zap className="w-5 h-5 text-blue-600" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.totalEvents}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-300 text-sm">Unique Emails</p>
-                  <p className="text-white text-3xl font-bold">{stats.totalEmails}</p>
-                </div>
-                <Users className="w-8 h-8 text-blue-400" />
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">UNIQUE EMAILS</p>
+                <Users className="w-5 h-5 text-green-600" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.totalEmails}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-300 text-sm">Blocked Emails</p>
-                  <p className="text-white text-3xl font-bold">{stats.blockedEmails}</p>
-                </div>
-                <Ban className="w-8 h-8 text-red-400" />
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">BLOCKED EMAILS</p>
+                <Ban className="w-5 h-5 text-red-600" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.blockedEmails}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-300 text-sm">Promo Status</p>
-                  <p className="text-white text-xl font-bold">{stats.statusEnabled ? '✅ Active' : '❌ Inactive'}</p>
-                </div>
-                <BarChart3 className="w-8 h-8 text-purple-400" />
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-gray-700">PROMO STATUS</p>
+                <BarChart3 className="w-5 h-5 text-purple-600" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">{stats.statusEnabled ? '✅ Active' : '❌ Inactive'}</p>
             </div>
           </div>
         )}
-
-        {/* Block Email Section */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 mb-8">
-          <h2 className="text-white text-xl font-bold mb-4 flex items-center gap-2">
-            <Ban className="w-5 h-5" />
-            Block Email from Promo
-          </h2>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={blockEmail}
-              onChange={(e) => setBlockEmail(e.target.value)}
-              placeholder="email@example.com"
-              className="flex-1 px-4 py-3 bg-white/20 border border-white/30 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            <button
-              onClick={handleBlockEmail}
-              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Ban className="w-4 h-4" />
-              Block
-            </button>
+        
+        {/* Events Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Events</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            {events.length > 0 ? (
+              <div className="space-y-4">
+                {events.map((event) => (
+                  <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                    <div>
+                      <Link href={`/e/${event.slug}`} target="_blank" className="text-lg font-semibold text-purple-600 hover:underline">
+                        {event.name}
+                      </Link>
+                      <p className="text-sm text-gray-500 mt-1">{event.email} • {event.photo_count || 0} photos • {new Date(event.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteEvent(event.id, event.name)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">No promo events created yet</p>
+            )}
           </div>
         </div>
 
-        {/* Blocked Emails */}
-        {blockedEmails.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 mb-8">
-            <h2 className="text-white text-xl font-bold mb-4">Blocked Emails ({blockedEmails.length})</h2>
-            <div className="space-y-2">
-              {blockedEmails.map((email) => (
-                <div key={email} className="flex items-center justify-between bg-black/20 p-3 rounded-lg">
-                  <span className="text-white">{email}</span>
-                  <button
-                    onClick={() => handleUnblockEmail(email)}
-                    className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-semibold rounded transition-colors"
-                  >
-                    Unblock
-                  </button>
-                </div>
-              ))}
+        {/* Block Email Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Block Email from Promo</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="flex gap-3 mb-6">
+              <input
+                type="email"
+                value={blockEmail}
+                onChange={(e) => setBlockEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+              />
+              <button
+                onClick={handleBlockEmail}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              >
+                <Ban className="w-4 h-4" />
+                Block
+              </button>
             </div>
-          </div>
-        )}
 
-        {/* Events List */}
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6">
-          <h2 className="text-white text-xl font-bold mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Promo Events ({events.length})
-          </h2>
-          {events.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/20">
-                    <th className="text-left px-4 py-3 text-gray-300">Event Name</th>
-                    <th className="text-left px-4 py-3 text-gray-300">Email</th>
-                    <th className="text-left px-4 py-3 text-gray-300">Photos</th>
-                    <th className="text-left px-4 py-3 text-gray-300">Created</th>
-                    <th className="text-right px-4 py-3 text-gray-300">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {events.map((event) => (
-                    <tr key={event.id} className="border-b border-white/10 hover:bg-white/5">
-                      <td className="px-4 py-3 text-white">
-                        <Link href={`/e/${event.slug}`} target="_blank" className="text-blue-400 hover:underline">
-                          {event.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{event.email}</td>
-                      <td className="px-4 py-3 text-gray-300">{event.photo_count || 0}</td>
-                      <td className="px-4 py-3 text-gray-400 text-sm">
-                        {new Date(event.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDeleteEvent(event.id, event.name)}
-                          className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
+            {/* Blocked Emails List */}
+            {blockedEmails.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-4">Blocked Emails ({blockedEmails.length})</h3>
+                <div className="space-y-2">
+                  {blockedEmails.map((email) => (
+                    <div key={email} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                      <span className="text-gray-900 text-sm">{email}</span>
+                      <button
+                        onClick={() => handleUnblockEmail(email)}
+                        className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold rounded transition-colors"
+                      >
+                        Unblock
+                      </button>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-gray-400 text-center py-8">No promo events created yet</p>
-          )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
