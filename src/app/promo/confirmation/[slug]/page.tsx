@@ -48,9 +48,9 @@ export default function ConfirmationPage() {
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  const shareViaSMS = () => {
-    const message = `Check out my event: ${eventUrl}`;
-    window.location.href = `sms:?body=${encodeURIComponent(message)}`;
+  const shareViaWhatsApp = () => {
+    const message = `Check out my event on Snapworxx! ${eventUrl}`;
+    window.location.href = `https://wa.me/?text=${encodeURIComponent(message)}`;
   };
 
   if (loading) {
@@ -188,11 +188,11 @@ export default function ConfirmationPage() {
               Email
             </button>
             <button
-              onClick={shareViaSMS}
+              onClick={shareViaWhatsApp}
               className="flex items-center justify-center gap-3 px-6 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-gray-700"
             >
               <MessageCircle className="w-5 h-5" />
-              SMS
+              WhatsApp
             </button>
             <button
               onClick={copyToClipboard}
