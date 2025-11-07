@@ -30,10 +30,10 @@ export default function QRCodeGenerator({ url, eventName, size = 256 }: QRCodeGe
         width: size,
         margin: 1,
         color: {
-          dark: '#7c3aed', // Purple
+          dark: '#000000', // Black QR code
           light: '#FFFFFF'
         },
-        errorCorrectionLevel: 'H' // High error correction for logo overlay
+        errorCorrectionLevel: 'H'
       });
       setQrCodeDataUrl(dataUrl);
       // Create styled version with canvas
@@ -47,12 +47,13 @@ export default function QRCodeGenerator({ url, eventName, size = 256 }: QRCodeGe
 
   const createStyledQRCode = (qrDataUrl: string) => {
     const canvas = document.createElement('canvas');
-    const borderSize = 60;
+    const padding = 80;
+    const topPadding = 100;
+    const bottomPadding = 80;
     const qrSize = size;
-    const canvasSize = qrSize + borderSize * 2;
     
-    canvas.width = canvasSize;
-    canvas.height = canvasSize + 80; // Extra space for text
+    canvas.width = qrSize + padding * 2;
+    canvas.height = qrSize + topPadding + bottomPadding;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -61,64 +62,136 @@ export default function QRCodeGenerator({ url, eventName, size = 256 }: QRCodeGe
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Purple border frame
-    const borderWidth = 12;
-    ctx.strokeStyle = '#7c3aed';
-    ctx.lineWidth = borderWidth;
-    const frameStart = borderSize - borderWidth / 2;
-    const frameSize = qrSize + borderWidth;
+    // Draw diamond pattern background
+    drawDiamondPattern(ctx, canvas.width, canvas.height);
     
-    // Draw border rectangle
-    ctx.strokeRect(frameStart, frameStart, frameSize, frameSize);
+    // Draw purple rounded border
+    drawRoundedBorder(ctx, padding, topPadding, qrSize, '#7c3aed', 16, 8);
+    
+    // Draw corner photo frames (4 purple squares)
+    drawCornerFrames(ctx, padding, topPadding, qrSize);
     
     // Draw QR code
     const qrImage = new window.Image();
     qrImage.onload = () => {
-      ctx.drawImage(qrImage, borderSize, borderSize, qrSize, qrSize);
+      ctx.drawImage(qrImage, padding, topPadding, qrSize, qrSize);
       
-      // Add purple circular logo/icon in center
-      const centerX = borderSize + qrSize / 2;
-      const centerY = borderSize + qrSize / 2;
-      const logoRadius = 30;
+      // Draw center circular logo with camera
+      const centerX = padding + qrSize / 2;
+      const centerY = topPadding + qrSize / 2;
+      drawCenterLogo(ctx, centerX, centerY);
       
-      // White circle background
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, logoRadius + 3, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Purple circle
+      // Draw top text
       ctx.fillStyle = '#7c3aed';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, logoRadius, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Draw camera icon inside circle (simple line representation)
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 2;
-      ctx.fillStyle = '#FFFFFF';
-      
-      // Camera body
-      const cameraX = centerX - 8;
-      const cameraY = centerY - 4;
-      ctx.fillRect(cameraX, cameraY, 16, 12);
-      ctx.strokeRect(cameraX, cameraY, 16, 12);
-      
-      // Camera lens
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-      ctx.stroke();
-      
-      // Add text below
-      ctx.fillStyle = '#7c3aed';
-      ctx.font = 'bold 20px Arial, sans-serif';
+      ctx.font = 'bold 14px Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('SNAPWORXX', canvas.width / 2, canvas.height - 20);
+      ctx.fillText('NEVER MISS THE MOMENTS', canvas.width / 2, 30);
+      
+      // Draw bottom text
+      ctx.fillStyle = '#7c3aed';
+      ctx.font = 'bold 18px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('snapworxx.com', canvas.width / 2, canvas.height - 20);
       
       // Convert to data URL
       setStyledQRDataUrl(canvas.toDataURL('image/png'));
     };
     qrImage.src = qrDataUrl;
+  };
+
+  const drawDiamondPattern = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    ctx.fillStyle = '#7c3aed';
+    const dotSize = 6;
+    const spacing = 20;
+    const opacity = 0.15;
+    ctx.globalAlpha = opacity;
+    
+    for (let x = 0; x < width; x += spacing) {
+      for (let y = 0; y < height; y += spacing) {
+        // Draw diamond shape (rotated square)
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(-dotSize / 2, -dotSize / 2, dotSize, dotSize);
+        ctx.restore();
+      }
+    }
+    
+    ctx.globalAlpha = 1;
+  };
+
+  const drawRoundedBorder = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string, radius: number, borderWidth: number) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = borderWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    const borderX = x - 15;
+    const borderY = y - 15;
+    const borderSize = size + 30;
+    
+    // Draw rounded rectangle
+    ctx.beginPath();
+    ctx.moveTo(borderX + radius, borderY);
+    ctx.lineTo(borderX + borderSize - radius, borderY);
+    ctx.quadraticCurveTo(borderX + borderSize, borderY, borderX + borderSize, borderY + radius);
+    ctx.lineTo(borderX + borderSize, borderY + borderSize - radius);
+    ctx.quadraticCurveTo(borderX + borderSize, borderY + borderSize, borderX + borderSize - radius, borderY + borderSize);
+    ctx.lineTo(borderX + radius, borderY + borderSize);
+    ctx.quadraticCurveTo(borderX, borderY + borderSize, borderX, borderY + borderSize - radius);
+    ctx.lineTo(borderX, borderY + radius);
+    ctx.quadraticCurveTo(borderX, borderY, borderX + radius, borderY);
+    ctx.closePath();
+    ctx.stroke();
+  };
+
+  const drawCornerFrames = (ctx: CanvasRenderingContext2D, padding: number, topPadding: number, qrSize: number) => {
+    const frameSize = 30;
+    const frameThickness = 3;
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth = frameThickness;
+    
+    // Top-left
+    ctx.strokeRect(padding - 8, topPadding - 8, frameSize, frameSize);
+    // Top-right
+    ctx.strokeRect(padding + qrSize - frameSize + 8, topPadding - 8, frameSize, frameSize);
+    // Bottom-left
+    ctx.strokeRect(padding - 8, topPadding + qrSize - frameSize + 8, frameSize, frameSize);
+    // Bottom-right
+    ctx.strokeRect(padding + qrSize - frameSize + 8, topPadding + qrSize - frameSize + 8, frameSize, frameSize);
+  };
+
+  const drawCenterLogo = (ctx: CanvasRenderingContext2D, centerX: number, centerY: number) => {
+    const logoRadius = 28;
+    
+    // White circle background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, logoRadius + 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Purple circle
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, logoRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Camera icon (white)
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Camera body (trapezoid-like)
+    const bodyLeft = centerX - 10;
+    const bodyTop = centerY - 5;
+    ctx.strokeRect(bodyLeft, bodyTop, 20, 12);
+    
+    // Camera lens circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+    ctx.stroke();
   };
 
   const downloadQRCode = () => {
