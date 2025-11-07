@@ -8,16 +8,10 @@ function hashPassword(password: string): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, fullName, code } = body;
+    const { email, password, fullName } = body;
 
-    if (!email || !password || !fullName || !code) {
+    if (!email || !password || !fullName) {
       return new Response(JSON.stringify({ error: 'All fields required' }), { status: 400 });
-    }
-
-    // Verify bootstrap code
-    const bootstrapCode = process.env.ADMIN_BOOTSTRAP_CODE;
-    if (code !== bootstrapCode) {
-      return new Response(JSON.stringify({ error: 'Invalid bootstrap code' }), { status: 401 });
     }
 
     // Validate password strength
@@ -27,7 +21,7 @@ export async function POST(req: Request) {
 
     const supabase = getServiceRoleClient();
 
-    // Check if any admin already exists
+    // Check if any admin already exists (bootstrap only once)
     const { data: existingAdmins, error: checkError } = await supabase
       .from('admin_accounts')
       .select('id')

@@ -7,8 +7,6 @@ import Link from 'next/link';
 
 export default function AdminBootstrapPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'verify' | 'register'>('verify');
-  const [registrationCode, setRegistrationCode] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,39 +15,19 @@ export default function AdminBootstrapPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/admin/verify-bootstrap-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: registrationCode }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Invalid registration code');
-        setLoading(false);
-        return;
-      }
-
-      setSuccess('Code verified! Now create your admin account.');
-      setTimeout(() => setStep('register'), 1500);
-    } catch (err) {
-      console.error(err);
-      setError('Server error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!fullName.trim()) {
+      setError('Full name is required');
+      return;
+    }
+
+    if (!email.trim()) {
+      setError('Email is required');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -70,8 +48,7 @@ export default function AdminBootstrapPage() {
         body: JSON.stringify({ 
           email, 
           password, 
-          fullName,
-          code: registrationCode 
+          fullName
         }),
       });
 
@@ -103,8 +80,8 @@ export default function AdminBootstrapPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
               <Lock className="w-8 h-8 text-purple-600" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Setup</h1>
-            <p className="text-gray-600 mt-2">Create your first admin account</p>
+            <h1 className="text-3xl font-bold text-gray-900">Create Admin Account</h1>
+            <p className="text-gray-600 mt-2">Set up your first admin account</p>
           </div>
 
           {/* Messages */}
@@ -125,131 +102,86 @@ export default function AdminBootstrapPage() {
             </div>
           )}
 
-          {/* Step 1: Verify Code */}
-          {step === 'verify' && (
-            <form onSubmit={handleVerifyCode} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Bootstrap Registration Code
-                </label>
-                <input
-                  type="text"
-                  value={registrationCode}
-                  onChange={(e) => setRegistrationCode(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Enter the registration code from .env"
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  This code is provided by your system administrator
-                </p>
-              </div>
+          {/* Admin Account Form */}
+          <form onSubmit={handleRegister} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Your name"
+              />
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Verifying...
-                  </>
-                ) : (
-                  'Verify Code'
-                )}
-              </button>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="admin@snapworxx.com"
+              />
+            </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-900">
-                  <strong>Note:</strong> The bootstrap code is a one-time use code for creating the first admin account.
-                </p>
-              </div>
-            </form>
-          )}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Min 12 characters"
+              />
+              <p className="text-xs text-gray-500 mt-1">At least 12 characters</p>
+            </div>
 
-          {/* Step 2: Create Admin Account */}
-          {step === 'register' && (
-            <form onSubmit={handleRegister} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Your name"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Confirm your password"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="admin@snapworxx.com"
-                />
-              </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Creating Account...
+                </>
+              ) : (
+                'Create Admin Account'
+              )}
+            </button>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Min 12 characters"
-                />
-                <p className="text-xs text-gray-500 mt-1">At least 12 characters</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="Confirm your password"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Creating Account...
-                  </>
-                ) : (
-                  'Create Admin Account'
-                )}
-              </button>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-green-900">
-                  <strong>✓ Success!</strong> After creating this account, you can log in and manage other admins from the dashboard.
-                </p>
-              </div>
-            </form>
-          )}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-900">
+                <strong>Note:</strong> This creates your super admin account. You can manage additional admins from the dashboard after logging in.
+              </p>
+            </div>
+          </form>
         </div>
 
         {/* Back Link */}
