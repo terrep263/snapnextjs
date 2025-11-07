@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Settings, FileText, Home, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Settings, FileText, Home, ChevronRight, Map } from 'lucide-react';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
@@ -25,6 +25,12 @@ export default function AdminSidebar() {
       label: 'Settings',
       icon: Settings,
       description: 'Admin settings'
+    },
+    {
+      href: '/admin/resources',
+      label: 'Resources',
+      icon: Map,
+      description: 'All page URLs'
     },
   ];
 
