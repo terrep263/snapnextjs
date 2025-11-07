@@ -521,6 +521,16 @@ export default function EventPage() {
               {eventData?.name}
             </h1>
 
+            {/* Back to Event Setup Button (for promo events) */}
+            {eventData?.is_free && (
+              <Link 
+                href={`/promo/confirmation/${slug}`}
+                className="hidden md:inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              >
+                ← Setup
+              </Link>
+            )}
+
             {/* Upload Button (Desktop) */}
             <Link 
               href={`/e/${slug}/upload`}

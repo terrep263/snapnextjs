@@ -38,7 +38,15 @@ export default function FreeBasicPromoPage() {
         return;
       }
 
-      router.push(`/e/${data.slug}`);
+      // Store event data in sessionStorage for confirmation page
+      sessionStorage.setItem(`promo_event_${data.slug}`, JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password_hash: data.password_hash,
+        slug: data.slug
+      }));
+
+      router.push(`/promo/confirmation/${data.slug}`);
     } catch (err) {
       console.error(err);
       setError('Server error');

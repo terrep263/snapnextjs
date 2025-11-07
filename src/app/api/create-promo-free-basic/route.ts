@@ -70,7 +70,13 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Could not create event' }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true, slug: newEvent.slug }), { status: 200 });
+    return new Response(JSON.stringify({ 
+      success: true, 
+      slug: newEvent.slug,
+      name: newEvent.name,
+      email: newEvent.email,
+      password_hash: newEvent.password_hash
+    }), { status: 200 });
   } catch (err) {
     console.error('Unhandled error in promo free basic route', err);
     return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
