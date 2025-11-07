@@ -36,8 +36,8 @@ export default function TempNavigation() {
 
       {/* Desktop Navigation - Fixed Left Sidebar with Collapse */}
       <div className="fixed left-4 top-1/2 z-40 hidden -translate-y-1/2 transform md:block">
-        <div className={`rounded-lg bg-white/95 shadow-lg backdrop-blur-sm transition-all duration-300 ${
-          isCollapsed ? 'p-3' : 'p-6'
+        <div className={`rounded-lg bg-white/95 shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out ${
+          isCollapsed ? 'p-3 w-20' : 'p-6 w-56'
         }`}>
           {/* Collapse Toggle Button */}
           <button
@@ -49,7 +49,11 @@ export default function TempNavigation() {
           </button>
 
           {/* Logo and Title */}
-          <div className={`mb-6 flex flex-col items-center gap-2 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>
+          <div className={`flex flex-col items-center gap-2 overflow-hidden transition-all duration-300 ${
+            isCollapsed 
+              ? 'mb-0 h-0 opacity-0' 
+              : 'mb-6 h-auto opacity-100'
+          }`}>
             <img 
               src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
@@ -66,15 +70,15 @@ export default function TempNavigation() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center rounded-md transition-colors hover:bg-purple-100 hover:text-purple-700 ${
+                  className={`flex items-center rounded-md transition-all duration-300 hover:bg-purple-100 hover:text-purple-700 ${
                     isCollapsed 
                       ? 'justify-center p-2' 
                       : 'gap-3 px-3 py-2 text-sm font-medium text-gray-700'
                   }`}
                   title={isCollapsed ? item.label : ''}
                 >
-                  <Icon className={isCollapsed ? 'h-5 w-5' : 'h-4 w-4'} />
-                  {!isCollapsed && <span className="text-sm font-medium text-gray-700">{item.label}</span>}
+                  <Icon className={isCollapsed ? 'h-5 w-5 flex-shrink-0' : 'h-4 w-4 flex-shrink-0'} />
+                  {!isCollapsed && <span className="text-sm font-medium text-gray-700 whitespace-nowrap">{item.label}</span>}
                 </Link>
               );
             })}
