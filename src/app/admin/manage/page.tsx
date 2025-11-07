@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Edit2, Trash2, AlertCircle, CheckCircle, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface AdminAccount {
   id: string;
@@ -201,15 +202,13 @@ export default function AdminManagePage() {
       {/* Navigation Bar */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-gray-900">SnapWorxx</span>
-              <span className="text-xs text-gray-600">Admin</span>
-            </div>
-          </div>
+          <Image 
+            src="/purple logo/purplelogo.png" 
+            alt="SnapWorxx Logo" 
+            width={40} 
+            height={40}
+            className="object-contain"
+          />
           <div className="flex items-center gap-3">
             <Link
               href="/admin/dashboard"

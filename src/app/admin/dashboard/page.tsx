@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface PromoStats {
   totalEvents: number;
@@ -213,9 +214,8 @@ export default function AdminDashboardPage() {
       {/* Navigation */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/snapworxx logo (1).png" alt="Snapworxx" className="w-8 h-8" />
-            <span className="text-lg font-bold text-gray-900">Snapworxx</span>
+          <Link href="/">
+            <Image src="/purple logo/purplelogo.png" alt="SnapWorxx" width={32} height={32} className="object-contain" />
           </Link>
           <div className="flex items-center gap-3">
             <Link

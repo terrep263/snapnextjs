@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Setting {
   enabled: boolean;
