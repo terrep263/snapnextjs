@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks } from 'lucide-react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -31,17 +31,22 @@ export default function SimpleEventGallery({
   profileImage,
   photos
 }: SimpleEventGalleryProps) {
+  console.log('🎨 SimpleEventGallery mounted:', { eventName, headerImage, profileImage, photosCount: photos.length });
+  
   const [navOpen, setNavOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [bulkMode, setBulkMode] = useState<'select' | 'all' | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build gallery items including header and profile images
   const allItems: GalleryItem[] = [];
   if (headerImage) {
+    console.log('📸 Adding header image to gallery:', headerImage);
     allItems.push({
       id: 'header',
       url: headerImage,
@@ -50,6 +55,7 @@ export default function SimpleEventGallery({
     });
   }
   if (profileImage) {
+    console.log('👤 Adding profile image to gallery:', profileImage);
     allItems.push({
       id: 'profile',
       url: profileImage,
@@ -58,6 +64,7 @@ export default function SimpleEventGallery({
     });
   }
   allItems.push(...photos);
+  console.log('📊 Total gallery items:', allItems.length);
 
   // Slideshow effect
   useEffect(() => {
@@ -193,6 +200,80 @@ export default function SimpleEventGallery({
                       </>
                     )}
                   </button>
+                </div>
+
+                {/* Select Controls */}
+                <div className="space-y-2 pt-4 border-t border-gray-800">
+                  <button
+                    onClick={() => setSelectMode(!selectMode)}
+                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
+                      selectMode
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    }`}
+                  >
+                    <ListChecks className="w-5 h-5" />
+                    {selectMode ? 'Selection Mode ON' : 'Enter Selection Mode'}
+                  </button>
+                </div>
+
+                {/* Share Controls */}
+                <div className="space-y-2 pt-4 border-t border-gray-800">
+                  <button
+                    onClick={() => setShareOpen(!shareOpen)}
+                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
+                      shareOpen
+                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                    }`}
+                  >
+                    <Share2 className="w-5 h-5" />
+                    Share Gallery
+                  </button>
+                  
+                  {shareOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="bg-gray-800 p-4 rounded-lg space-y-2"
+                    >
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          alert('Gallery link copied to clipboard!');
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
+                      >
+                        📋 Copy Link
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (navigator.share) {
+                            navigator.share({
+                              title: eventName,
+                              text: `Check out this gallery: ${eventName}`,
+                              url: window.location.href,
+                            });
+                          } else {
+                            alert('Share not supported on this device');
+                          }
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
+                      >
+                        🔗 Share via Device
+                      </button>
+                      <button
+                        onClick={() => {
+                          const text = `Check out this gallery: ${eventName} - ${window.location.href}`;
+                          window.open(`mailto:?subject=${encodeURIComponent(eventName)}&body=${encodeURIComponent(text)}`);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
+                      >
+                        ✉️ Share via Email
+                      </button>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Download Controls */}
@@ -425,10 +506,18 @@ export default function SimpleEventGallery({
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="break-inside-avoid group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className={`break-inside-avoid group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer ${
+                selectMode && selectedItems.has(item.id)
+                  ? 'ring-2 ring-green-500 shadow-green-500/50'
+                  : ''
+              }`}
               onClick={() => {
-                setSelectedIndex(index);
-                setSlideshowActive(false);
+                if (selectMode) {
+                  toggleItemSelection(item.id);
+                } else {
+                  setSelectedIndex(index);
+                  setSlideshowActive(false);
+                }
               }}
             >
               {/* Image */}
@@ -458,8 +547,8 @@ export default function SimpleEventGallery({
                   </div>
                 </div>
 
-                {/* Selection Checkbox (in bulk mode) */}
-                {bulkMode === 'select' && (
+                {/* Selection Checkbox (in bulk mode or select mode) */}
+                {(bulkMode === 'select' || selectMode) && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

@@ -69,11 +69,14 @@ export default function EventPage() {
         setEventData(event);
         
         // Load images from database
+        console.log('🖼️ Event images:', { header: event.header_image, profile: event.profile_image });
         if (event.header_image) {
           setHeaderImage(event.header_image);
+          console.log('✅ Header image set:', event.header_image);
         }
         if (event.profile_image) {
           setProfileImage(event.profile_image);
+          console.log('✅ Profile image set:', event.profile_image);
         }
       } else {
         // Event not found
