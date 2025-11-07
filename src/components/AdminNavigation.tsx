@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Lock, Settings, BarChart3, Shield, Zap } from 'lucide-react';
+import { ChevronRight, Lock, Settings, BarChart3, Shield } from 'lucide-react';
 
 interface AdminLink {
   href: string;
@@ -45,16 +45,6 @@ export default function AdminNavigation() {
       description: 'Configure admin panel preferences',
       icon: <Settings className="h-5 w-5" />,
       category: 'Settings'
-    },
-    
-    // System Section
-    {
-      href: '/admin/bootstrap',
-      label: 'Bootstrap/Setup',
-      description: 'Initialize and configure system',
-      icon: <Zap className="h-5 w-5" />,
-      category: 'System',
-      requiresAuth: false
     },
   ];
 
