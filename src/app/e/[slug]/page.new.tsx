@@ -62,8 +62,7 @@ export default function EventPage() {
         if (event.password_hash) {
           setPasswordRequired(true);
           setLoading(false);
-          setEventData(event);
-          return; // Don't load photos yet, wait for password
+          return; // Don't set eventData yet, wait for password
         }
         
         setEventData(event);
@@ -96,6 +95,9 @@ export default function EventPage() {
     if (!eventData?.id) return;
     
     try {
+      setLoading(true);
+      setError(null);
+      
       console.log('📸 Loading photos for event:', eventData.id);
       
       const { data, error: fetchError } = await supabase
@@ -116,6 +118,8 @@ export default function EventPage() {
       console.error('❌ Error loading photos:', errorMessage);
       setError(errorMessage);
       setPhotos([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -134,8 +138,7 @@ export default function EventPage() {
         // Password correct - store it in session
         sessionStorage.setItem(`event_${slug}_authenticated`, 'true');
         setPasswordRequired(false);
-        // Now load photos
-        loadPhotos();
+        // Photos are already loaded, just allow viewing
       } else {
         setPasswordError('Incorrect password');
       }
@@ -234,8 +237,7 @@ export default function EventPage() {
           uploadedAt: photo.created_at,
           isVideo: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/'),
           duration: photo.duration,
-          size: photo.size,
-          type: 'photo'
+          size: photo.size
         }))}
       />
     </ErrorBoundary>
