@@ -28,10 +28,21 @@ export async function POST(req: Request) {
     const supabase = getServiceRoleClient();
 
     // Check if any admin already exists
-    const { data: existingAdmins } = await supabase
+    const { data: existingAdmins, error: checkError } = await supabase
       .from('admin_accounts')
       .select('id')
       .limit(1);
+
+    if (checkError) {
+      console.error('Database check error:', checkError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database error. Make sure admin_accounts table exists.',
+          details: checkError.message 
+        }), 
+        { status: 500 }
+      );
+    }
 
     if (existingAdmins && existingAdmins.length > 0) {
       return new Response(JSON.stringify({ error: 'Admin account already exists. Use login page.' }), { status: 409 });
