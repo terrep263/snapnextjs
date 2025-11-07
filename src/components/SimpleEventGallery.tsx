@@ -156,6 +156,41 @@ export default function SimpleEventGallery({
 
   return (
     <div className="min-h-screen bg-white">
+      {/* HERO SECTION with Header and Profile Images */}
+      {(headerImage || profileImage) && (
+        <div className="relative w-full">
+          {/* Header Banner */}
+          {headerImage && (
+            <div className="relative w-full h-64 md:h-80 lg:h-96 overflow-hidden bg-gray-200">
+              <img
+                src={headerImage}
+                alt="Event Header"
+                className="w-full h-full object-cover"
+              />
+              {/* Optional overlay gradient */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30"></div>
+            </div>
+          )}
+          
+          {/* Profile Section */}
+          <div className="relative -mt-20 z-10 flex flex-col items-center px-4 pb-8">
+            {profileImage && (
+              <img
+                src={profileImage}
+                alt="Event Profile"
+                className="w-40 h-40 rounded-full border-4 border-white shadow-lg object-cover"
+              />
+            )}
+            <h1 className="mt-6 text-4xl md:text-5xl font-bold text-gray-900 text-center">
+              {eventName}
+            </h1>
+          </div>
+
+          {/* Divider */}
+          <div className="w-full h-px bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
+        </div>
+      )}
+
       {/* SLIDE-OUT NAVIGATION */}
       <AnimatePresence>
         {navOpen && (
@@ -510,8 +545,12 @@ export default function SimpleEventGallery({
         </AnimatePresence>
 
         {/* MASONRY GRID */}
-        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
-          {allItems.map((item, index) => (
+        <div className="p-4 md:p-6">
+          <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+            {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item, index) => {
+              // Adjust index for filtered items
+              const actualIndex = allItems.findIndex(i => i.id === item.id);
+              return (
             <motion.div
               key={item.id}
               layout
@@ -595,11 +634,13 @@ export default function SimpleEventGallery({
                 </div>
               )}
             </motion.div>
-          ))}
+              );
+            })}
+          </div>
         </div>
 
         {/* Empty State */}
-        {allItems.length === 0 && (
+        {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').length === 0 && (
           <div className="text-center py-24">
             <div className="text-6xl mb-4">📷</div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">No photos yet</h2>
