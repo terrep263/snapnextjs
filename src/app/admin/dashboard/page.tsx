@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import AdminSidebar from '@/components/AdminSidebar';
 
 interface PromoStats {
   totalEvents: number;
@@ -210,7 +211,9 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="flex min-h-screen bg-gray-50">
+      <AdminSidebar />
+      <div className="flex-1">
       {/* Navigation */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -371,6 +374,7 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { LogIn, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import AdminNavigation from '@/components/AdminNavigation';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <AdminNavigation />
+      
       {/* Navigation */}
       <div className="border-b border-gray-200 bg-white sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center">
