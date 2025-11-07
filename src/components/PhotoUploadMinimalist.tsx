@@ -62,6 +62,25 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
       throw new Error('Event information is missing. Please refresh the page and try again.');
     }
 
+    // Check photo limit for free promo events
+    if (eventData.is_free && eventData.max_photos) {
+      const { data: existingPhotos, error: countError } = await supabase
+        .from('photos')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventData.id);
+      
+      const currentPhotoCount = existingPhotos?.length || 0;
+      const remainingSlots = eventData.max_photos - currentPhotoCount;
+      
+      if (remainingSlots <= 0) {
+        throw new Error(`Photo limit reached! This free event has a maximum of ${eventData.max_photos} photos.`);
+      }
+      
+      if (files.length > remainingSlots) {
+        throw new Error(`Only ${remainingSlots} photo slots remaining (max ${eventData.max_photos} total). Please select fewer files.`);
+      }
+    }
+
     for (const file of Array.from(files)) {
       const key = `${file.name}-${file.size}`;
 

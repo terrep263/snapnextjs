@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Zap, Users, Clock, Share2, CheckCircle } from 'lucide-react';
+import { ArrowRight, Zap, Users, Clock, Share2, CheckCircle, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 export default function FreeBasicPromoPage() {
@@ -12,6 +12,7 @@ export default function FreeBasicPromoPage() {
   const [eventDate, setEventDate] = useState('');
   const [email, setEmail] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [eventPassword, setEventPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,7 +27,7 @@ export default function FreeBasicPromoPage() {
       const res = await fetch('/api/create-promo-free-basic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventName, eventDate, email, ownerName }),
+        body: JSON.stringify({ eventName, eventDate, email, ownerName, eventPassword }),
       });
 
       const data = await res.json();
@@ -233,6 +234,21 @@ export default function FreeBasicPromoPage() {
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Event Password (Optional)
+                  </label>
+                  <input
+                    type="password"
+                    value={eventPassword}
+                    onChange={e => setEventPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Leave blank for no password"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Guests will need this password to access the gallery</p>
                 </div>
 
                 <button

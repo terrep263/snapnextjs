@@ -1,5 +1,10 @@
 
 import { getServiceRoleClient } from '@/lib/supabase';
+import crypto from 'crypto';
+
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 export async function POST(req: Request) {
   try {
@@ -8,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { eventName, eventDate, email, ownerName } = body;
+    const { eventName, eventDate, email, ownerName, eventPassword } = body;
 
     if (!eventName || !eventDate || !email) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
@@ -38,6 +43,9 @@ export async function POST(req: Request) {
     const slug = `${slugBase}-${Date.now()}`;
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
+    // Hash password if provided
+    const passwordHash = eventPassword ? hashPassword(eventPassword) : null;
+
     const { data: newEvent, error: insertError } = await supabase
       .from('events')
       .insert([
@@ -50,7 +58,8 @@ export async function POST(req: Request) {
           is_free: true,
           promo_type: 'FREE_BASIC',
           expires_at: expiresAt.toISOString(),
-          max_photos: Number(process.env.PROMO_FREE_BASIC_MAX_PHOTOS || 100),
+          max_photos: 250,
+          password_hash: passwordHash,
         },
       ])
       .select()

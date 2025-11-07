@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, Menu, X, Play, Pause, Download, CheckSquare, Square } from 'lucide-react';
+import { Loader2, Menu, X, Play, Pause, Download, CheckSquare, Square, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import ProfessionalGallery from '@/components/ProfessionalGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -17,6 +17,9 @@ export default function EventPage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [passwordRequired, setPasswordRequired] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [headerImage, setHeaderImage] = useState<string>('');
@@ -83,6 +86,14 @@ export default function EventPage() {
       if (event) {
         // Real event found
         console.log('✅ Real event loaded:', event);
+        
+        // Check if password is required
+        if (event.password_hash) {
+          setPasswordRequired(true);
+          setLoading(false);
+          return; // Don't set eventData yet, wait for password
+        }
+        
         setEventData(event);
         
         // Load images from database
@@ -139,6 +150,70 @@ export default function EventPage() {
       setLoading(false);
     }
   };
+
+  const verifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    
+    if (!eventData) return;
+
+    try {
+      // Hash the input password the same way as backend
+      const crypto = await import('crypto');
+      const hash = crypto.createHash('sha256').update(passwordInput).digest('hex');
+      
+      if (hash === eventData.password_hash) {
+        // Password correct - store it in session
+        sessionStorage.setItem(`event_${slug}_authenticated`, 'true');
+        setPasswordRequired(false);
+        // Photos are already loaded, just allow viewing
+      } else {
+        setPasswordError('Incorrect password');
+      }
+    } catch (err) {
+      console.error('Password verification error:', err);
+      setPasswordError('Error verifying password');
+    }
+  };
+
+  // Show password prompt if needed
+  if (passwordRequired && eventData && !sessionStorage.getItem(`event_${slug}_authenticated`)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-orange-50 p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+          <div className="flex justify-center mb-6">
+            <div className="bg-purple-100 p-3 rounded-full">
+              <Lock className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-2">This event is protected</h2>
+          <p className="text-gray-600 text-center mb-6">Enter the password to view photos</p>
+          
+          <form onSubmit={verifyPassword} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                placeholder="Enter event password"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                autoFocus
+              />
+            </div>
+            {passwordError && (
+              <p className="text-red-600 text-sm bg-red-50 p-3 rounded">{passwordError}</p>
+            )}
+            <button
+              type="submit"
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-colors"
+            >
+              Unlock Gallery
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   const handleDownloadPhoto = async (photo: any) => {
     try {
