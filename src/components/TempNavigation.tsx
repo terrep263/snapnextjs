@@ -18,6 +18,7 @@ export default function TempNavigation() {
     { href: '/affiliate/dashboard', label: '📊 Affiliate Dashboard', icon: DollarSign },
     { href: '/create?ref=TEST1234', label: '🔗 Test Referral Link', icon: CheckCircle },
     { href: '/test-upload', label: '🧪 Test Upload', icon: Camera },
+    { href: '/admin-nav', label: '📋 Admin Nav Map', icon: BarChart3 },
   ];
 
   if (process.env.NODE_ENV === 'production') {
