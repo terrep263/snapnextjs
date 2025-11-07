@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Camera, Home, Plus, BarChart3, Image, CheckCircle, Users, DollarSign } from 'lucide-react';
+import { Menu, X, Camera, Home, Plus, BarChart3, Image, CheckCircle, Users, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function TempNavigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
@@ -33,10 +34,22 @@ export default function TempNavigation() {
         {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
       </button>
 
-      {/* Desktop Navigation - Fixed Left Sidebar */}
+      {/* Desktop Navigation - Fixed Left Sidebar with Collapse */}
       <div className="fixed left-4 top-1/2 z-40 hidden -translate-y-1/2 transform md:block">
-        <div className="rounded-lg bg-white/95 p-6 shadow-lg backdrop-blur-sm">
-          <div className="mb-6 flex flex-col items-center gap-2">
+        <div className={`rounded-lg bg-white/95 shadow-lg backdrop-blur-sm transition-all duration-300 ${
+          isCollapsed ? 'p-3' : 'p-6'
+        }`}>
+          {/* Collapse Toggle Button */}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 text-white shadow-md hover:bg-purple-700 transition-colors"
+            title={isCollapsed ? 'Expand' : 'Collapse'}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+
+          {/* Logo and Title */}
+          <div className={`mb-6 flex flex-col items-center gap-2 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>
             <img 
               src="/purple logo/purplelogo.png" 
               alt="Snapworxx Logo" 
@@ -44,17 +57,24 @@ export default function TempNavigation() {
             />
             <span className="text-sm font-semibold text-gray-800">Dev Nav</span>
           </div>
-          <nav className="space-y-2">
+
+          {/* Navigation Links */}
+          <nav className={`space-y-2 ${isCollapsed ? 'space-y-3' : ''}`}>
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-purple-100 hover:text-purple-700"
+                  className={`flex items-center rounded-md transition-colors hover:bg-purple-100 hover:text-purple-700 ${
+                    isCollapsed 
+                      ? 'justify-center p-2' 
+                      : 'gap-3 px-3 py-2 text-sm font-medium text-gray-700'
+                  }`}
+                  title={isCollapsed ? item.label : ''}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <Icon className={isCollapsed ? 'h-5 w-5' : 'h-4 w-4'} />
+                  {!isCollapsed && <span className="text-sm font-medium text-gray-700">{item.label}</span>}
                 </Link>
               );
             })}
