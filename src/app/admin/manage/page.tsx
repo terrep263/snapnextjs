@@ -197,29 +197,45 @@ export default function AdminManagePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white">Manage Admins</h1>
-            <p className="text-purple-200 mt-1">Logged in as: {currentUser}</p>
+    <div className="min-h-screen bg-white">
+      {/* Navigation Bar */}
+      <div className="border-b border-gray-200 bg-white sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-bold text-lg">S</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-gray-900">SnapWorxx</span>
+              <span className="text-xs text-gray-600">Admin</span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/admin/dashboard"
-              className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              className="text-gray-700 hover:text-purple-600 font-semibold text-sm transition-colors"
             >
               Dashboard
             </Link>
             <button
               onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2 text-sm"
             >
               <LogOut className="w-4 h-4" />
               Logout
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        {/* Welcome Header */}
+        <div className="mb-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
+            <span className="text-3xl">👥</span>
+          </div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Manage Admin Accounts</h1>
+          <p className="text-gray-600">Logged in as: <span className="font-semibold text-gray-900">{currentUser}</span></p>
         </div>
 
         {/* Messages */}
@@ -244,7 +260,7 @@ export default function AdminManagePage() {
         <div className="mb-8">
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center gap-2"
+            className="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center gap-2 shadow-md"
           >
             <Plus className="w-5 h-5" />
             Add New Admin
@@ -253,7 +269,7 @@ export default function AdminManagePage() {
 
         {/* Add Admin Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl shadow-2xl p-8 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg shadow-md p-8 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Admin Account</h2>
             <form onSubmit={handleAddAdmin} className="space-y-5">
               <div>
@@ -264,7 +280,7 @@ export default function AdminManagePage() {
                   type="text"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   placeholder="Admin name"
                 />
               </div>
@@ -277,7 +293,7 @@ export default function AdminManagePage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   placeholder="admin@example.com"
                 />
               </div>
@@ -290,10 +306,10 @@ export default function AdminManagePage() {
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   placeholder="Min 12 characters"
                 />
-                <p className="text-xs text-gray-500 mt-1">At least 12 characters</p>
+                <p className="text-xs text-gray-600 mt-1">At least 12 characters</p>
               </div>
 
               <div>
@@ -303,24 +319,24 @@ export default function AdminManagePage() {
                 <select
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'super_admin' })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="admin">Admin (manage promos only)</option>
                   <option value="super_admin">Super Admin (full access)</option>
                 </select>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 rounded-lg transition-colors"
+                  className="flex-1 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 rounded-lg transition-all"
                 >
                   Create Admin Account
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-900 font-semibold py-3 rounded-lg transition-colors"
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 font-semibold py-3 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -330,66 +346,77 @@ export default function AdminManagePage() {
         )}
 
         {/* Admin Accounts List */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-lg shadow-md overflow-hidden">
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Admin Accounts ({admins.length})
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+              Current Admin Accounts
             </h2>
+            <p className="text-gray-600 text-sm mb-6">
+              Total: <span className="font-semibold text-gray-900">{admins.length}</span> account{admins.length !== 1 ? 's' : ''}
+            </p>
 
             {admins.length === 0 ? (
-              <p className="text-gray-600">No admin accounts yet.</p>
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+                  <span className="text-3xl">👤</span>
+                </div>
+                <p className="text-gray-600 font-semibold mb-1">No Admin Accounts Yet</p>
+                <p className="text-gray-500 text-sm mb-6">Create your first admin account to get started</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Name</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Role</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Created</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Name</th>
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Email</th>
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Role</th>
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Status</th>
+                      <th className="text-left py-4 px-4 font-semibold text-gray-700 text-sm">Added</th>
+                      <th className="text-center py-4 px-4 font-semibold text-gray-700 text-sm">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {admins.map((admin) => (
-                      <tr key={admin.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-4 px-4 text-gray-900">{admin.full_name}</td>
-                        <td className="py-4 px-4 text-gray-600">{admin.email}</td>
+                    {admins.map((admin, index) => (
+                      <tr key={admin.id} className={`border-b border-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                        <td className="py-4 px-4 text-gray-900 font-medium">{admin.full_name}</td>
+                        <td className="py-4 px-4 text-gray-600 text-sm">{admin.email}</td>
                         <td className="py-4 px-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
                             admin.role === 'super_admin'
                               ? 'bg-purple-100 text-purple-800'
-                              : 'bg-gray-100 text-gray-800'
+                              : 'bg-blue-100 text-blue-800'
                           }`}>
-                            {admin.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                            {admin.role === 'super_admin' ? '👑 Super Admin' : '🔑 Admin'}
                           </span>
                         </td>
                         <td className="py-4 px-4">
                           <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
                             admin.is_active
                               ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {admin.is_active ? 'Active' : 'Inactive'}
+                            {admin.is_active ? '✓ Active' : '○ Inactive'}
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-gray-600">
-                          {new Date(admin.created_at).toLocaleDateString()}
+                        <td className="py-4 px-4 text-gray-600 text-sm">
+                          {new Date(admin.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
-                        <td className="py-4 px-4 text-right space-x-2">
-                          {admin.email !== currentUser && (
-                            <button
-                              onClick={() => handleDeleteAdmin(admin.id, admin.email)}
-                              className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-semibold transition-colors"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Delete
-                            </button>
-                          )}
-                          {admin.email === currentUser && (
-                            <span className="text-xs text-gray-500">Current User</span>
-                          )}
+                        <td className="py-4 px-4">
+                          <div className="flex justify-center">
+                            {admin.email === currentUser ? (
+                              <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">You</span>
+                            ) : (
+                              <button
+                                onClick={() => handleDeleteAdmin(admin.id, admin.email)}
+                                className="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 px-3 py-2 rounded-lg text-xs font-semibold transition-all border border-red-200 hover:border-red-300"
+                                title="Delete this admin account"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -398,6 +425,13 @@ export default function AdminManagePage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Info Section */}
+        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-900">
+            <strong>💡 Tip:</strong> Super Admins have full access to all admin features. Regular Admins can only manage promotional events. You cannot delete your own account for security reasons.
+          </p>
         </div>
       </div>
     </div>
