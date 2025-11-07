@@ -57,6 +57,7 @@ export default function EventPage() {
       if (event) {
         // Real event found
         console.log('✅ Real event loaded:', event);
+        console.log('📊 Event fields:', Object.keys(event));
         
         // Check if password is required
         if (event.password_hash) {
@@ -69,14 +70,23 @@ export default function EventPage() {
         setEventData(event);
         
         // Load images from database
-        console.log('🖼️ Event images:', { header: event.header_image, profile: event.profile_image });
+        console.log('🖼️ Event images field values:', { 
+          header: event.header_image, 
+          profile: event.profile_image,
+          headerExists: !!event.header_image,
+          profileExists: !!event.profile_image
+        });
         if (event.header_image) {
           setHeaderImage(event.header_image);
-          console.log('✅ Header image set:', event.header_image);
+          console.log('✅ Header image set:', event.header_image.substring(0, 100));
+        } else {
+          console.log('⚠️ No header_image in event');
         }
         if (event.profile_image) {
           setProfileImage(event.profile_image);
-          console.log('✅ Profile image set:', event.profile_image);
+          console.log('✅ Profile image set:', event.profile_image.substring(0, 100));
+        } else {
+          console.log('⚠️ No profile_image in event');
         }
       } else {
         // Event not found

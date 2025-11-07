@@ -31,7 +31,14 @@ export default function SimpleEventGallery({
   profileImage,
   photos
 }: SimpleEventGalleryProps) {
-  console.log('🎨 SimpleEventGallery mounted:', { eventName, headerImage, profileImage, photosCount: photos.length });
+  console.log('🎨 SimpleEventGallery mounted with:', { 
+    eventName, 
+    headerImageExists: !!headerImage,
+    headerImagePreview: headerImage ? headerImage.substring(0, 50) : 'null',
+    profileImageExists: !!profileImage,
+    profileImagePreview: profileImage ? profileImage.substring(0, 50) : 'null',
+    photosCount: photos.length 
+  });
   
   const [navOpen, setNavOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -46,25 +53,29 @@ export default function SimpleEventGallery({
   // Build gallery items including header and profile images
   const allItems: GalleryItem[] = [];
   if (headerImage) {
-    console.log('📸 Adding header image to gallery:', headerImage);
+    console.log('📸 Adding header image to gallery');
     allItems.push({
       id: 'header',
       url: headerImage,
       title: 'Event Header',
       type: 'header'
     });
+  } else {
+    console.log('⚠️ No header image to add');
   }
   if (profileImage) {
-    console.log('👤 Adding profile image to gallery:', profileImage);
+    console.log('👤 Adding profile image to gallery');
     allItems.push({
       id: 'profile',
       url: profileImage,
       title: 'Event Profile',
       type: 'profile'
     });
+  } else {
+    console.log('⚠️ No profile image to add');
   }
   allItems.push(...photos);
-  console.log('📊 Total gallery items:', allItems.length);
+  console.log('📊 Total gallery items:', allItems.length, 'items');
 
   // Slideshow effect
   useEffect(() => {
