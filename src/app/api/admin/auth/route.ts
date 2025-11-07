@@ -20,21 +20,22 @@ export async function POST(req: Request) {
 
       // Query admin account from database
       const supabase = getServiceRoleClient();
-      const { data: adminAccount, error: dbError } = await supabase
+      const { data: adminAccounts, error: dbError } = await supabase
         .from('admin_accounts')
         .select('id, email, password_hash, full_name, role, is_active')
-        .eq('email', email)
-        .single();
+        .eq('email', email);
 
-      // Handle database errors (including not found)
+      // Handle database errors
       if (dbError) {
-        // Not found or other error - return generic message for security
+        console.error('Database query error:', dbError);
+        return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+      }
+
+      if (!adminAccounts || adminAccounts.length === 0) {
         return new Response(JSON.stringify({ error: 'Invalid email or password' }), { status: 401 });
       }
 
-      if (!adminAccount) {
-        return new Response(JSON.stringify({ error: 'Invalid email or password' }), { status: 401 });
-      }
+      const adminAccount = adminAccounts[0];
 
       // Check if account is active
       if (!adminAccount.is_active) {
