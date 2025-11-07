@@ -380,8 +380,8 @@ export default function EventPage() {
             <div className="space-y-3">
               <h3 className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Stats</h3>
               <div className="bg-purple-50 rounded-lg p-3">
-                <p className="text-sm text-gray-600">Total Photos</p>
-                <p className="text-2xl font-light text-gray-900">{photos.length}</p>
+                <p className="text-xs md:text-sm text-gray-600">Total Photos</p>
+                <p className="text-xl md:text-2xl font-light text-gray-900">{photos.length}</p>
               </div>
             </div>
 
@@ -507,17 +507,17 @@ export default function EventPage() {
         {/* MAIN CONTENT */}
         <div className="flex-1 flex flex-col overflow-hidden relative z-10">
           {/* TOP BAR */}
-          <div className="bg-gradient-to-r from-gray-900 to-black border-b border-gray-800 px-6 py-4 flex items-center justify-between z-40">
+          <div className="bg-gradient-to-r from-gray-900 to-black border-b border-gray-800 px-3 md:px-6 py-3 md:py-4 flex items-center justify-between z-40 gap-2 md:gap-4">
             {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-800 rounded-lg transition-colors lg:hidden"
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors lg:hidden flex-shrink-0"
             >
-              <Menu className="w-6 h-6" />
+              <Menu className="w-5 h-5 md:w-6 md:h-6" />
             </button>
 
             {/* Title */}
-            <h1 className="text-lg font-light tracking-wide text-gray-100 flex-1 text-center lg:text-left">
+            <h1 className="text-xs sm:text-sm md:text-lg font-light tracking-wide text-gray-100 flex-1 text-center lg:text-left truncate">
               {eventData?.name}
             </h1>
 
@@ -525,7 +525,7 @@ export default function EventPage() {
             {eventData?.is_free && (
               <Link 
                 href={`/promo/confirmation/${slug}`}
-                className="hidden md:inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                className="hidden md:inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors text-xs md:text-sm font-medium flex-shrink-0"
               >
                 ← Setup
               </Link>
@@ -534,7 +534,7 @@ export default function EventPage() {
             {/* Upload Button (Desktop) */}
             <Link 
               href={`/e/${slug}/upload`}
-              className="hidden lg:inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+              className="hidden lg:inline-block bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg transition-colors text-xs md:text-sm font-medium flex-shrink-0"
             >
               + Upload
             </Link>
@@ -585,13 +585,13 @@ export default function EventPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
-              <div className="text-center">
-                <div className="text-6xl mb-4">📷</div>
-                <h2 className="text-2xl font-light text-gray-300 mb-4">No photos yet</h2>
-                <p className="text-gray-500 mb-6">Be the first to share your moments</p>
+              <div className="text-center px-4">
+                <div className="text-5xl md:text-6xl mb-4">📷</div>
+                <h2 className="text-lg md:text-2xl font-light text-gray-300 mb-2 md:mb-4">No photos yet</h2>
+                <p className="text-xs md:text-base text-gray-500 mb-4 md:mb-6">Be the first to share your moments</p>
                 <Link 
                   href={`/e/${slug}/upload`}
-                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-lg transition-colors text-sm md:text-base"
                 >
                   Upload Photos
                 </Link>
