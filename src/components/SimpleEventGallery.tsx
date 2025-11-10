@@ -385,6 +385,7 @@ export default function SimpleEventGallery({
                 {bulkMode === null && (
                   <button
                     onClick={() => {
+                      setBulkMode('all');
                       setDownloading(true);
                       handleBulkDownload();
                     }}

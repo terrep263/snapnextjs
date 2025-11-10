@@ -6,6 +6,10 @@ import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap } from 'luci
 import Link from 'next/link';
 import Image from 'next/image';
 import AdminSidebar from '@/components/AdminSidebar';
+import { useAuth, useAsync } from '@/hooks';
+import { adminApi } from '@/lib/api';
+import { toast } from '@/lib/toast';
+import { Button, TextInput } from '@/components/forms';
 
 interface PromoStats {
   totalEvents: number;
@@ -25,113 +29,72 @@ interface PromoEvent {
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const [authenticated, setAuthenticated] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<PromoStats | null>(null);
-  const [events, setEvents] = useState<PromoEvent[]>([]);
-  const [blockedEmails, setBlockedEmails] = useState<string[]>([]);
+  const { authenticated, email: adminEmail, loading: authLoading, logout } = useAuth();
   const [blockEmail, setBlockEmail] = useState('');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [isBlockingEmail, setIsBlockingEmail] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);
 
-  // Verify admin session on mount
-  useEffect(() => {
-    verifyAuth();
-  }, []);
+  // Load stats
+  const { data: stats, loading: statsLoading, execute: loadStats } = useAsync(
+    async () => {
+      const res = await adminApi.getStats();
+      if (res.success) return res.data as PromoStats;
+      throw new Error(res.error);
+    },
+    false
+  );
+
+  // Load events
+  const { data: events, loading: eventsLoading, execute: loadEvents } = useAsync(
+    async () => {
+      const res = await adminApi.getEvents();
+      if (res.success) return (res.data as any)?.events || [];
+      throw new Error(res.error);
+    },
+    false
+  );
+
+  // Load blocked emails
+  const { data: blockedEmails, loading: emailsLoading, execute: loadBlockedEmails } = useAsync(
+    async () => {
+      const res = await adminApi.getBlockedEmails();
+      if (res.success) return (res.data as any)?.emails || [];
+      throw new Error(res.error);
+    },
+    false
+  );
 
   // Load data when authenticated
   useEffect(() => {
     if (authenticated) {
-      loadStats();
-      loadEvents();
-      loadBlockedEmails();
+      loadStats().catch((err) => toast.error('Failed to load stats'));
+      loadEvents().catch((err) => toast.error('Failed to load events'));
+      loadBlockedEmails().catch((err) => toast.error('Failed to load blocked emails'));
     }
   }, [authenticated]);
 
-  const verifyAuth = async () => {
-    try {
-      const res = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify' }),
-      });
-
-      const data = await res.json();
-
-      if (data.authenticated) {
-        setAuthenticated(true);
-        setAdminEmail(data.email);
-      } else {
-        router.push('/admin/login');
-      }
-    } catch (err) {
-      console.error('Auth verification failed:', err);
-      router.push('/admin/login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const res = await fetch('/api/admin/promo-stats');
-      const data = await res.json();
-      setStats(data);
-    } catch (err) {
-      console.error('Failed to load stats:', err);
-    }
-  };
-
-  const loadEvents = async () => {
-    try {
-      const res = await fetch('/api/admin/promo-events');
-      const data = await res.json();
-      setEvents(data.events || []);
-    } catch (err) {
-      console.error('Failed to load events:', err);
-    }
-  };
-
-  const loadBlockedEmails = async () => {
-    try {
-      const res = await fetch('/api/admin/blocked-emails');
-      const data = await res.json();
-      setBlockedEmails(data.emails || []);
-    } catch (err) {
-      console.error('Failed to load blocked emails:', err);
-    }
-  };
-
   const handleBlockEmail = async () => {
     if (!blockEmail.trim()) {
-      setError('Please enter an email');
+      toast.error('Please enter an email');
       return;
     }
 
-    setError('');
-    setMessage('');
-
+    setIsBlockingEmail(true);
     try {
-      const res = await fetch('/api/admin/block-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: blockEmail }),
-      });
+      const res = await adminApi.blockEmail(blockEmail);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to block email');
+      if (!res.success) {
+        toast.error(res.error || 'Failed to block email');
         return;
       }
 
-      setMessage(`Email blocked successfully: ${blockEmail}`);
+      toast.success(`Email blocked successfully: ${blockEmail}`);
       setBlockEmail('');
       loadBlockedEmails();
     } catch (err) {
-      console.error('Error blocking email:', err);
-      setError('Server error');
+      toast.error('Server error');
+    } finally {
+      setIsBlockingEmail(false);
     }
   };
 
@@ -140,66 +103,47 @@ export default function AdminDashboardPage() {
       return;
     }
 
+    setIsDeletingEvent(eventId);
     try {
-      const res = await fetch('/api/admin/delete-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
-      });
+      const res = await adminApi.deleteEvent(eventId);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to delete event');
+      if (!res.success) {
+        toast.error(res.error || 'Failed to delete event');
         return;
       }
 
-      setMessage(`Event deleted: ${eventName}`);
+      toast.success(`Event deleted: ${eventName}`);
       loadEvents();
       loadStats();
     } catch (err) {
-      console.error('Error deleting event:', err);
-      setError('Server error');
+      toast.error('Server error');
+    } finally {
+      setIsDeletingEvent(null);
     }
   };
 
   const handleUnblockEmail = async (email: string) => {
     try {
-      const res = await fetch('/api/admin/unblock-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
+      const res = await adminApi.unblockEmail(email);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to unblock email');
+      if (!res.success) {
+        toast.error(res.error || 'Failed to unblock email');
         return;
       }
 
-      setMessage(`Email unblocked: ${email}`);
+      toast.success(`Email unblocked: ${email}`);
       loadBlockedEmails();
     } catch (err) {
-      console.error('Error unblocking email:', err);
-      setError('Server error');
+      toast.error('Server error');
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'logout' }),
-      });
-      router.push('/admin/login');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
+    await logout();
+    toast.success('Logged out successfully');
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -306,23 +250,35 @@ export default function AdminDashboardPage() {
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Events</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            {events.length > 0 ? (
+            {events && (events as PromoEvent[]).length > 0 ? (
               <div className="space-y-4">
-                {events.map((event) => (
-                  <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                {(events as PromoEvent[]).map((event: PromoEvent) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+                  >
                     <div>
-                      <Link href={`/e/${event.slug}`} target="_blank" className="text-lg font-semibold text-purple-600 hover:underline">
+                      <Link
+                        href={`/e/${event.slug}`}
+                        target="_blank"
+                        className="text-lg font-semibold text-purple-600 hover:underline"
+                      >
                         {event.name}
                       </Link>
-                      <p className="text-sm text-gray-500 mt-1">{event.email} • {event.photo_count || 0} photos • {new Date(event.created_at).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {event.email} • {event.photo_count || 0} photos •{' '}
+                        {new Date(event.created_at).toLocaleDateString()}
+                      </p>
                     </div>
-                    <button
+                    <Button
                       onClick={() => handleDeleteEvent(event.id, event.name)}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                      variant="danger"
+                      size="sm"
+                      loading={isDeletingEvent === event.id}
+                      icon={<Trash2 className="w-4 h-4" />}
                     >
-                      <Trash2 className="w-4 h-4" />
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -337,36 +293,42 @@ export default function AdminDashboardPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Block Email from Promo</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div className="flex gap-3 mb-6">
-              <input
+              <TextInput
                 type="email"
                 value={blockEmail}
                 onChange={(e) => setBlockEmail(e.target.value)}
                 placeholder="email@example.com"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                className="flex-1"
               />
-              <button
+              <Button
                 onClick={handleBlockEmail}
-                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+                loading={isBlockingEmail}
+                icon={<Ban className="w-4 h-4" />}
               >
-                <Ban className="w-4 h-4" />
                 Block
-              </button>
+              </Button>
             </div>
 
             {/* Blocked Emails List */}
-            {blockedEmails.length > 0 && (
+            {blockedEmails && blockedEmails.length > 0 && (
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-4">Blocked Emails ({blockedEmails.length})</h3>
+                <h3 className="font-semibold text-gray-900 mb-4">
+                  Blocked Emails ({blockedEmails.length})
+                </h3>
                 <div className="space-y-2">
-                  {blockedEmails.map((email) => (
-                    <div key={email} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                  {(blockedEmails as string[]).map((email: string) => (
+                    <div
+                      key={email}
+                      className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
+                    >
                       <span className="text-gray-900 text-sm">{email}</span>
-                      <button
+                      <Button
                         onClick={() => handleUnblockEmail(email)}
-                        className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-semibold rounded transition-colors"
+                        variant="secondary"
+                        size="sm"
                       >
                         Unblock
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
