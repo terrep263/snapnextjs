@@ -1,43 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Lead Capture API
- * Stores user information for follow-up
+ * Stores user information in Supabase for follow-up
  */
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, eventType, budget, notes } = body;
+    const { name, email, source, eventType, formData } = body;
 
-    if (!email || !name) {
+    // Validation
+    if (!name || !email) {
       return NextResponse.json(
-        { error: 'Email and name are required' },
+        { error: 'Name and email are required' },
         { status: 400 }
       );
     }
 
-    console.log('📧 New lead captured:', { email, name, eventType, budget });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email format' },
+        { status: 400 }
+      );
+    }
 
-    // TODO: Store in database or CRM
-    // For now, just log and return success
+    console.log('📧 New lead captured:', { name, email, eventType, source });
+
+    // Check if lead already exists
+    const { data: existingLead } = await supabase
+      .from('leads')
+      .select('id, email')
+      .eq('email', email)
+      .single();
+
+    if (existingLead) {
+      console.log('⚠️ Lead already exists:', email);
+      return NextResponse.json({
+        success: true,
+        message: 'Lead already in system',
+        data: existingLead,
+      });
+    }
+
+    // Insert new lead
+    const { data, error } = await supabase
+      .from('leads')
+      .insert({
+        name,
+        email,
+        source: source || 'event-planner',
+        event_type: eventType,
+        event_details: formData || {},
+        created_at: new Date(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    console.log('✅ Lead saved successfully:', data.id);
 
     return NextResponse.json({
       success: true,
       message: 'Lead captured successfully',
-      lead: {
-        email,
-        name,
-        eventType,
-        budget,
-        notes,
-        createdAt: new Date(),
-      },
+      data,
     });
   } catch (error) {
-    console.error('Lead capture error:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Lead capture error:', errorMsg);
     return NextResponse.json(
-      { error: 'Failed to capture lead' },
+      { error: `Failed to capture lead: ${errorMsg}` },
       { status: 500 }
     );
   }
