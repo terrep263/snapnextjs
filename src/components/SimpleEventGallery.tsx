@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks } from 'lucide-react';
+import ShareButtons from './ShareButtons';
 
 interface GalleryItem {
   id: string;
@@ -318,8 +319,20 @@ export default function SimpleEventGallery({
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="bg-gray-800 p-4 rounded-lg space-y-2"
+                      className="bg-gray-800 p-4 rounded-lg space-y-3"
                     >
+                      {/* Social Media Share Buttons */}
+                      <div className="pb-3 border-b border-gray-700">
+                        <p className="text-xs text-gray-400 mb-2">Share on social media:</p>
+                        <ShareButtons
+                          url={typeof window !== 'undefined' ? window.location.href : ''}
+                          title={eventName}
+                          description={`Check out this gallery: ${eventName}`}
+                          size={40}
+                        />
+                      </div>
+
+                      {/* Quick Actions */}
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(window.location.href);
@@ -344,15 +357,6 @@ export default function SimpleEventGallery({
                         className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
                       >
                         🔗 Share via Device
-                      </button>
-                      <button
-                        onClick={() => {
-                          const text = `Check out this gallery: ${eventName} - ${window.location.href}`;
-                          window.open(`mailto:?subject=${encodeURIComponent(eventName)}&body=${encodeURIComponent(text)}`);
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
-                      >
-                        ✉️ Share via Email
                       </button>
                     </motion.div>
                   )}
@@ -565,6 +569,26 @@ export default function SimpleEventGallery({
                   )}
                   <button
                     onClick={() => {
+                      const item = allItems[selectedIndex];
+                      const itemUrl = `${window.location.origin}${window.location.pathname}?photo=${item.id}`;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: item.title || eventName,
+                          text: `Check out this ${item.isVideo ? 'video' : 'photo'} from ${eventName}`,
+                          url: itemUrl,
+                        }).catch(err => console.log('Share cancelled'));
+                      } else {
+                        navigator.clipboard.writeText(itemUrl);
+                        alert('Link copied to clipboard!');
+                      }
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    title="Share this item"
+                  >
+                    <Share2 className="w-5 h-5 text-white" />
+                  </button>
+                  <button
+                    onClick={() => {
                       setSlideshowActive(!slideshowActive);
                     }}
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -633,6 +657,28 @@ export default function SimpleEventGallery({
                     <ZoomIn className="w-8 h-8" />
                   </div>
                 </div>
+
+                {/* Share Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const itemUrl = `${window.location.origin}${window.location.pathname}?photo=${item.id}`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: item.title || eventName,
+                        text: `Check out this ${item.isVideo ? 'video' : 'photo'} from ${eventName}`,
+                        url: itemUrl,
+                      }).catch(err => console.log('Share cancelled'));
+                    } else {
+                      navigator.clipboard.writeText(itemUrl);
+                      alert('Link copied to clipboard!');
+                    }
+                  }}
+                  className="absolute top-3 right-3 z-10 p-2 bg-white/90 hover:bg-white rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  title="Share this item"
+                >
+                  <Share2 className="w-4 h-4 text-gray-700" />
+                </button>
 
                 {/* Selection Checkbox (in bulk mode or select mode) */}
                 {(bulkMode === 'select' || selectMode) && (
