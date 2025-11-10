@@ -27,17 +27,21 @@ async function downloadFileWithTimeout(url: string): Promise<Blob> {
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
 
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
+    // Use the /api/download proxy to handle CORS and authentication
+    const response = await fetch('/api/download', {
+      method: 'POST',
       headers: {
-        'Accept': '*/*',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ url }),
+      signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`);
     }
 
     const blob = await response.blob();

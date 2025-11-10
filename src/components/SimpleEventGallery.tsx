@@ -40,7 +40,6 @@ export default function SimpleEventGallery({
   
   const [navOpen, setNavOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [bulkMode, setBulkMode] = useState<'select' | 'all' | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -110,26 +109,23 @@ export default function SimpleEventGallery({
     }
   };
 
-  // Handle bulk download
-  const handleBulkDownload = async () => {
+  // Download all items in gallery
+  const downloadAllItems = async () => {
     try {
       setDownloading(true);
-      const itemsToDownload = bulkMode === 'all' 
-        ? allItems 
-        : allItems.filter(item => selectedItems.has(item.id));
+      console.log(`🔄 Download All: Starting bulk download of ${allItems.length} items`);
 
-      // Validate items
-      if (itemsToDownload.length === 0) {
-        alert('No items selected for download');
+      if (allItems.length === 0) {
+        alert('No items to download');
+        setDownloading(false);
         return;
       }
 
-      if (itemsToDownload.length > 1000) {
+      if (allItems.length > 1000) {
         alert('Maximum 1000 files allowed per download');
+        setDownloading(false);
         return;
       }
-
-      console.log(`🔄 Starting bulk download of ${itemsToDownload.length} items`);
 
       // Call server-side bulk download endpoint
       const response = await fetch('/api/bulk-download', {
@@ -139,7 +135,7 @@ export default function SimpleEventGallery({
         },
         body: JSON.stringify({
           filename: eventName || 'event-gallery',
-          items: itemsToDownload.map(item => ({
+          items: allItems.map(item => ({
             id: item.id,
             url: item.url,
             title: item.title || `media-${item.id}`
@@ -169,14 +165,82 @@ export default function SimpleEventGallery({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log(`✅ Bulk download completed successfully (${(zipBlob.size / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`✅ Download All completed: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ Download failed:', errorMsg);
+      console.error('❌ Download All failed:', errorMsg);
       alert(`Download failed: ${errorMsg}`);
     } finally {
       setDownloading(false);
-      setBulkMode(null);
+    }
+  };
+
+  // Download selected items
+  const downloadSelectedItems = async () => {
+    try {
+      setDownloading(true);
+      const itemsForDownload = allItems.filter(item => selectedItems.has(item.id));
+      
+      console.log(`🔄 Download Selected: Starting bulk download of ${itemsForDownload.length} items`);
+
+      if (itemsForDownload.length === 0) {
+        alert('No items selected for download');
+        setDownloading(false);
+        return;
+      }
+
+      if (itemsForDownload.length > 1000) {
+        alert('Maximum 1000 files allowed per download');
+        setDownloading(false);
+        return;
+      }
+
+      // Call server-side bulk download endpoint
+      const response = await fetch('/api/bulk-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filename: eventName || 'event-gallery',
+          items: itemsForDownload.map(item => ({
+            id: item.id,
+            url: item.url,
+            title: item.title || `media-${item.id}`
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      // Get the ZIP blob from response
+      const zipBlob = await response.blob();
+
+      if (zipBlob.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
+
+      // Trigger download
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${eventName || 'event-gallery'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`✅ Download Selected completed: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('❌ Download Selected failed:', errorMsg);
+      alert(`Download failed: ${errorMsg}`);
+    } finally {
+      setDownloading(false);
+      setSelectMode(false);
       setSelectedItems(new Set());
     }
   };
@@ -358,17 +422,33 @@ export default function SimpleEventGallery({
                   )}
                 </div>
 
-                {/* Download Controls */}
+                {/* Download Controls - SIMPLE */}
                 <div className="space-y-2 pt-4 border-t border-gray-800">
-                  {bulkMode === null ? (
-                    <button
-                      onClick={() => setBulkMode('select')}
-                      className="w-full flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                    >
-                      <Download className="w-5 h-5" />
-                      Select & Download
-                    </button>
-                  ) : (
+                  {/* GREEN: Download All - No selection needed */}
+                  <button
+                    onClick={downloadAllItems}
+                    disabled={downloading}
+                    className="w-full flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download All ({allItems.length})
+                  </button>
+
+                  {/* BLUE: Select & Download */}
+                  <button
+                    onClick={() => setSelectMode(!selectMode)}
+                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
+                      selectMode
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    <CheckSquare className="w-5 h-5" />
+                    {selectMode ? `Download Selected (${selectedItems.size})` : 'Select Items to Download'}
+                  </button>
+
+                  {/* Selection Controls - Only show if in select mode */}
+                  {selectMode && (
                     <>
                       <div className="flex gap-2">
                         <button
@@ -384,7 +464,7 @@ export default function SimpleEventGallery({
                           ) : (
                             <Square className="w-4 h-4" />
                           )}
-                          All ({allItems.length})
+                          Select All ({allItems.length})
                         </button>
                         <button
                           onClick={() => setSelectedItems(new Set())}
@@ -395,14 +475,7 @@ export default function SimpleEventGallery({
                       </div>
 
                       <button
-                        onClick={() => setBulkMode(null)}
-                        className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 rounded-lg transition-colors text-sm"
-                      >
-                        Cancel
-                      </button>
-
-                      <button
-                        onClick={handleBulkDownload}
+                        onClick={downloadSelectedItems}
                         disabled={selectedItems.size === 0 || downloading}
                         className={`w-full font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
                           selectedItems.size === 0 || downloading
@@ -411,32 +484,24 @@ export default function SimpleEventGallery({
                         }`}
                       >
                         <Download className="w-4 h-4" />
-                        Download ({selectedItems.size})
+                        Download ({selectedItems.size}) Selected
+                      </button>
+
+                      <button
+                        onClick={() => setSelectMode(false)}
+                        className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 rounded-lg transition-colors text-sm"
+                      >
+                        Cancel Selection
                       </button>
                     </>
                   )}
                 </div>
-
-                {/* Bulk Download All Option */}
-                {bulkMode === null && (
-                  <button
-                    onClick={() => {
-                      setBulkMode('all');
-                      setDownloading(true);
-                      handleBulkDownload();
-                    }}
-                    className="w-full flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download All ({allItems.length})
-                  </button>
-                )}
               </div>
 
               {/* Footer */}
               <div className="border-t border-gray-800 p-6 bg-gray-950">
                 <p className="text-xs text-gray-500 text-center">
-                  {bulkMode ? 'Select items to download' : 'View and manage your gallery'}
+                  {selectMode ? `${selectedItems.size} items selected` : 'View and manage your gallery'}
                 </p>
               </div>
             </motion.div>
@@ -551,7 +616,7 @@ export default function SimpleEventGallery({
                   {selectedIndex + 1} / {allItems.length}
                 </span>
                 <div className="flex items-center gap-2">
-                  {bulkMode === 'select' && (
+                  {selectMode && (
                     <button
                       onClick={() => toggleItemSelection(allItems[selectedIndex].id)}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -634,8 +699,8 @@ export default function SimpleEventGallery({
                   </div>
                 </div>
 
-                {/* Selection Checkbox (in bulk mode or select mode) */}
-                {(bulkMode === 'select' || selectMode) && (
+                {/* Selection Checkbox (in select mode) */}
+                {selectMode && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
