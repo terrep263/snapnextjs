@@ -33,6 +33,7 @@ interface DownloadOptions {
 
 /**
  * Download a single file with timeout support
+ * Uses server-side proxy to avoid CORS issues
  */
 async function downloadFileWithTimeout(
   url: string,
@@ -42,14 +43,21 @@ async function downloadFileWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const response = await fetch(url, {
+    // Use server-side proxy to download
+    const response = await fetch('/api/download', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const error = await response.json().catch(() => ({}));
+      throw new Error(`HTTP ${response.status}: ${error.error || response.statusText}`);
     }
 
     const blob = await response.blob();
