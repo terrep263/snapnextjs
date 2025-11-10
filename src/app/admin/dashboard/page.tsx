@@ -33,6 +33,8 @@ export default function AdminDashboardPage() {
   const [blockEmail, setBlockEmail] = useState('');
   const [isBlockingEmail, setIsBlockingEmail] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);
+  const [error, setError] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
 
   // Load stats
   const { data: stats, loading: statsLoading, execute: loadStats } = useAsync(

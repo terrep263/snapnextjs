@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Toast Notification Utilities
  * Wrapper around 'sonner' toast library with consistent styling
