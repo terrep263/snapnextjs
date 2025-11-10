@@ -200,17 +200,7 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-gray-500 mt-2">Logged in as: <span className="font-semibold">{adminEmail}</span></p>
         </div>
 
-        {/* Messages */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {message}
-          </div>
-        )}
+
 
         {/* Stats Grid */}
         {stats && (
