@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks } from 'lucide-react';
-import { downloadZipFile, validateDownloadItems, formatFileSize } from '@/lib/zipDownload';
 
 interface GalleryItem {
   id: string;
@@ -119,43 +118,58 @@ export default function SimpleEventGallery({
         ? allItems 
         : allItems.filter(item => selectedItems.has(item.id));
 
-      // Validate items before attempting download
-      const validation = validateDownloadItems(
-        itemsToDownload.map(item => ({
-          id: item.id,
-          url: item.url,
-          title: item.title
-        }))
-      );
+      // Validate items
+      if (itemsToDownload.length === 0) {
+        alert('No items selected for download');
+        return;
+      }
 
-      if (!validation.valid) {
-        const errorMsg = `Download validation failed:\n${validation.errors.join('\n')}`;
-        console.error(errorMsg);
-        alert(errorMsg);
+      if (itemsToDownload.length > 1000) {
+        alert('Maximum 1000 files allowed per download');
         return;
       }
 
       console.log(`🔄 Starting bulk download of ${itemsToDownload.length} items`);
 
-      // Use proper ZIP download utility with error handling
-      await downloadZipFile(
-        itemsToDownload.map(item => ({
-          id: item.id,
-          url: item.url,
-          title: item.title || `media-${item.id}`
-        })),
-        {
+      // Call server-side bulk download endpoint
+      const response = await fetch('/api/bulk-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           filename: eventName || 'event-gallery',
-          onProgress: (progress) => {
-            console.log(`📦 Downloading: ${progress.current}/${progress.total} - ${progress.currentFile}`);
-          },
-          onError: (error, failedFile) => {
-            console.error(`❌ Download error for ${failedFile}:`, error.message);
-          }
-        }
-      );
+          items: itemsToDownload.map(item => ({
+            id: item.id,
+            url: item.url,
+            title: item.title || `media-${item.id}`
+          })),
+        }),
+      });
 
-      console.log('✅ Bulk download completed successfully');
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      // Get the ZIP blob from response
+      const zipBlob = await response.blob();
+
+      if (zipBlob.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
+
+      // Trigger download
+      const url = window.URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${eventName || 'event-gallery'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      console.log(`✅ Bulk download completed successfully (${(zipBlob.size / 1024 / 1024).toFixed(2)}MB)`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('❌ Download failed:', errorMsg);
