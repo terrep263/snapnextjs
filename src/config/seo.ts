@@ -16,8 +16,8 @@ export const seoConfig = {
   // Brand information
   brand: {
     name: 'Snapworxx',
-    logo: 'https://snapworxx.com/logo.png',
-    logoSquare: 'https://snapworxx.com/logo-square.png',
+    logo: 'https://snapworxx.com/open-graph.png',
+    logoSquare: 'https://snapworxx.com/purple logo/purplelogo.png',
     tagline: 'Your moments, perfectly captured',
     color: '#9333ea', // Purple brand color
   },
