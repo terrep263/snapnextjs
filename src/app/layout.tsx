@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     description: 'Create custom photo sharing links for your events. Guests scan a QR code, upload photos, and everyone can view and download the gallery.',
     images: [
       {
-        url: '/open-graph.png',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'SnapWorxx - Event Photo Sharing Made Easy',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     creator: '@snapworxx',
     title: 'SnapWorxx - Event Photo Sharing Made Easy',
     description: 'Create custom photo sharing links for your events. Guests scan a QR code, upload photos, and everyone can view and download the gallery.',
-    images: ['/open-graph.png'],
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
