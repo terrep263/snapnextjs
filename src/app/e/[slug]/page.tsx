@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import SimpleEventGallery from '@/components/SimpleEventGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
-import Head from 'next/head';
 
 export default function EventPage() {
   const params = useParams();
@@ -235,53 +234,8 @@ export default function EventPage() {
     return null;
   }
 
-  // Generate SEO config for this event
-  const seoConfig = getEventSeoConfig({
-    eventId: slug,
-    eventName: eventData.name || 'Event Gallery',
-    description: eventData.description,
-    imageUrl: headerImage || profileImage,
-    photos: photos.map(p => ({
-      url: p.url || p.file_path || p.storage_path || '',
-      title: p.title || p.filename
-    })),
-    date: eventData.event_date,
-    location: eventData.location,
-    author: eventData.photographer_name,
-  });
-
   return (
     <ErrorBoundary>
-      <Head>
-        {/* Title & Description */}
-        <title>{seoConfig.title} | Snapworxx</title>
-        <meta name="description" content={seoConfig.description} />
-        <meta name="canonical" content={seoConfig.canonical} />
-
-        {/* Open Graph / Social Sharing */}
-        <meta property="og:type" content={seoConfig.openGraph.type} />
-        <meta property="og:url" content={seoConfig.openGraph.url} />
-        <meta property="og:title" content={seoConfig.openGraph.title} />
-        <meta property="og:description" content={seoConfig.openGraph.description} />
-        <meta property="og:site_name" content={seoConfig.openGraph.siteName} />
-        <meta property="og:image" content={seoConfig.openGraph.images?.[0]?.url} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content={seoConfig.twitter.cardType} />
-        <meta name="twitter:site" content={seoConfig.twitter.site} />
-        <meta name="twitter:creator" content={seoConfig.twitter.handle} />
-        <meta name="twitter:title" content={seoConfig.openGraph.title} />
-        <meta name="twitter:description" content={seoConfig.openGraph.description} />
-        <meta name="twitter:image" content={seoConfig.openGraph.images?.[0]?.url} />
-
-        {/* Additional Meta Tags */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      </Head>
-
       <SimpleEventGallery
         eventName={eventData.name || 'Event Gallery'}
         headerImage={headerImage}
