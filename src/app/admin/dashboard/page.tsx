@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap } from 'lucide-react';
+import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap, Gift } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -33,6 +33,10 @@ export default function AdminDashboardPage() {
   const [blockEmail, setBlockEmail] = useState('');
   const [isBlockingEmail, setIsBlockingEmail] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);
+  const [freebieEventName, setFreebieEventName] = useState('');
+  const [freebieEventDate, setFreebieEventDate] = useState('');
+  const [isCreatingFreebieEvent, setIsCreatingFreebieEvent] = useState(false);
+  const [freebieCount, setFreebieCount] = useState(0);
 
   // Load stats
   const { data: stats, loading: statsLoading, execute: loadStats } = useAsync(
@@ -95,6 +99,45 @@ export default function AdminDashboardPage() {
       toast.error('Server error');
     } finally {
       setIsBlockingEmail(false);
+    }
+  };
+
+  const handleCreateFreebieEvent = async () => {
+    if (!freebieEventName.trim() || !freebieEventDate.trim()) {
+      toast.error('Please enter event name and date');
+      return;
+    }
+
+    setIsCreatingFreebieEvent(true);
+    try {
+      const res = await fetch('/api/create-freebie-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventName: freebieEventName,
+          eventDate: freebieEventDate,
+          email: 'freebie@snapworxx.com',
+          ownerName: adminEmail,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to create freebie event');
+        return;
+      }
+
+      toast.success(`✅ Freebie event created! (${data.freebie_count}/${data.max_freebies})`);
+      setFreebieEventName('');
+      setFreebieEventDate('');
+      setFreebieCount(data.freebie_count);
+      loadEvents();
+      loadStats();
+    } catch (err) {
+      toast.error('Server error');
+    } finally {
+      setIsCreatingFreebieEvent(false);
     }
   };
 
@@ -235,6 +278,57 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+        
+        {/* Freebie Events Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Gift className="w-6 h-6 text-amber-500" />
+            Create Freebie Event (Master Email)
+          </h2>
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl shadow-sm border-2 border-amber-200 p-6">
+            <p className="text-gray-700 mb-4 font-medium">
+              Create unlimited free promo events for freebie@snapworxx.com
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              Limit: 100 freebie events total • Unlimited storage per event
+            </p>
+            
+            <div className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <TextInput
+                  type="text"
+                  value={freebieEventName}
+                  onChange={(e) => setFreebieEventName(e.target.value)}
+                  placeholder="Event name (e.g., Birthday Party)"
+                  className="w-full"
+                />
+                <TextInput
+                  type="date"
+                  value={freebieEventDate}
+                  onChange={(e) => setFreebieEventDate(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              
+              <Button
+                onClick={handleCreateFreebieEvent}
+                loading={isCreatingFreebieEvent}
+                icon={<Gift className="w-4 h-4" />}
+                className="w-full md:w-auto"
+              >
+                Create Freebie Event
+              </Button>
+            </div>
+            
+            {freebieCount > 0 && (
+              <div className="mt-4 p-3 bg-white rounded-lg border border-amber-200">
+                <p className="text-sm text-amber-900">
+                  <span className="font-semibold">{freebieCount}/100</span> freebie events created
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* Events Section */}
         <div className="mb-12">
