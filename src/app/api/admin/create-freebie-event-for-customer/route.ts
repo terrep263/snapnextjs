@@ -1,30 +1,44 @@
 import { getServiceRoleClient } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-const MAX_FREEBIE_EVENTS_PER_CUSTOMER = 1000; // Per-customer limit (admin controls via UI)
-const UNLIMITED_STORAGE = 999999999; // ~999GB unlimited
+const MAX_FREEBIE_EVENTS_PER_CUSTOMER = 1000;
+const UNLIMITED_STORAGE = 999999999;
 
 function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+function isAdminRequest(request: Request | NextRequest): boolean {
+  // Check for admin session cookie
+  const cookieHeader = request.headers.get('cookie');
+  if (cookieHeader) {
+    const cookies = cookieHeader.split('; ');
+    const adminSessionCookie = cookies.find(c => c.startsWith('admin_session='));
+    if (adminSessionCookie) return true;
+  }
+
+  // Check for admin auth header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer admin_')) return true;
+
+  return false;
+}
+
 /**
  * Admin endpoint to create freebie events for specific customers
  * This endpoint allows admins to assign freebie events to customer emails
- * 
- * Request body:
- * {
- *   "hostName": "Customer Name",
- *   "hostEmail": "customer@email.com",
- *   "eventName": "Birthday Party",
- *   "eventDate": "2025-01-15",
- *   "eventType": "basic" or "premium",  // optional
- *   "eventSlug": "custom-slug",         // optional - auto-generated if not provided
- *   "adminAuthToken": "..."             // admin authentication
- * }
  */
-export async function POST(req: Request) {
+export async function POST(req: Request | NextRequest) {
   try {
+    // VERIFY ADMIN ACCESS
+    if (!isAdminRequest(req)) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Admin access required' }),
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       hostName,
@@ -33,7 +47,6 @@ export async function POST(req: Request) {
       eventDate,
       eventType,
       eventSlug,
-      adminAuthToken,
     } = body;
 
     // Validate required fields
@@ -54,9 +67,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // TODO: In production, verify adminAuthToken to ensure only admins can create freebie events
-    // For now, we rely on API route protection (should be behind auth middleware)
-    
     const supabase = getServiceRoleClient();
 
     // Count existing freebie events for this customer email

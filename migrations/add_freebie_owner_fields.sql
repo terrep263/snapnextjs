@@ -10,10 +10,11 @@ ALTER TABLE public.events
 ALTER TABLE public.events
   ADD COLUMN IF NOT EXISTS owner_email text;
 
--- Add paymentType column to clarify payment status without changing Stripe logic
+-- Add payment_type column to clarify payment status without changing Stripe logic
 -- Values: 'stripe' (paid via Stripe), 'freebie' (complimentary), NULL (legacy events)
+-- NOTE: Keep the column simple here; avoid adding a CHECK constraint with NULL in the IN list.
 ALTER TABLE public.events
-  ADD COLUMN IF NOT EXISTS payment_type text CHECK (payment_type IN ('stripe', 'freebie', NULL));
+  ADD COLUMN IF NOT EXISTS payment_type text;
 
 -- Create indexes for owner-based queries (used when loading dashboard)
 CREATE INDEX IF NOT EXISTS idx_events_owner_id ON public.events(owner_id);

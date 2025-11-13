@@ -466,6 +466,11 @@ export default function Dashboard() {
                   <h1 className="text-4xl font-bold text-gray-900">
                     {eventData ? eventData.name : 'Event Dashboard'}
                   </h1>
+                  {eventData?.is_freebie && (
+                    <span className="inline-block ml-3 px-3 py-1 bg-purple-100 text-purple-700 text-sm font-semibold rounded-full">
+                      🎁 Free Event
+                    </span>
+                  )}
                   <button
                     onClick={() => setEditingEventName(true)}
                     className="absolute -right-8 top-1 opacity-0 group-hover:opacity-100 bg-purple-500 hover:bg-purple-600 text-white p-1 rounded-md transition-all duration-200 text-xs"
