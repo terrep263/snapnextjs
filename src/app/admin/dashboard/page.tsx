@@ -25,9 +25,31 @@ interface PromoEvent {
   id: string;
   name: string;
   email: string;
+  owner_email?: string;
   slug: string;
   created_at: string;
   photo_count: number;
+  is_free?: boolean;
+  is_freebie?: boolean;
+  payment_type?: string;
+  stripe_session_id?: string;
+  promo_type?: string;
+}
+
+// Helper function to determine payment category
+function getPaymentCategory(event: PromoEvent): 'Paid' | 'Freebie' | 'Free Promo' {
+  if (event.is_freebie || event.payment_type === 'freebie') return 'Freebie';
+  if (event.is_free && !event.is_freebie) return 'Free Promo';
+  if (event.stripe_session_id || event.payment_type === 'stripe') return 'Paid';
+  return 'Paid'; // Safe default for existing events
+}
+
+// Helper to get event type
+function getEventType(event: PromoEvent): string {
+  if (event.promo_type === 'FREE_BASIC') return 'Free Basic';
+  if (event.is_freebie) return 'Freebie';
+  if (event.is_free) return 'Free Promo';
+  return 'Paid Event';
 }
 
 export default function AdminDashboardPage() {
@@ -42,6 +64,8 @@ export default function AdminDashboardPage() {
   const [freebieHostEmail, setFreebieHostEmail] = useState('');
   const [isCreatingFreebieEvent, setIsCreatingFreebieEvent] = useState(false);
   const [freebieCount, setFreebieCount] = useState(0);
+  const [eventPageIndex, setEventPageIndex] = useState(0);
+  const EVENTS_PER_PAGE = 20;
 
   // Load stats
   const { data: stats, loading: statsLoading, execute: loadStats } = useAsync(
@@ -379,42 +403,126 @@ export default function AdminDashboardPage() {
         
         {/* Events Section */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Events</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Log</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             {events && (events as PromoEvent[]).length > 0 ? (
-              <div className="space-y-4">
-                {(events as PromoEvent[]).map((event: PromoEvent) => (
-                  <div
-                    key={event.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                  >
-                    <div>
-                      <Link
-                        href={`/e/${event.slug}`}
-                        target="_blank"
-                        className="text-lg font-semibold text-purple-600 hover:underline"
-                      >
-                        {event.name}
-                      </Link>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {event.email} • {event.photo_count || 0} photos •{' '}
-                        {new Date(event.created_at).toLocaleDateString()}
-                      </p>
+              <div>
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Event Name</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Event Type</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Payment Category</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">User Email</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Created</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Photos</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(events as PromoEvent[])
+                        .slice(eventPageIndex * EVENTS_PER_PAGE, (eventPageIndex + 1) * EVENTS_PER_PAGE)
+                        .map((event: PromoEvent) => (
+                          <tr
+                            key={event.id}
+                            className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="px-6 py-4 text-sm">
+                              <Link
+                                href={`/e/${event.slug}`}
+                                target="_blank"
+                                className="text-purple-600 hover:underline font-medium truncate max-w-xs block"
+                                title={event.name}
+                              >
+                                {event.name}
+                              </Link>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                {getEventType(event)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  getPaymentCategory(event) === 'Paid'
+                                    ? 'bg-green-50 text-green-700'
+                                    : getPaymentCategory(event) === 'Freebie'
+                                    ? 'bg-purple-50 text-purple-700'
+                                    : 'bg-amber-50 text-amber-700'
+                                }`}
+                              >
+                                {getPaymentCategory(event)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              <span className="truncate max-w-xs block" title={event.email}>
+                                {event.email}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700">
+                              {new Date(event.created_at).toLocaleDateString()} {new Date(event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-700 text-center">
+                              {event.photo_count || 0}
+                            </td>
+                            <td className="px-6 py-4 text-sm">
+                              <Button
+                                onClick={() => handleDeleteEvent(event.id, event.name)}
+                                variant="danger"
+                                size="sm"
+                                loading={isDeletingEvent === event.id}
+                                icon={<Trash2 className="w-4 h-4" />}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+                  <p className="text-sm text-gray-600">
+                    Showing {Math.min(eventPageIndex * EVENTS_PER_PAGE + 1, (events as PromoEvent[]).length)} to{' '}
+                    {Math.min((eventPageIndex + 1) * EVENTS_PER_PAGE, (events as PromoEvent[]).length)} of{' '}
+                    {(events as PromoEvent[]).length} events
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setEventPageIndex(Math.max(0, eventPageIndex - 1))}
+                      disabled={eventPageIndex === 0}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600">
+                        Page {eventPageIndex + 1} of{' '}
+                        {Math.ceil((events as PromoEvent[]).length / EVENTS_PER_PAGE)}
+                      </span>
                     </div>
                     <Button
-                      onClick={() => handleDeleteEvent(event.id, event.name)}
-                      variant="danger"
+                      onClick={() => setEventPageIndex(eventPageIndex + 1)}
+                      disabled={
+                        (eventPageIndex + 1) * EVENTS_PER_PAGE >=
+                        (events as PromoEvent[]).length
+                      }
                       size="sm"
-                      loading={isDeletingEvent === event.id}
-                      icon={<Trash2 className="w-4 h-4" />}
+                      variant="secondary"
                     >
-                      Delete
+                      Next
                     </Button>
                   </div>
-                ))}
+                </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">No promo events created yet</p>
+              <p className="text-gray-500 text-center py-12">No events created yet</p>
             )}
           </div>
         </div>

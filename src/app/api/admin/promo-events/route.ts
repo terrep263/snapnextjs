@@ -16,12 +16,12 @@ export async function GET(req: Request) {
 
     const supabase = getServiceRoleClient();
 
-    // Get all promo events with photo counts
+    // Get all events (free, freebie, and paid) with all necessary fields
     const { data: events, error: eventsError } = await supabase
       .from('events')
-      .select('id, name, email, slug, created_at')
-      .eq('is_free', true)
-      .eq('promo_type', 'FREE_BASIC')
+      .select(
+        'id, name, email, owner_email, slug, created_at, is_free, is_freebie, payment_type, stripe_session_id, promo_type'
+      )
       .order('created_at', { ascending: false });
 
     if (eventsError) throw eventsError;
