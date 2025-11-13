@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     // Generate QR code PNG
     const qrPngBuffer = await QRCode.toBuffer(text, {
-      type: 'image/png',
+      type: 'png',
       width: validatedSize,
       margin: 2,
       color: {
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return new NextResponse(qrPngBuffer, {
+    return new NextResponse(Buffer.from(qrPngBuffer), {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': 'public, max-age=3600',
