@@ -38,6 +38,8 @@ export default function AdminDashboardPage() {
   const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);
   const [freebieEventName, setFreebieEventName] = useState('');
   const [freebieEventDate, setFreebieEventDate] = useState('');
+  const [freebieHostName, setFreebieHostName] = useState('');
+  const [freebieHostEmail, setFreebieHostEmail] = useState('');
   const [isCreatingFreebieEvent, setIsCreatingFreebieEvent] = useState(false);
   const [freebieCount, setFreebieCount] = useState(0);
 
@@ -106,21 +108,35 @@ export default function AdminDashboardPage() {
   };
 
   const handleCreateFreebieEvent = async () => {
-    if (!freebieEventName.trim() || !freebieEventDate.trim()) {
-      toast.error('Please enter event name and date');
+    // Validate required fields
+    if (!freebieHostName.trim()) {
+      toast.error('Please enter Host Name');
+      return;
+    }
+    if (!freebieHostEmail.trim()) {
+      toast.error('Please enter Host Email');
+      return;
+    }
+    if (!freebieEventName.trim()) {
+      toast.error('Please enter Event Name');
+      return;
+    }
+    if (!freebieEventDate.trim()) {
+      toast.error('Please enter Event Date');
       return;
     }
 
     setIsCreatingFreebieEvent(true);
     try {
-      const res = await fetch('/api/create-freebie-event', {
+      const res = await fetch('/api/admin/create-freebie-event-for-customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          hostName: freebieHostName,
+          hostEmail: freebieHostEmail,
           eventName: freebieEventName,
           eventDate: freebieEventDate,
-          email: 'freebie@snapworxx.com',
-          ownerName: adminEmail,
+          adminAuthToken: adminEmail, // Pass admin email as proof of admin action
         }),
       });
 
@@ -131,13 +147,21 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      toast.success(`✅ Freebie event created! (${data.freebie_count}/${data.max_freebies})`);
+      toast.success(
+        `✅ Freebie event created for ${freebieHostName}!\n\nHost Dashboard: ${data.urls.hostDashboard}\n\nGuest Gallery: ${data.urls.guestGallery}`
+      );
+      
+      // Clear form
+      setFreebieHostName('');
+      setFreebieHostEmail('');
       setFreebieEventName('');
       setFreebieEventDate('');
-      setFreebieCount(data.freebie_count);
+      
+      // Reload data
       loadEvents();
       loadStats();
     } catch (err) {
+      console.error('Error creating freebie event:', err);
       toast.error('Server error');
     } finally {
       setIsCreatingFreebieEvent(false);
@@ -303,9 +327,26 @@ export default function AdminDashboardPage() {
               <div className="grid md:grid-cols-2 gap-4">
                 <TextInput
                   type="text"
+                  value={freebieHostName}
+                  onChange={(e) => setFreebieHostName(e.target.value)}
+                  placeholder="Host Name"
+                  className="w-full"
+                />
+                <TextInput
+                  type="email"
+                  value={freebieHostEmail}
+                  onChange={(e) => setFreebieHostEmail(e.target.value)}
+                  placeholder="Host Email"
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <TextInput
+                  type="text"
                   value={freebieEventName}
                   onChange={(e) => setFreebieEventName(e.target.value)}
-                  placeholder="Event name (e.g., Birthday Party)"
+                  placeholder="Event Name (e.g., Birthday Party)"
                   className="w-full"
                 />
                 <TextInput
