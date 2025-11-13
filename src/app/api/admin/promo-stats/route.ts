@@ -17,17 +17,32 @@ export async function GET(req: Request) {
 
     const supabase = getServiceRoleClient();
 
-    // Get total promo events
-    const { data: events, error: eventsError } = await supabase
+    // Get ALL events with their types
+    const { data: allEvents, error: allEventsError } = await supabase
       .from('events')
-      .select('id, email')
-      .eq('is_free', true)
-      .eq('promo_type', 'FREE_BASIC');
+      .select('id, email, is_free, is_freebie, promo_type, status');
 
-    if (eventsError) throw eventsError;
+    if (allEventsError) throw allEventsError;
+
+    // Count event types
+    let totalEvents = 0;
+    let freeBasicCount = 0;
+    let freebieCount = 0;
+    let paidCount = 0;
+
+    (allEvents || []).forEach((event: any) => {
+      totalEvents++;
+      if (event.is_freebie) {
+        freebieCount++;
+      } else if (event.is_free && event.promo_type === 'FREE_BASIC') {
+        freeBasicCount++;
+      } else if (!event.is_free) {
+        paidCount++;
+      }
+    });
 
     // Get unique emails
-    const uniqueEmails = new Set((events || []).map(e => e.email));
+    const uniqueEmails = new Set((allEvents || []).map(e => e.email));
 
     // Get blocked emails
     const { data: blockedData } = await supabase
@@ -37,7 +52,10 @@ export async function GET(req: Request) {
     const blockedEmails = (blockedData || []).map(b => b.email);
 
     return new Response(JSON.stringify({
-      totalEvents: events?.length || 0,
+      totalEvents,
+      freeBasicEvents: freeBasicCount,
+      freebieEvents: freebieCount,
+      paidEvents: paidCount,
       totalEmails: uniqueEmails.size,
       blockedEmails: blockedEmails.length,
       statusEnabled: process.env.PROMO_FREE_BASIC_ENABLED === 'true',

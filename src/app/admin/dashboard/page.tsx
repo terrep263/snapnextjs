@@ -13,6 +13,9 @@ import { Button, TextInput } from '@/components/forms';
 
 interface PromoStats {
   totalEvents: number;
+  freeBasicEvents?: number;
+  freebieEvents?: number;
+  paidEvents?: number;
   totalEmails: number;
   blockedEmails: number;
   statusEnabled: boolean;
@@ -254,6 +257,9 @@ export default function AdminDashboardPage() {
                 <Zap className="w-5 h-5 text-blue-600" />
               </div>
               <p className="text-3xl font-bold text-gray-900">{stats.totalEvents}</p>
+              <p className="text-xs text-gray-600 mt-2">
+                Free Basic: {stats.freeBasicEvents || 0} | Freebie: {stats.freebieEvents || 0} | Paid: {stats.paidEvents || 0}
+              </p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
               <div className="flex items-center justify-between mb-2">
