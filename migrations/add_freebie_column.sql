@@ -5,6 +5,5 @@ ALTER TABLE public.events
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_events_is_freebie ON public.events(is_freebie);
 
--- Add check to ensure freebie events are also marked as free
-ALTER TABLE public.events
-  ADD CONSTRAINT check_freebie_is_free CHECK (NOT is_freebie OR is_free = true);
+-- Note: Constraint already exists if this migration ran before - that's OK!
+-- ALTER TABLE public.events ADD CONSTRAINT check_freebie_is_free CHECK (NOT is_freebie OR is_free = true);

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Generate base QR code as SVG string
     const qrSvg = await QRCode.toString(text, {
-      type: 'image/svg+xml',
+      type: 'svg',
       width: size,
       margin: 2,
       color: {
