@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Generate QR as PNG first
     const qrPngBuffer = await QRCode.toBuffer(text, {
-      type: 'image/png',
+      type: 'png',
       width: size,
       margin: 2,
       color: {
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // For now, return PNG without overlay (overlay requires canvas/sharp which adds complexity)
     // The QR code is still scannable and includes the URL encoded in it
-    return new NextResponse(qrPngBuffer, {
+    return new NextResponse(Buffer.from(qrPngBuffer), {
       headers: {
         'Content-Type': 'image/png',
         'Cache-Control': 'public, max-age=3600',
