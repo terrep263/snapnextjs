@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Download, Copy, Mail, MessageCircle, ArrowRight, ArrowLeft, Lock } from 'lucide-react';
+import { Copy, Mail, MessageCircle, ArrowRight, ArrowLeft, Lock } from 'lucide-react';
 import Link from 'next/link';
+import QRCodeGenerator from '@/components/QRCodeGenerator';
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -13,7 +14,6 @@ export default function ConfirmationPage() {
   const [eventData, setEventData] = useState<any>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
-  const qrCodeRef = useRef<HTMLDivElement>(null);
   
   const eventUrl = `https://snapworxx.com/e/${slug}`;
 
@@ -32,14 +32,6 @@ export default function ConfirmationPage() {
     navigator.clipboard.writeText(eventUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const downloadQRCode = () => {
-    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(eventUrl)}`;
-    const link = document.createElement('a');
-    link.href = qrImageUrl;
-    link.download = `${eventData?.name || 'event'}-qrcode.png`;
-    link.click();
   };
 
   const shareViaEmail = () => {
@@ -123,28 +115,13 @@ export default function ConfirmationPage() {
 
         {/* QR Code Section */}
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* QR Code */}
+          {/* QR Code - Branded */}
           <div className="flex flex-col items-center">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Scan to Upload Photos</h3>
-            <div
-              ref={qrCodeRef}
-              className="bg-white p-8 rounded-2xl border-2 border-gray-200 mb-4"
-            >
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(eventUrl)}`}
-                alt="QR Code"
-                width={256}
-                height={256}
-                className="border border-gray-300"
-              />
-            </div>
-            <button
-              onClick={downloadQRCode}
-              className="flex items-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download QR Code
-            </button>
+            <QRCodeGenerator 
+              url={eventUrl}
+              eventName={eventData?.name}
+              size={256}
+            />
           </div>
 
           {/* Next Steps */}
