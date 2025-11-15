@@ -171,9 +171,16 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      toast.success(
-        `✅ Freebie event created for ${freebieHostName}!\n\nHost Dashboard: ${data.urls.hostDashboard}\n\nGuest Gallery: ${data.urls.guestGallery}`
-      );
+      // Show success with email status
+      if (data.emailSent) {
+        toast.success(
+          `🎉 Freebie created! Email sent to ${freebieHostEmail}\n\n📊 Host Dashboard: ${data.urls.hostDashboard}\n\n🖼️ Guest Gallery: ${data.urls.guestGallery}`
+        );
+      } else {
+        toast.error(
+          `⚠️ Freebie created but email failed. Share manually:\n\n🖼️ Gallery: ${data.urls.guestGallery}`
+        );
+      }
       
       // Clear form
       setFreebieHostName('');
