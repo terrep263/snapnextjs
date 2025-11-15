@@ -81,7 +81,13 @@ export default function AdminDashboardPage() {
   const { data: events, loading: eventsLoading, execute: loadEvents } = useAsync(
     async () => {
       const res = await adminApi.getEvents();
-      if (res.success) return (res.data as any)?.events || [];
+      console.log('Events response:', res);
+      if (res.success) {
+        const eventsList = (res.data as any)?.events || [];
+        console.log(`Loaded ${eventsList.length} events`);
+        return eventsList;
+      }
+      console.error('Failed to load events:', res.error);
       throw new Error(res.error);
     },
     false
@@ -105,6 +111,14 @@ export default function AdminDashboardPage() {
       loadBlockedEmails().catch((err) => toast.error('Failed to load blocked emails'));
     }
   }, [authenticated]);
+
+  // Debug: log events when they change
+  useEffect(() => {
+    if (events) {
+      console.log('Events state updated:', events);
+      console.log('Events count:', (events as PromoEvent[]).length);
+    }
+  }, [events]);
 
   const handleBlockEmail = async () => {
     if (!blockEmail.trim()) {
