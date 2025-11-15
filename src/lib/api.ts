@@ -33,6 +33,7 @@ export const apiClient = async <T = any>(
 
     const response = await fetch(url, {
       ...options,
+      credentials: 'include', // ✅ IMPORTANT: Send cookies with API requests
       headers: {
         ...defaultHeaders,
         ...options?.headers,
