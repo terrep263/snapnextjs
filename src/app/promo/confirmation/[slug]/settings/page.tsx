@@ -215,9 +215,15 @@ export default function EventSettingsPage() {
           <h2 className="text-lg font-bold text-gray-900 mb-4">About Your Event</h2>
           <div className="space-y-3 text-sm text-gray-600">
             <p>✓ Your event is active for 30 days from creation</p>
-            <p>✓ Guests can upload up to 1500 photos</p>
+            <p>✓ Guests can upload up to 1500 photos and videos</p>
             <p>✓ All photos stay in your private gallery</p>
             <p>✓ You can download all photos at any time</p>
+          </div>
+          
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-900">
+              <strong>Note:</strong> By accepting this free promotional event offer, you grant SnapWorxx permission to use photos from this event for marketing and promotional purposes.
+            </p>
           </div>
         </div>
       </div>
