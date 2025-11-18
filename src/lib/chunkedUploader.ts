@@ -1,22 +1,20 @@
-// Utility for handling large file uploads with chunking
+// Utility for handling large file uploads with retry logic
+// NOTE: Renamed from "ChunkedUploader" but now uses direct upload with retries
+// for better reliability. Supabase handles large files well without chunking.
 export class ChunkedUploader {
-  private chunkSize: number;
   private maxRetries: number;
-  
-  constructor(chunkSize = 2 * 1024 * 1024, maxRetries = 5) { // 2MB chunks for better mobile reliability
-    this.chunkSize = chunkSize;
+
+  constructor(chunkSize = 2 * 1024 * 1024, maxRetries = 5) {
     this.maxRetries = maxRetries;
+    // chunkSize parameter kept for backwards compatibility but not used
   }
 
   async uploadFile(
-    file: File, 
-    uploadPath: string, 
+    file: File,
+    uploadPath: string,
     supabaseClient: any,
     onProgress?: (progress: number) => void
   ): Promise<{ success: boolean; error?: string; url?: string }> {
-    const totalChunks = Math.ceil(file.size / this.chunkSize);
-    let uploadedBytes = 0;
-    
     // Determine correct MIME type upfront
     let mimeType = file.type;
     if (!mimeType || mimeType === 'application/octet-stream') {
@@ -43,192 +41,117 @@ export class ChunkedUploader {
       if (ext && mimeMap[ext]) {
         mimeType = mimeMap[ext];
       } else {
-        mimeType = file.name.match(/\.(mp4|mov|avi|quicktime|mkv|flv|wmv|webm)$/i) ? 'video/mp4' : 'video/mp4';
+        mimeType = file.name.match(/\.(mp4|mov|avi|quicktime|mkv|flv|wmv|webm)$/i) ? 'video/mp4' : 'application/octet-stream';
       }
     }
-    
-    console.log(`📤 Starting upload: ${file.name} (${file.size} bytes, MIME: ${mimeType})`);
-    
+
+    console.log(`📤 Starting reliable upload: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB, MIME: ${mimeType})`);
+
     try {
-      // For files smaller than chunk size, use direct upload
-      if (file.size <= this.chunkSize) {
-        console.log(`📁 File is small (${(file.size / 1024 / 1024).toFixed(2)}MB), using direct upload with MIME: ${mimeType}`);
-        
-        // Create a blob with explicit MIME type
-        const blob = new Blob([file], { type: mimeType });
-        
-        const { data, error } = await supabaseClient.storage
-          .from('photos')
-          .upload(uploadPath, blob, {
-            cacheControl: '3600',
-            upsert: false,
-            contentType: mimeType
-          });
-          
-        if (error) throw error;
-        
-        const { data: { publicUrl } } = supabaseClient.storage
-          .from('photos')
-          .getPublicUrl(uploadPath);
-          
-        return { success: true, url: publicUrl };
-      }
+      // Upload file directly with retry logic and exponential backoff
+      let retries = 0;
+      let uploadSuccess = false;
+      let lastError: any = null;
 
-      // For larger files, use chunked upload approach
-      const chunks: Blob[] = [];
-      
-      // Split file into chunks
-      for (let i = 0; i < totalChunks; i++) {
-        const start = i * this.chunkSize;
-        const end = Math.min(start + this.chunkSize, file.size);
-        chunks.push(file.slice(start, end));
-      }
+      // Create a blob with explicit MIME type
+      const blob = new Blob([file], { type: mimeType });
 
-      // Upload each chunk with retry logic
-      const uploadedChunks: string[] = [];
-      
-      for (let i = 0; i < chunks.length; i++) {
-        const chunkPath = `${uploadPath}.part${i.toString().padStart(3, '0')}`;
-        let success = false;
-        let retries = 0;
+      while (!uploadSuccess && retries < this.maxRetries) {
+        try {
+          console.log(`🔄 Upload attempt ${retries + 1}/${this.maxRetries} for ${file.name}`);
 
-        while (!success && retries < this.maxRetries) {
-          try {
-            // Create chunk blob with correct MIME type
-            const chunkBlob = new Blob([chunks[i]], { type: mimeType });
-            
-            console.log(`🔄 Uploading chunk ${i + 1}/${chunks.length} (${(chunks[i].size / 1024 / 1024).toFixed(2)}MB) to ${chunkPath} with MIME: ${mimeType}...`);
-            
-            const { data, error } = await supabaseClient.storage
-              .from('photos')
-              .upload(chunkPath, chunkBlob, {
-                cacheControl: '3600',
-                upsert: true, // Allow overwrite for retries
-                contentType: mimeType
-              });
-              
-            if (error) throw error;
-            
-            uploadedChunks.push(chunkPath);
-            uploadedBytes += chunks[i].size;
-            success = true;
-            
-            // Report progress
-            if (onProgress) {
-              onProgress((uploadedBytes / file.size) * 100);
-            }
-            
-          } catch (error) {
-            retries++;
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(`Chunk ${i} upload failed (${chunks[i].size} bytes), retry ${retries}/${this.maxRetries}:`, errorMessage);
-            
-            if (retries >= this.maxRetries) {
-              // Clean up partial uploads
-              await this.cleanupChunks(supabaseClient, uploadedChunks);
-              throw new Error(`Failed to upload chunk ${i} (${chunks[i].size} bytes) after ${this.maxRetries} retries: ${errorMessage}`);
-            }
-            
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+          // Update progress during attempt
+          if (onProgress) {
+            onProgress(10 + (retries * 10));
+          }
+
+          const { data, error } = await supabaseClient.storage
+            .from('photos')
+            .upload(uploadPath, blob, {
+              cacheControl: '3600',
+              upsert: retries > 0, // Allow overwrite on retry attempts
+              contentType: mimeType
+            });
+
+          if (error) {
+            throw error;
+          }
+
+          uploadSuccess = true;
+          if (onProgress) {
+            onProgress(100);
+          }
+
+          const { data: { publicUrl } } = supabaseClient.storage
+            .from('photos')
+            .getPublicUrl(uploadPath);
+
+          console.log(`✅ Upload completed successfully: ${file.name}`);
+          return { success: true, url: publicUrl };
+
+        } catch (error) {
+          lastError = error;
+          retries++;
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.warn(`❌ Upload attempt ${retries}/${this.maxRetries} failed: ${errorMessage}`);
+
+          if (retries < this.maxRetries) {
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+            const waitTime = 1000 * Math.pow(2, retries - 1);
+            console.log(`⏳ Waiting ${waitTime}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
           }
         }
       }
 
-      // All chunks uploaded successfully
-      // For now, we'll keep chunks separate and create a reference file
-      const chunkInfo = {
-        originalName: file.name,
-        originalSize: file.size,
-        mimeType: file.type,
-        chunks: uploadedChunks,
-        totalChunks: chunks.length,
-        uploadedAt: new Date().toISOString()
+      // All retries failed
+      const errorMessage = lastError instanceof Error ? lastError.message : 'Upload failed after multiple retries';
+      console.error(`❌ Upload failed after ${this.maxRetries} attempts: ${errorMessage}`);
+      return {
+        success: false,
+        error: errorMessage
       };
 
-      // Create metadata file
-      const metadataPath = `${uploadPath}.metadata`;
-      const metadataBlob = new Blob([JSON.stringify(chunkInfo)], { type: 'application/json' });
-      
-      const { error: metadataError } = await supabaseClient.storage
-        .from('photos')
-        .upload(metadataPath, metadataBlob, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: 'application/json'
-        });
-
-      if (metadataError) {
-        await this.cleanupChunks(supabaseClient, uploadedChunks);
-        throw metadataError;
-      }
-
-      // Return the metadata file URL as the reference
-      const { data: { publicUrl } } = supabaseClient.storage
-        .from('photos')
-        .getPublicUrl(metadataPath);
-
-      return { success: true, url: publicUrl };
-      
     } catch (error) {
-      console.error('Chunked upload failed:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Upload failed' 
+      console.error('Upload failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
       };
     }
   }
 
-  private async cleanupChunks(supabaseClient: any, chunkPaths: string[]) {
+  /**
+   * Download file (for backwards compatibility)
+   */
+  async downloadChunkedFile(url: string, supabaseClient: any): Promise<Blob | null> {
     try {
-      if (chunkPaths.length > 0) {
-        await supabaseClient.storage
-          .from('photos')
-          .remove(chunkPaths);
+      // Extract path from URL
+      const urlParts = url.split('/storage/v1/object/public/photos/');
+      if (urlParts.length < 2) {
+        console.error('Invalid URL format');
+        return null;
       }
-    } catch (error) {
-      console.warn('Failed to cleanup chunks:', error);
-    }
-  }
 
-  // Utility to reconstruct file from chunks (for download)
-  async downloadChunkedFile(metadataUrl: string, supabaseClient: any): Promise<Blob | null> {
-    try {
-      // Extract path from URL and fetch metadata
-      const metadataPath = metadataUrl.split('/storage/v1/object/public/photos/')[1];
-      
-      const { data: metadataBlob, error } = await supabaseClient.storage
+      const filePath = urlParts[1];
+
+      const { data, error } = await supabaseClient.storage
         .from('photos')
-        .download(metadataPath);
+        .download(filePath);
 
       if (error) throw error;
+      return data;
 
-      const metadataText = await metadataBlob.text();
-      const metadata = JSON.parse(metadataText);
-
-      // Download all chunks
-      const chunkBlobs: Blob[] = [];
-      
-      for (const chunkPath of metadata.chunks) {
-        const { data: chunkBlob, error: chunkError } = await supabaseClient.storage
-          .from('photos')
-          .download(chunkPath);
-          
-        if (chunkError) throw chunkError;
-        chunkBlobs.push(chunkBlob);
-      }
-
-      // Combine chunks back into original file
-      return new Blob(chunkBlobs, { type: metadata.mimeType });
-      
     } catch (error) {
-      console.error('Failed to download chunked file:', error);
+      console.error('Failed to download file:', error);
       return null;
     }
   }
 
-  // Check if URL represents a chunked file
+  /**
+   * Check if URL represents a chunked file (deprecated, always returns false now)
+   */
   static isChunkedFile(url: string): boolean {
-    return url.includes('.metadata');
+    return false; // No longer using chunked uploads
   }
 }

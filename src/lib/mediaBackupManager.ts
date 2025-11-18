@@ -94,7 +94,7 @@ export class MediaBackupManager {
       eventId,
       originalFilename: filename,
       originalPath,
-      backupPath: `backups/${backupId}/${filename}`,
+      backupPath: `backups/${eventId}/${backupId}/${filename}`,
       backupTimestamp,
       fileSize,
       fileHash,
@@ -105,15 +105,68 @@ export class MediaBackupManager {
     };
 
     try {
-      // Store backup metadata in database for tracking
-      console.log(`📦 Creating backup metadata for ${filename}:`, metadata);
-      
-      // Note: In production, store this in a backup_metadata table
-      // For now, we'll just track it in logs and localStorage
-      
+      console.log(`📦 Creating backup for ${filename} at ${metadata.backupPath}`);
+
+      metadata.status = 'in_progress';
+
+      // Actually copy the file from photos bucket to backups bucket
+      // Step 1: Download from original location
+      const { data: fileData, error: downloadError } = await supabaseClient.storage
+        .from('photos')
+        .download(originalPath);
+
+      if (downloadError) {
+        throw new Error(`Failed to download original file: ${downloadError.message}`);
+      }
+
+      // Step 2: Upload to backup location
+      const { error: uploadError } = await supabaseClient.storage
+        .from('photos') // Using same bucket with backups/ prefix for simplicity
+        .upload(metadata.backupPath, fileData, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload backup: ${uploadError.message}`);
+      }
+
+      // Step 3: Verify the backup was created successfully
+      const { data: verifyData, error: verifyError } = await supabaseClient.storage
+        .from('photos')
+        .download(metadata.backupPath);
+
+      if (verifyError || !verifyData) {
+        throw new Error('Backup verification failed');
+      }
+
+      // Step 4: Store metadata in database if table exists
+      try {
+        await supabaseClient
+          .from('media_backup_metadata')
+          .insert([{
+            backup_id: backupId,
+            event_id: eventId,
+            original_filename: filename,
+            original_path: originalPath,
+            backup_path: metadata.backupPath,
+            file_hash: fileHash,
+            file_size: fileSize,
+            status: 'completed',
+            verified: true,
+            retention_days: this.DEFAULT_RETENTION_DAYS,
+            expires_at: expiresAt
+          }]);
+        console.log(`✅ Backup metadata stored in database`);
+      } catch (dbError) {
+        // Non-critical - backup file exists even if metadata insert fails
+        console.warn(`⚠️ Backup metadata insert failed (non-critical):`, dbError);
+      }
+
       metadata.status = 'completed';
-      console.log(`✅ Backup created successfully: ${backupId}`);
-      
+      metadata.verified = true;
+      console.log(`✅ Backup created and verified: ${backupId}`);
+
       return metadata;
     } catch (error) {
       console.error('❌ Backup creation failed:', error);

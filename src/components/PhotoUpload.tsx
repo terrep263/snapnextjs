@@ -286,22 +286,34 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 80;
         setUploadProgress({ ...progress });
 
-        // BACKUP: Create backup of uploaded file
-        const uploadStartTime = Date.now();
+        // Calculate file hash for integrity verification
+        let fileHash = 'hash-not-calculated';
         try {
-          await MediaBackupManager.createMediaBackup(
-            filePath,
-            eventData.id,
-            processedFile.name,
-            'hash-placeholder', // In production, calculate actual SHA-256 hash
-            processedFile.size,
-            supabase
-          );
+          progress[key] = 85;
+          setUploadProgress({ ...progress });
+          fileHash = await SecureMediaManager.calculateFileHash(processedFile);
+          console.log(`🔐 File hash calculated: ${fileHash.substring(0, 16)}...`);
+        } catch (hashError) {
+          console.warn(`⚠️ Hash calculation failed for ${processedFile.name}:`, hashError);
+          // Continue without hash - it's not critical for upload to succeed
+        }
+
+        // BACKUP: Create backup of uploaded file (non-blocking)
+        const uploadStartTime = Date.now();
+        // Don't await - run backup in background, don't block upload completion
+        MediaBackupManager.createMediaBackup(
+          filePath,
+          eventData.id,
+          processedFile.name,
+          fileHash,
+          processedFile.size,
+          supabase
+        ).then(() => {
           console.log(`📦 Backup created for ${processedFile.name}`);
-        } catch (backupError) {
+        }).catch((backupError) => {
           console.warn(`⚠️ Backup creation failed for ${processedFile.name}:`, backupError);
           // Don't fail upload if backup fails, just log it
-        }
+        });
 
         // AUDIT: Log successful upload operation
         const uploadDuration = Date.now() - uploadStartTime;
@@ -416,7 +428,8 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           file_path: filePath,
           size: file.size,
           type: file.type,
-          is_video: isVideo
+          is_video: isVideo,
+          file_hash: fileHash !== 'hash-not-calculated' ? fileHash : null
         };
 
         // Validate photoRecord is complete
@@ -515,6 +528,13 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
   const handleFiles = useCallback(async (files: FileList) => {
     if (!files || files.length === 0 || !eventData) {
       console.error('❌ Missing required data:', { files: !!files, filesLength: files?.length, eventData });
+      return;
+    }
+
+    // Validate file count (prevent bulk upload attacks)
+    const MAX_FILES_PER_UPLOAD = 100;
+    if (files.length > MAX_FILES_PER_UPLOAD) {
+      alert(`Please upload a maximum of ${MAX_FILES_PER_UPLOAD} files at once. You selected ${files.length} files.`);
       return;
     }
 
