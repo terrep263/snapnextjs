@@ -1,4 +1,3 @@
-
 import { getServiceRoleClient } from '@/lib/supabase';
 import crypto from 'crypto';
 
@@ -16,7 +15,10 @@ export async function POST(req: Request) {
     const { eventName, eventDate, email, ownerName, eventPassword } = body;
 
     if (!eventName || !eventDate || !email) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields' }),
+        { status: 400 }
+      );
     }
 
     const supabase = getServiceRoleClient();
@@ -30,20 +32,29 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (existingEvents && existingEvents.length > 0) {
-      return new Response(JSON.stringify({ error: 'Promo already used for this email' }), { status: 409 });
+      return new Response(
+        JSON.stringify({ error: 'Promo already used for this email' }),
+        { status: 409 }
+      );
     }
 
     const now = new Date();
     const expiresAt = new Date(
       now.getTime() +
-        Number(process.env.PROMO_FREE_BASIC_EVENT_LIFESPAN_DAYS || 30) * 24 * 60 * 60 * 1000
+        Number(process.env.PROMO_FREE_BASIC_EVENT_LIFESPAN_DAYS || 30) *
+          24 * 60 * 60 * 1000
     );
 
-    const slugBase = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slugBase = eventName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
     const slug = `${slugBase}-${Date.now()}`;
-    const eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Hash password if provided
+    const eventId = `evt_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
+
     const passwordHash = eventPassword ? hashPassword(eventPassword) : null;
 
     const { data: newEvent, error: insertError } = await supabase
@@ -67,18 +78,28 @@ export async function POST(req: Request) {
 
     if (insertError) {
       console.error('Error creating promo event', insertError);
-      return new Response(JSON.stringify({ error: 'Could not create event' }), { status: 500 });
+      return new Response(
+        JSON.stringify({ error: 'Could not create event' }),
+        { status: 500 }
+      );
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      slug: newEvent.slug,
-      name: newEvent.name,
-      email: newEvent.email,
-      password_hash: newEvent.password_hash
-    }), { status: 200 });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        id: newEvent.id,
+        slug: newEvent.slug,
+        name: newEvent.name,
+        email: newEvent.email,
+        password_hash: newEvent.password_hash,
+      }),
+      { status: 200 }
+    );
   } catch (err) {
     console.error('Unhandled error in promo free basic route', err);
-    return new Response(JSON.stringify({ error: 'Server error' }), { status: 500 });
+    return new Response(
+      JSON.stringify({ error: 'Server error' }),
+      { status: 500 }
+    );
   }
 }
