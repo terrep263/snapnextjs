@@ -1,6 +1,6 @@
 /**
  * Secure Media Manager
- * 
+ *
  * Enterprise-grade media upload/download management with:
  * - File validation & sanitization
  * - Virus/malware scanning capability
@@ -9,8 +9,6 @@
  * - Comprehensive error handling & logging
  * - Automatic cleanup on failure
  */
-
-import crypto from 'crypto';
 
 export interface MediaValidationResult {
   valid: boolean;
@@ -169,31 +167,23 @@ export class SecureMediaManager {
   }
 
   /**
-   * Calculate file hash for integrity verification
+   * Calculate file hash for integrity verification using Web Crypto API
    */
   static async calculateFileHash(file: File): Promise<string> {
-    const hash = crypto.createHash('sha256');
-    const chunkSize = 1024 * 1024; // 1MB chunks for hashing
-    let offset = 0;
-
-    while (offset < file.size) {
-      const chunk = file.slice(offset, offset + chunkSize);
-      const buffer = await chunk.arrayBuffer();
-      hash.update(Buffer.from(buffer));
-      offset += chunkSize;
-    }
-
-    return hash.digest('hex');
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   /**
-   * Calculate chunk hash for integrity verification
+   * Calculate chunk hash for integrity verification using Web Crypto API
    */
   static async calculateChunkHash(chunk: Blob): Promise<string> {
-    const hash = crypto.createHash('sha256');
     const buffer = await chunk.arrayBuffer();
-    hash.update(Buffer.from(buffer));
-    return hash.digest('hex');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   /**

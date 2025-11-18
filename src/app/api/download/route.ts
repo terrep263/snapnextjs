@@ -17,8 +17,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate URL is from Supabase storage
-    if (!url.includes('supabase') && !url.includes('snapworxx')) {
+    // SECURITY: Strict URL validation to prevent SSRF attacks
+    // Only allow URLs from our Supabase storage domain
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    // URL must start with the exact Supabase URL (prevents bypasses like http://evil.com?supabase=true)
+    if (!url.startsWith(supabaseUrl)) {
+      console.warn('⚠️ Blocked download attempt from unauthorized domain:', url);
       return NextResponse.json(
         { error: 'Invalid URL - must be from Supabase storage' },
         { status: 403 }

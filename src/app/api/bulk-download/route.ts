@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Server-side bulk ZIP download endpoint
  * Uses archiver for efficient streaming ZIP creation
- * Handles multiple file downloads and creates ZIP on-the-fly
+ * Handles multiple file downloads with parallel fetching and creates ZIP on-the-fly
  */
 
 interface DownloadRequest {
@@ -22,17 +22,22 @@ interface DownloadRequest {
 }
 
 const FETCH_TIMEOUT = 30000; // 30 seconds per file
-const REQUEST_DELAY = 100; // Delay between requests
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB per file
 const MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500MB total
+const MAX_PARALLEL_DOWNLOADS = 5; // Download 5 files at a time
 
-async function downloadFileWithTimeout(url: string): Promise<Buffer> {
+async function downloadFileWithTimeout(url: string, timeout: number = FETCH_TIMEOUT): Promise<Buffer> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT);
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
-    // Use the /api/download proxy to handle CORS and authentication
-    const response = await fetch(url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_SUPABASE_URL || ''}${url}`, {
+    // Validate URL is from Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (supabaseUrl && !url.startsWith(supabaseUrl)) {
+      throw new Error('Invalid URL - must be from Supabase storage');
+    }
+
+    const response = await fetch(url, {
       signal: controller.signal,
     });
 
@@ -53,7 +58,7 @@ async function downloadFileWithTimeout(url: string): Promise<Buffer> {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Timeout downloading file (${FETCH_TIMEOUT / 1000}s)`);
+      throw new Error(`Timeout downloading file (${timeout / 1000}s)`);
     }
     throw error;
   }
@@ -64,6 +69,43 @@ function sanitizeFilename(filename: string): string {
     .replace(/[/\\?%*:|"<>]/g, '-')
     .replace(/\s+/g, '_')
     .substring(0, 200);
+}
+
+// Helper to download files in parallel with concurrency limit
+async function downloadFilesInParallel<T>(
+  items: T[],
+  concurrency: number,
+  downloadFn: (item: T, index: number) => Promise<{ buffer: Buffer; item: T }>
+): Promise<Array<{ buffer: Buffer; item: T; index: number } | { error: string; item: T; index: number }>> {
+  const results: Array<{ buffer: Buffer; item: T; index: number } | { error: string; item: T; index: number }> = [];
+  const executing: Promise<void>[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const index = i;
+
+    const promise = downloadFn(item, index)
+      .then((result) => {
+        results[index] = { ...result, index };
+      })
+      .catch((error) => {
+        results[index] = {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          item,
+          index
+        };
+      });
+
+    executing.push(promise);
+
+    if (executing.length >= concurrency) {
+      await Promise.race(executing);
+      executing.splice(executing.findIndex(p => p === promise), 1);
+    }
+  }
+
+  await Promise.all(executing);
+  return results;
 }
 
 export async function POST(request: NextRequest) {
@@ -85,15 +127,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🔄 Starting bulk ZIP creation for ${items.length} items`);
+    console.log(`🔄 Starting bulk ZIP creation for ${items.length} items with parallel downloads`);
 
-    // Collect chunks in memory
-    const chunks: Buffer[] = [];
-    let totalSize = 0;
-    let processedCount = 0;
-    const failedItems: string[] = [];
+    // Download all files in parallel with concurrency limit
+    const downloadResults = await downloadFilesInParallel(
+      items,
+      MAX_PARALLEL_DOWNLOADS,
+      async (item, index) => {
+        console.log(`📦 Downloading: ${index + 1}/${items.length} - ${item.title}`);
+        const buffer = await downloadFileWithTimeout(item.url);
+        return { buffer, item };
+      }
+    );
+
+    // Separate successful and failed downloads
+    const successfulDownloads = downloadResults.filter(r => 'buffer' in r) as Array<{ buffer: Buffer; item: typeof items[0]; index: number }>;
+    const failedDownloads = downloadResults.filter(r => 'error' in r) as Array<{ error: string; item: typeof items[0]; index: number }>;
+
+    if (successfulDownloads.length === 0) {
+      throw new Error('No items were successfully downloaded');
+    }
+
+    console.log(`✅ Downloaded ${successfulDownloads.length}/${items.length} items successfully`);
+    if (failedDownloads.length > 0) {
+      console.warn(`⚠️ Failed downloads:`, failedDownloads.map(f => `${f.item.title}: ${f.error}`));
+    }
+
+    // Check total size
+    const totalSize = successfulDownloads.reduce((sum, d) => sum + d.buffer.length, 0);
+    if (totalSize > MAX_TOTAL_SIZE) {
+      throw new Error(
+        `Total ZIP size would exceed ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit (got ${Math.round(totalSize / 1024 / 1024)}MB)`
+      );
+    }
 
     // Create archive
+    const chunks: Buffer[] = [];
     const archive = archiver('zip', {
       zlib: { level: 6 }, // Compression level 6 (good balance)
     });
@@ -114,48 +183,17 @@ export async function POST(request: NextRequest) {
       throw err;
     });
 
-    // Download and add files to archive
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      const sanitizedTitle = sanitizeFilename(item.title || `file-${i + 1}`);
-
-      try {
-        console.log(`📦 Downloading: ${i + 1}/${items.length} - ${item.title}`);
-
-        // Download file
-        const buffer = await downloadFileWithTimeout(item.url);
-
-        totalSize += buffer.length;
-
-        if (totalSize > MAX_TOTAL_SIZE) {
-          throw new Error(
-            `Total ZIP size would exceed ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`
-          );
-        }
-
-        // Add to archive
-        archive.append(buffer, { name: sanitizedTitle });
-        processedCount++;
-
-        // Delay between requests to prevent rate limiting
-        if (i < items.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY));
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        console.error(`❌ Failed to download ${item.title}:`, errorMsg);
-        failedItems.push(item.title || `Item ${i + 1}`);
-        // Continue with next item
-      }
+    // Add all successfully downloaded files to archive
+    for (const download of successfulDownloads) {
+      const sanitizedTitle = sanitizeFilename(download.item.title || `file-${download.index + 1}`);
+      archive.append(download.buffer, { name: sanitizedTitle });
     }
 
-    if (processedCount === 0) {
-      throw new Error('No items were successfully downloaded');
-    }
-
-    console.log(`✅ Archive created: ${processedCount}/${items.length} items (${totalSize / 1024 / 1024}MB)`);
-    if (failedItems.length > 0) {
-      console.warn(`⚠️ Failed items: ${failedItems.join(', ')}`);
+    // Add a manifest file listing failed downloads (if any)
+    if (failedDownloads.length > 0) {
+      const manifest = `Failed Downloads (${failedDownloads.length} files):\n\n` +
+        failedDownloads.map(f => `- ${f.item.title || `file-${f.index + 1}`}: ${f.error}`).join('\n');
+      archive.append(Buffer.from(manifest), { name: '_FAILED_DOWNLOADS.txt' });
     }
 
     // Finalize the archive and wait for completion
@@ -170,7 +208,7 @@ export async function POST(request: NextRequest) {
     // Combine all chunks into single buffer
     const zipBuffer = Buffer.concat(chunks);
 
-    console.log(`📦 ZIP file created: ${zipBuffer.length} bytes`);
+    console.log(`📦 ZIP file created: ${(zipBuffer.length / 1024 / 1024).toFixed(2)}MB`);
 
     // Return the ZIP file
     return new NextResponse(zipBuffer, {
@@ -178,6 +216,8 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="${sanitizeFilename(filename)}.zip"`,
         'Content-Length': zipBuffer.length.toString(),
+        'X-Downloaded-Files': successfulDownloads.length.toString(),
+        'X-Failed-Files': failedDownloads.length.toString(),
       },
     });
   } catch (error) {

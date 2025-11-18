@@ -155,12 +155,23 @@ export async function createZipFile(
       throw new Error('All items failed to download');
     }
 
+    // Add a manifest file listing failed downloads (if any)
+    if (failedItems.length > 0) {
+      const manifest = `Failed Downloads (${failedItems.length} files):\n\n` +
+        failedItems.map(item => `- ${item}`).join('\n') +
+        '\n\nThese files could not be included in the ZIP archive.\n' +
+        'Please try downloading them individually.';
+      zip.file('_FAILED_DOWNLOADS.txt', manifest);
+    }
+
     // Generate ZIP blob
     const zipBlob = await zip.generateAsync({ type: 'blob' });
 
     return {
       blob: zipBlob,
       size: zipBlob.size,
+      failedCount: failedItems.length,
+      successCount: items.length - failedItems.length
     };
   } catch (error) {
     if (error instanceof Error) {
