@@ -69,7 +69,7 @@ export async function POST(req: Request) {
           is_free: true,
           promo_type: 'FREE_BASIC',
           expires_at: expiresAt.toISOString(),
-          max_photos: 250,
+          max_photos: 1500,
           password_hash: passwordHash,
         },
       ])

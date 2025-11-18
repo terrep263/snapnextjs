@@ -215,7 +215,7 @@ export default function EventSettingsPage() {
           <h2 className="text-lg font-bold text-gray-900 mb-4">About Your Event</h2>
           <div className="space-y-3 text-sm text-gray-600">
             <p>✓ Your event is active for 30 days from creation</p>
-            <p>✓ Guests can upload up to 250 photos</p>
+            <p>✓ Guests can upload up to 1500 photos</p>
             <p>✓ All photos stay in your private gallery</p>
             <p>✓ You can download all photos at any time</p>
           </div>
