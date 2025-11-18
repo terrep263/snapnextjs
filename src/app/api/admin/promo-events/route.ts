@@ -1,26 +1,29 @@
 import { getServiceRoleClient } from '@/lib/supabase';
+import { cookies } from 'next/headers';
 
-function isAuthenticated(request: Request): boolean {
-  const cookieHeader = request.headers.get('cookie');
-  console.log('🔍 Promo Events Request - Cookie Header:', cookieHeader ? '✓ Present' : '✗ Missing');
-  if (cookieHeader) {
-    const cookies_array = cookieHeader.split('; ');
-    console.log('  Cookies:', cookies_array.map(c => c.split('=')[0]).join(', '));
-    const sessionCookie = cookies_array.find(c => c.startsWith('admin_session='));
-    console.log('  Admin Session:', sessionCookie ? '✓ Found' : '✗ Not found');
-    return !!sessionCookie;
+async function isAuthenticated(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get('admin_session')?.value;
+    const adminEmail = cookieStore.get('admin_email')?.value;
+    
+    console.log('🔍 Promo Events Auth Check:');
+    console.log(`  - session: ${session ? '✅ Present' : '❌ Missing'}`);
+    console.log(`  - email: ${adminEmail ? '✅ ' + adminEmail : '❌ Missing'}`);
+    
+    return !!(session && adminEmail);
+  } catch (error) {
+    console.error('Auth check error:', error);
+    return false;
   }
-  if (!cookieHeader) return false;
-  const cookies_array = cookieHeader.split('; ');
-  const sessionCookie = cookies_array.find(c => c.startsWith('admin_session='));
-  return !!sessionCookie;
 }
 
 export async function GET(req: Request) {
   try {
-    if (!isAuthenticated(req)) {
+    const authenticated = await isAuthenticated();
+    if (!authenticated) {
       console.log('❌ Unauthorized access to promo-events');
-      return new Response(JSON.stringify({ error: 'Unauthorized - admin_session cookie not found' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized - admin session not found' }), { status: 401 });
     }
 
     const supabase = getServiceRoleClient();
