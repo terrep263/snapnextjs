@@ -298,6 +298,8 @@ export default function EventPage() {
         eventName={eventData.name || 'Event Gallery'}
         headerImage={headerImage}
         profileImage={profileImage}
+        eventId={eventData.id}
+        eventSlug={slug}
         photos={photos.map(photo => ({
           id: photo.id,
           url: photo.url || photo.file_path || photo.storage_path || '',
