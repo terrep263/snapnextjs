@@ -9,7 +9,7 @@ export default function EventSettingsPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
-  
+
   const [eventData, setEventData] = useState<any>(null);
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -19,42 +19,75 @@ export default function EventSettingsPage() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Retrieve event data from sessionStorage
-    if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem(`promo_event_${slug}`);
-      if (stored) {
-        const data = JSON.parse(stored);
-        setEventData(data);
-        setEventName(data.name || '');
+    // Fetch event data from database
+    const fetchEvent = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase');
+
+        const { data: event, error } = await supabase
+          .from('events')
+          .select('*')
+          .eq('slug', slug)
+          .single();
+
+        if (error || !event) {
+          console.error('Error fetching event:', error);
+          // Redirect to dashboard if event not found
+          router.replace('/');
+          return;
+        }
+
+        setEventData(event);
+        setEventName(event.name || '');
+        setEventDate(event.created_at?.split('T')[0] || '');
+      } catch (err) {
+        console.error('Error:', err);
+        router.replace('/');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
+    };
+
+    if (slug) {
+      fetchEvent();
     }
-  }, [slug]);
+  }, [slug, router]);
 
   const handleSave = async () => {
+    if (!eventData) return;
+
     setSaving(true);
     setMessage('');
 
     try {
-      // In a real implementation, this would update the database
-      // For now, we'll update sessionStorage
-      const updated = {
-        ...eventData,
-        name: eventName,
-      };
-      
-      sessionStorage.setItem(`promo_event_${slug}`, JSON.stringify(updated));
-      setEventData(updated);
+      const { supabase } = await import('@/lib/supabase');
+
+      // Update event name in database
+      const { error } = await supabase
+        .from('events')
+        .update({ name: eventName })
+        .eq('id', eventData.id);
+
+      if (error) {
+        throw error;
+      }
+
       setMessage('Event settings updated successfully!');
-      
+
       setTimeout(() => {
-        router.push(`/promo/confirmation/${slug}`);
+        router.push(`/dashboard/${eventData.id}`);
       }, 1500);
     } catch (err) {
       console.error(err);
       setMessage('Failed to update settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (eventData) {
+      router.push(`/dashboard/${eventData.id}`);
     }
   };
 
@@ -67,6 +100,10 @@ export default function EventSettingsPage() {
         </div>
       </div>
     );
+  }
+
+  if (!eventData) {
+    return null;
   }
 
   return (
@@ -86,11 +123,11 @@ export default function EventSettingsPage() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => router.push(`/promo/confirmation/${slug}`)}
+            onClick={handleCancel}
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 font-semibold mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Confirmation
+            Back to Dashboard
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Event Settings</h1>
         </div>
@@ -164,7 +201,7 @@ export default function EventSettingsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push(`/promo/confirmation/${slug}`)}
+                onClick={handleCancel}
                 className="px-6 py-3 bg-white border-2 border-gray-300 text-gray-900 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
