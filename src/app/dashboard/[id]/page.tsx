@@ -147,6 +147,28 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('Are you sure you want to delete this photo?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+
+      // Refresh photos after deletion
+      await loadPhotos();
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      alert('Failed to delete photo. Please try again.');
+    }
+  };
+
   const updateEventName = async (newName: string) => {
     if (!newName.trim()) return;
     
@@ -736,6 +758,7 @@ export default function Dashboard() {
                 photos={photos}
                 onDownload={handleDownloadPhoto}
                 onDownloadAll={handleDownloadAll}
+                onDelete={handleDeletePhoto}
               />
             </div>
           </main>

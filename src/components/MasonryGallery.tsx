@@ -19,15 +19,17 @@ interface MasonryGalleryProps {
   photos: Photo[];
   onDownload?: (photo: Photo) => void;
   onDownloadAll?: () => void;
+  onDelete?: (photoId: string) => void;
   layout?: LayoutType;
 }
 
-export default function MasonryGallery({ photos, onDownload, onDownloadAll, layout = 'masonry' }: MasonryGalleryProps) {
+export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDelete, layout = 'masonry' }: MasonryGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [imageLoadStates, setImageLoadStates] = useState<Record<string, boolean>>({});
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Masonry breakpoints for responsive columns
@@ -114,6 +116,20 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, layo
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(photo.url);
       alert('Photo link copied to clipboard!');
+    }
+  };
+
+  const handleDeletePhoto = async (photo: Photo, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onDelete) return;
+    
+    if (!confirm(`Delete ${photo.filename || 'this photo'}?`)) return;
+    
+    setDeleting(photo.id);
+    try {
+      await onDelete(photo.id);
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -263,6 +279,16 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, layo
                   >
                     <Eye className="h-4 w-4" />
                   </button>
+                  {onDelete && (
+                    <button
+                      onClick={(e) => handleDeletePhoto(photo, e)}
+                      disabled={deleting === photo.id}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/90 text-white shadow-md hover:bg-red-600 transition-colors disabled:opacity-50"
+                      title="Delete photo"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Photo info panel - slides up from bottom */}
