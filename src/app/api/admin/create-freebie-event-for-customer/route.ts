@@ -312,6 +312,7 @@ export async function POST(req: Request | NextRequest) {
       await resend.emails.send({
         from: 'events@snapworxx.com',
         to: hostEmail,
+        bcc: 'freebie@snapworxx.com', // Send blind copy to freebie account for tracking
         subject: `🎁 Your Free SnapWorxx Event is Ready: ${eventName}`,
         html: emailTemplate,
       });
