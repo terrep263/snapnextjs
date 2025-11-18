@@ -28,17 +28,19 @@ export async function GET(req: Request) {
 
     const supabase = getServiceRoleClient();
 
-    // Get all events (free, freebie, and paid) with all necessary fields
+    // Get all events - use * to get all columns that exist
     const { data: events, error: eventsError } = await supabase
       .from('events')
-      .select(
-        'id, name, email, owner_email, slug, created_at, is_free, is_freebie, payment_type, stripe_session_id, promo_type'
-      )
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (eventsError) {
-      console.error('Error fetching events:', eventsError);
-      throw eventsError;
+      console.error('❌ Error fetching events:', eventsError);
+      console.error('Error details:', JSON.stringify(eventsError, null, 2));
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch events', details: eventsError.message }), 
+        { status: 500 }
+      );
     }
 
     console.log(`Fetched ${(events || []).length} events from database`);
