@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap, Gift } from 'lucide-react';
+import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap, Gift, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -490,15 +490,25 @@ export default function AdminDashboardPage() {
                               {event.photo_count || 0}
                             </td>
                             <td className="px-6 py-4 text-sm">
-                              <Button
-                                onClick={() => handleDeleteEvent(event.id, event.name)}
-                                variant="danger"
-                                size="sm"
-                                loading={isDeletingEvent === event.id}
-                                icon={<Trash2 className="w-4 h-4" />}
-                              >
-                                Delete
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/admin/events/${event.slug}`}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded transition-colors"
+                                  title={`Manage ${event.name}`}
+                                >
+                                  <Settings2 className="w-3.5 h-3.5" />
+                                  Manage
+                                </Link>
+                                <Button
+                                  onClick={() => handleDeleteEvent(event.id, event.name)}
+                                  variant="danger"
+                                  size="sm"
+                                  loading={isDeletingEvent === event.id}
+                                  icon={<Trash2 className="w-4 h-4" />}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
