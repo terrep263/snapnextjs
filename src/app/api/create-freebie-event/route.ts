@@ -84,6 +84,88 @@ export async function POST(req: Request) {
     // Log freebie event creation
     console.log(`✅ Freebie event created: ${newEvent.slug} (${freebieCount + 1}/${MAX_FREEBIE_EVENTS})`);
 
+    // Send confirmation email
+    const eventDetails = {
+      id: newEvent.id,
+      name: newEvent.name,
+      slug: newEvent.slug,
+      dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${newEvent.id}`,
+      eventUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${newEvent.slug}`
+    };
+
+    // Note: Freebie events use master email but we can still send notification
+    try {
+      console.log('📧 Sending freebie event notification');
+      
+      const { Resend } = await import('resend');
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      
+      const { data, error: emailError } = await resend.emails.send({
+        from: 'SnapWorxx <noreply@snapworxx.app>',
+        to: MASTER_EMAIL, // Send to master email for freebie tracking
+        subject: `Freebie Event Created: ${eventName}`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(to right, #10b981, #06b6d4); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+                .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+                .button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+                .link { color: #10b981; word-break: break-all; }
+                .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
+                .badge { display: inline-block; background: #10b981; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Freebie Event Created! 🎁</h1>
+                  <span class="badge">UNLIMITED STORAGE</span>
+                </div>
+                <div class="content">
+                  <h2>Event: ${eventName}</h2>
+                  <p><strong>Owner:</strong> ${ownerName || 'SnapWorxx Team'}</p>
+                  <p><strong>Event Date:</strong> ${eventDate || 'Not specified'}</p>
+
+                  <h3>📱 Guest Gallery Link</h3>
+                  <p class="link">${eventDetails.eventUrl}</p>
+
+                  <h3>🎛️ Dashboard</h3>
+                  <a href="${eventDetails.dashboardUrl}" class="button">Go to Dashboard</a>
+
+                  <h3>⭐ Freebie Features</h3>
+                  <ul>
+                    <li><strong>Unlimited Photos:</strong> No storage limits</li>
+                    <li><strong>No Expiration:</strong> Event stays active</li>
+                    <li><strong>All Features:</strong> Full SnapWorxx functionality</li>
+                  </ul>
+
+                  ${eventPassword ? '<p><strong>🔒 Password Protected:</strong> This event has password protection enabled.</p>' : ''}
+
+                  <p><strong>Freebie Count:</strong> ${freebieCount + 1} of ${MAX_FREEBIE_EVENTS} used</p>
+                </div>
+                <div class="footer">
+                  <p>&copy; 2025 SnapWorxx. All rights reserved.</p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+
+      if (emailError) {
+        console.error('❌ Failed to send freebie notification:', emailError);
+      } else {
+        console.log('✅ Freebie notification sent, message ID:', data?.id);
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending freebie notification:', emailError);
+      // Don't fail the process if email fails
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

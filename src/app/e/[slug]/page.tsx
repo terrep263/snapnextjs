@@ -71,24 +71,36 @@ export default function EventPage() {
         
         setEventData(event);
         
-        // Load images from database
+        // Load images from database or localStorage as fallback
         console.log('🖼️ Event images field values:', { 
           header: event.header_image, 
           profile: event.profile_image,
           headerExists: !!event.header_image,
           profileExists: !!event.profile_image
         });
+        
+        // Try database first, then localStorage
+        const storedHeader = localStorage.getItem(`headerImage_${event.id}`);
+        const storedProfile = localStorage.getItem(`profileImage_${event.id}`);
+        
         if (event.header_image) {
           setHeaderImage(event.header_image);
-          console.log('✅ Header image set:', event.header_image.substring(0, 100));
+          console.log('✅ Header image set from DB:', event.header_image.substring(0, 100));
+        } else if (storedHeader) {
+          setHeaderImage(storedHeader);
+          console.log('✅ Header image set from localStorage');
         } else {
-          console.log('⚠️ No header_image in event');
+          console.log('⚠️ No header_image available');
         }
+        
         if (event.profile_image) {
           setProfileImage(event.profile_image);
-          console.log('✅ Profile image set:', event.profile_image.substring(0, 100));
+          console.log('✅ Profile image set from DB:', event.profile_image.substring(0, 100));
+        } else if (storedProfile) {
+          setProfileImage(storedProfile);
+          console.log('✅ Profile image set from localStorage');
         } else {
-          console.log('⚠️ No profile_image in event');
+          console.log('⚠️ No profile_image available');
         }
       } else {
         // Event not found

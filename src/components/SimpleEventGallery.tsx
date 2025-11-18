@@ -394,15 +394,25 @@ export default function SimpleEventGallery({
                         📋 Copy Link
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           if (navigator.share) {
-                            navigator.share({
-                              title: eventName,
-                              text: `Check out this gallery: ${eventName}`,
-                              url: window.location.href,
-                            });
+                            try {
+                              await navigator.share({
+                                title: eventName,
+                                text: `Check out this gallery: ${eventName}`,
+                                url: window.location.href,
+                              });
+                            } catch (error) {
+                              // User cancelled or share failed
+                              if (error instanceof Error && error.name !== 'AbortError') {
+                                console.error('Share failed:', error);
+                                navigator.clipboard.writeText(window.location.href);
+                                alert('Share failed. Link copied to clipboard instead!');
+                              }
+                            }
                           } else {
-                            alert('Share not supported on this device');
+                            navigator.clipboard.writeText(window.location.href);
+                            alert('Link copied to clipboard!');
                           }
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"

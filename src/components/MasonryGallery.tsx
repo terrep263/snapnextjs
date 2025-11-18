@@ -94,13 +94,22 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, layo
     }, 1000);
   }, [selectedPhotos, photos, onDownload]);
 
-  const sharePhoto = (photo: Photo) => {
+  const sharePhoto = async (photo: Photo) => {
     if (navigator.share) {
-      navigator.share({
-        title: `Photo from Event`,
-        text: `Check out this photo: ${photo.filename}`,
-        url: photo.url,
-      });
+      try {
+        await navigator.share({
+          title: `Photo from Event`,
+          text: `Check out this photo: ${photo.filename}`,
+          url: photo.url,
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Share failed:', error);
+          navigator.clipboard.writeText(photo.url);
+          alert('Share failed. Photo link copied to clipboard instead!');
+        }
+      }
     } else {
       // Fallback: copy to clipboard
       navigator.clipboard.writeText(photo.url);

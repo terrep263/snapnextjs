@@ -2,6 +2,14 @@ import { getServiceRoleClient } from '@/lib/supabase';
 
 function isAuthenticated(request: Request): boolean {
   const cookieHeader = request.headers.get('cookie');
+  console.log('🔍 Promo Events Request - Cookie Header:', cookieHeader ? '✓ Present' : '✗ Missing');
+  if (cookieHeader) {
+    const cookies_array = cookieHeader.split('; ');
+    console.log('  Cookies:', cookies_array.map(c => c.split('=')[0]).join(', '));
+    const sessionCookie = cookies_array.find(c => c.startsWith('admin_session='));
+    console.log('  Admin Session:', sessionCookie ? '✓ Found' : '✗ Not found');
+    return !!sessionCookie;
+  }
   if (!cookieHeader) return false;
   const cookies_array = cookieHeader.split('; ');
   const sessionCookie = cookies_array.find(c => c.startsWith('admin_session='));
@@ -11,7 +19,8 @@ function isAuthenticated(request: Request): boolean {
 export async function GET(req: Request) {
   try {
     if (!isAuthenticated(req)) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      console.log('❌ Unauthorized access to promo-events');
+      return new Response(JSON.stringify({ error: 'Unauthorized - admin_session cookie not found' }), { status: 401 });
     }
 
     const supabase = getServiceRoleClient();

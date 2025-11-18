@@ -132,10 +132,17 @@ export async function POST(req: Request) {
       const adminEmail = cookieStore.get('admin_email')?.value;
       const adminRole = cookieStore.get('admin_role')?.value;
 
+      console.log('🔍 VERIFY ACTION - Checking cookies:');
+      console.log(`  - session: ${session ? '✅ ' + session.substring(0, 20) + '...' : '❌ NOT FOUND'}`);
+      console.log(`  - adminEmail: ${adminEmail ? '✅ ' + adminEmail : '❌ NOT FOUND'}`);
+      console.log(`  - adminRole: ${adminRole ? '✅ ' + adminRole : '❌ NOT FOUND'}`);
+
       if (!session || !adminEmail) {
+        console.log('❌ VERIFY FAILED - Missing required cookies');
         return new Response(JSON.stringify({ authenticated: false }), { status: 200 });
       }
 
+      console.log('✅ VERIFY PASSED - Admin authenticated');
       return new Response(JSON.stringify({ authenticated: true, email: adminEmail, role: adminRole }), { status: 200 });
     }
 
