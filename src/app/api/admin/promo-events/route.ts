@@ -38,11 +38,23 @@ export async function GET(req: Request) {
       throw eventsError;
     }
 
-    console.log(`Fetched ${(events || []).length} events from database`);
+    console.log(`📊 Fetched ${(events || []).length} events from database`);
+
+    // If no events, return empty array immediately
+    if (!events || events.length === 0) {
+      console.log('⚠️  No events found in database - returning empty array');
+      return new Response(
+        JSON.stringify({ success: true, data: { events: [] } }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
 
     // Get photo counts for each event
     const eventsWithPhotos = await Promise.all(
-      (events || []).map(async (event) => {
+      events.map(async (event) => {
         const { count, error: countError } = await supabase
           .from('photos')
           .select('*', { count: 'exact', head: true })
@@ -59,8 +71,16 @@ export async function GET(req: Request) {
       })
     );
 
-    console.log(`Returning ${eventsWithPhotos.length} events with photo counts`);
-    return new Response(JSON.stringify({ events: eventsWithPhotos }), { status: 200 });
+    console.log(`✅ Returning ${eventsWithPhotos.length} events with photo counts`);
+    console.log('Sample event structure:', eventsWithPhotos[0] ? JSON.stringify(eventsWithPhotos[0], null, 2) : 'None');
+
+    return new Response(
+      JSON.stringify({ success: true, data: { events: eventsWithPhotos } }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (err) {
     console.error('Promo events error:', err);
     return new Response(JSON.stringify({ error: 'Server error', details: String(err) }), { status: 500 });

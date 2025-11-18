@@ -80,14 +80,25 @@ export default function AdminDashboardPage() {
   // Load events
   const { data: events, loading: eventsLoading, execute: loadEvents } = useAsync(
     async () => {
+      console.log('🔄 Loading events from API...');
       const res = await adminApi.getEvents();
-      console.log('Events response:', res);
+      console.log('📦 Events API response:', res);
+      console.log('  Success:', res.success);
+      console.log('  Status:', res.status);
+      console.log('  Data:', res.data);
+
       if (res.success) {
         const eventsList = (res.data as any)?.events || [];
-        console.log(`Loaded ${eventsList.length} events`);
+        console.log(`✅ Loaded ${eventsList.length} events`);
+        if (eventsList.length > 0) {
+          console.log('  First event:', eventsList[0]);
+        } else {
+          console.log('  ⚠️  Events array is empty - no events in database');
+        }
         return eventsList;
       }
-      console.error('Failed to load events:', res.error);
+      console.error('❌ Failed to load events:', res.error);
+      console.error('   Status:', res.status);
       throw new Error(res.error);
     },
     false
