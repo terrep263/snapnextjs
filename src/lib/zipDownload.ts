@@ -93,7 +93,7 @@ function sanitizeFilename(filename: string): string {
 export async function createZipFile(
   items: DownloadItem[],
   options: DownloadOptions = {}
-): Promise<{ blob: Blob; size: number }> {
+): Promise<{ blob: Blob; size: number; failedCount: number; successCount: number }> {
   const {
     filename = 'download',
     onProgress,
