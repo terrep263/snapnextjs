@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import SimpleEventGallery from '@/components/SimpleEventGallery';
+import MasonryGallery from '@/components/MasonryGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
 import Head from 'next/head';
@@ -294,22 +294,59 @@ export default function EventPage() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </Head>
 
-      <SimpleEventGallery
-        eventName={eventData.name || 'Event Gallery'}
-        headerImage={headerImage}
-        profileImage={profileImage}
-        photos={photos.map(photo => ({
-          id: photo.id,
-          url: photo.url || photo.file_path || photo.storage_path || '',
-          title: photo.title || photo.filename,
-          description: photo.description,
-          uploadedAt: photo.created_at,
-          isVideo: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/'),
-          duration: photo.duration,
-          size: photo.size,
-          type: 'photo'
-        }))}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-orange-50">
+        {/* Header Section */}
+        <div className="relative">
+          {/* Header Banner */}
+          {headerImage && (
+            <div className="w-full h-48 md:h-64 overflow-hidden">
+              <img 
+                src={headerImage} 
+                alt="Event header"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
+          {/* Profile Section */}
+          <div className="container mx-auto px-4">
+            <div className="relative -mt-16 mb-8">
+              <div className="flex flex-col items-center">
+                {/* Profile Image */}
+                {profileImage && (
+                  <div className="w-32 h-32 rounded-full bg-white p-1 shadow-lg mb-4">
+                    <img 
+                      src={profileImage} 
+                      alt="Event profile"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                )}
+                
+                {/* Event Name */}
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 text-center">
+                  {eventData.name || 'Event Gallery'}
+                </h1>
+                <p className="text-gray-600 mt-2">Memories that last a lifetime ❤️</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Gallery */}
+        <div className="container mx-auto px-4 pb-12">
+          <MasonryGallery
+            photos={photos.map(photo => ({
+              id: photo.id,
+              url: photo.url || photo.file_path || photo.storage_path || '',
+              filename: photo.title || photo.filename,
+              alt: photo.description,
+              created_at: photo.created_at,
+              type: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/') ? 'video/mp4' : 'image/jpeg'
+            }))}
+          />
+        </div>
+      </div>
     </ErrorBoundary>
   );
 }
