@@ -12,9 +12,9 @@ function hashPassword(password: string): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { eventName, eventDate, email, ownerName, eventPassword } = body;
+    const { eventName, eventDate, email, ownerName, eventPassword, hostEmail } = body;
 
-    if (!eventName || !eventDate || !email) {
+    if (!eventName || !eventDate || !email || !hostEmail) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 });
     }
 
@@ -84,26 +84,27 @@ export async function POST(req: Request) {
     // Log freebie event creation
     console.log(`✅ Freebie event created: ${newEvent.slug} (${freebieCount + 1}/${MAX_FREEBIE_EVENTS})`);
 
-    // Send confirmation email
+    // Send confirmation email to actual host
     const eventDetails = {
       id: newEvent.id,
       name: newEvent.name,
       slug: newEvent.slug,
       dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/${newEvent.id}`,
-      eventUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${newEvent.slug}`
+      eventUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${newEvent.slug}`,
+      uploadUrl: `${process.env.NEXT_PUBLIC_APP_URL}/e/${newEvent.slug}/upload`
     };
 
-    // Note: Freebie events use master email but we can still send notification
+    // Send email to the actual host (hostEmail), not master email
     try {
-      console.log('📧 Sending freebie event notification');
+      console.log(`📧 Sending freebie event notification to ${hostEmail}`);
       
       const { Resend } = await import('resend');
       const resend = new Resend(process.env.RESEND_API_KEY);
       
       const { data, error: emailError } = await resend.emails.send({
         from: 'SnapWorxx <noreply@snapworxx.app>',
-        to: MASTER_EMAIL, // Send to master email for freebie tracking
-        subject: `Freebie Event Created: ${eventName}`,
+        to: hostEmail, // Send to actual host email
+        subject: `Your SnapWorxx Event is Ready: ${eventName}`,
         html: `
           <!DOCTYPE html>
           <html>
@@ -122,30 +123,43 @@ export async function POST(req: Request) {
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>Freebie Event Created! 🎁</h1>
+                  <h1>Your SnapWorxx Event is Ready! 🎉</h1>
                   <span class="badge">UNLIMITED STORAGE</span>
                 </div>
                 <div class="content">
-                  <h2>Event: ${eventName}</h2>
-                  <p><strong>Owner:</strong> ${ownerName || 'SnapWorxx Team'}</p>
-                  <p><strong>Event Date:</strong> ${eventDate || 'Not specified'}</p>
+                  <p>Hi ${ownerName || 'there'},</p>
+                  
+                  <p>Your event <strong>${eventName}</strong> has been created and is ready to collect memories!</p>
 
-                  <h3>📱 Guest Gallery Link</h3>
+                  <h3>📱 Share This Link With Guests</h3>
+                  <p>Anyone can upload photos using this link:</p>
+                  <a href="${eventDetails.uploadUrl}" class="button">Upload Photos</a>
+                  <p class="link">${eventDetails.uploadUrl}</p>
+
+                  <h3>🖼️ View Your Gallery</h3>
+                  <a href="${eventDetails.eventUrl}" class="button">View Gallery</a>
                   <p class="link">${eventDetails.eventUrl}</p>
 
-                  <h3>🎛️ Dashboard</h3>
+                  <h3>🎛️ Manage Your Event</h3>
                   <a href="${eventDetails.dashboardUrl}" class="button">Go to Dashboard</a>
-
-                  <h3>⭐ Freebie Features</h3>
+                  <p>From your dashboard you can:</p>
                   <ul>
-                    <li><strong>Unlimited Photos:</strong> No storage limits</li>
-                    <li><strong>No Expiration:</strong> Event stays active</li>
-                    <li><strong>All Features:</strong> Full SnapWorxx functionality</li>
+                    <li>View all uploaded photos</li>
+                    <li>Download photos individually or as a ZIP</li>
+                    <li>Delete unwanted photos</li>
+                    <li>Share your event QR code</li>
                   </ul>
 
-                  ${eventPassword ? '<p><strong>🔒 Password Protected:</strong> This event has password protection enabled.</p>' : ''}
+                  <h3>⭐ Your Event Features</h3>
+                  <ul>
+                    <li><strong>Unlimited Storage:</strong> No limits on photos or videos</li>
+                    <li><strong>No Expiration:</strong> Your event stays active</li>
+                    <li><strong>Full Access:</strong> All SnapWorxx features included</li>
+                  </ul>
 
-                  <p><strong>Freebie Count:</strong> ${freebieCount + 1} of ${MAX_FREEBIE_EVENTS} used</p>
+                  ${eventPassword ? '<p><strong>🔒 Your Event is Password Protected</strong><br/>Guests will need the password you set to view photos.</p>' : ''}
+
+                  <p><strong>Event Date:</strong> ${eventDate || 'Not specified'}</p>
                 </div>
                 <div class="footer">
                   <p>&copy; 2025 SnapWorxx. All rights reserved.</p>
