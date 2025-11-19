@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import MasonryGallery from '@/components/MasonryGallery';
+import SimpleEventGallery from '@/components/SimpleEventGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
 import Head from 'next/head';
@@ -295,116 +295,30 @@ export default function EventPage() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-orange-50">
-        {/* Header Section */}
-        <div className="relative">
-          {/* Navigation Bar - Mobile-first responsive */}
-          <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-200">
-            <div className="container mx-auto px-3 py-2.5 sm:px-4 sm:py-3">
-              {/* Mobile Layout */}
-              <div className="flex flex-col gap-2 sm:hidden">
-                <h2 className="text-base font-semibold text-gray-900 truncate">{eventData.name || 'Event Gallery'}</h2>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/e/${slug}/upload`}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    Upload
-                  </Link>
-                  <Link
-                    href={`/dashboard/${eventData.id}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm text-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Dashboard
-                  </Link>
-                </div>
-              </div>
-              
-              {/* Desktop Layout */}
-              <div className="hidden sm:flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900">{eventData.name || 'Event Gallery'}</h2>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/e/${slug}/upload`}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    Upload
-                  </Link>
-                  <Link
-                    href={`/dashboard/${eventData.id}`}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-sm"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Dashboard
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Header Banner */}
-          {headerImage && (
-            <div className="w-full h-48 md:h-64 overflow-hidden">
-              <img 
-                src={headerImage} 
-                alt="Event header"
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          
-          {/* Profile Section */}
-          <div className="container mx-auto px-4">
-            <div className={`relative ${headerImage ? '-mt-16' : 'mt-8'} mb-8`}>
-              <div className="flex flex-col items-center">
-                {/* Profile Image */}
-                {profileImage && (
-                  <div className="w-32 h-32 rounded-full bg-white p-1 shadow-lg mb-4">
-                    <img 
-                      src={profileImage} 
-                      alt="Event profile"
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  </div>
-                )}
-                
-                {/* Event Name */}
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 text-center">
-                  {eventData.name || 'Event Gallery'}
-                </h1>
-                <p className="text-gray-600 mt-2">Memories that last a lifetime ❤️</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Gallery */}
-        <div className="container mx-auto px-4 pb-12">
-          <MasonryGallery
-            photos={photos.map(photo => ({
-              id: photo.id,
-              url: photo.url || photo.file_path || photo.storage_path || '',
-              filename: photo.title || photo.filename,
-              alt: photo.description,
-              created_at: photo.created_at,
-              type: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/') ? 'video/mp4' : 'image/jpeg'
-            }))}
-          />
-        </div>
-      </div>
+      {/* SimpleEventGallery handles its own header/profile/navigation */}
+      <SimpleEventGallery
+        eventName={eventData.name || 'Event Gallery'}
+        headerImage={headerImage}
+        profileImage={profileImage}
+        packageType={
+          eventData.is_freebie || eventData.payment_type === 'freebie' 
+            ? 'freebie' 
+            : eventData.stripe_session_id || eventData.payment_type === 'stripe'
+            ? 'premium'
+            : 'basic'
+        }
+        isFree={eventData.is_free}
+        isFreebie={eventData.is_freebie}
+        photos={photos.map(photo => ({
+          id: photo.id,
+          url: photo.url || photo.file_path || photo.storage_path || '',
+          title: photo.title || photo.filename,
+          description: photo.description,
+          uploadedAt: photo.created_at,
+          isVideo: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/'),
+          type: 'photo'
+        }))}
+      />
     </ErrorBoundary>
   );
 }

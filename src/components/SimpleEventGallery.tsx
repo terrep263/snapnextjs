@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid } from 'lucide-react';
 
 interface GalleryItem {
   id: string;
@@ -21,13 +21,19 @@ interface SimpleEventGalleryProps {
   headerImage?: string;
   profileImage?: string;
   photos: GalleryItem[];
+  packageType?: 'basic' | 'premium' | 'freebie'; // basic = individual downloads only, premium/freebie = bulk + individual
+  isFree?: boolean;
+  isFreebie?: boolean;
 }
 
 export default function SimpleEventGallery({
   eventName,
   headerImage,
   profileImage,
-  photos
+  photos,
+  packageType = 'premium', // default to premium (full features)
+  isFree = false,
+  isFreebie = false
 }: SimpleEventGalleryProps) {
   console.log('🎨 SimpleEventGallery mounted with:', { 
     eventName, 
@@ -35,8 +41,16 @@ export default function SimpleEventGallery({
     headerImagePreview: headerImage ? headerImage.substring(0, 50) : 'null',
     profileImageExists: !!profileImage,
     profileImagePreview: profileImage ? profileImage.substring(0, 50) : 'null',
-    photosCount: photos.length 
+    photosCount: photos.length,
+    packageType,
+    isFree,
+    isFreebie
   });
+  
+  // Determine if bulk download is allowed
+  // Premium events and freebie events get bulk download
+  // Basic/free promo events only get individual downloads
+  const allowBulkDownload = packageType === 'premium' || isFreebie || packageType === 'freebie';
   
   const [navOpen, setNavOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -45,6 +59,7 @@ export default function SimpleEventGallery({
   const [downloading, setDownloading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build gallery items including header and profile images
@@ -432,19 +447,21 @@ export default function SimpleEventGallery({
                   )}
                 </div>
 
-                {/* Download Controls - SIMPLE */}
+                {/* Download Controls - Package-based */}
                 <div className="space-y-2 pt-4 border-t border-gray-800">
-                  {/* GREEN: Download All - No selection needed */}
-                  <button
-                    onClick={downloadAllItems}
-                    disabled={downloading}
-                    className="w-full flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="w-5 h-5" />
-                    Download All ({allItems.length})
-                  </button>
+                  {/* Show bulk download only for premium/freebie events */}
+                  {allowBulkDownload && (
+                    <button
+                      onClick={downloadAllItems}
+                      disabled={downloading}
+                      className="w-full flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Download className="w-5 h-5" />
+                      Download All ({allItems.length})
+                    </button>
+                  )}
 
-                  {/* BLUE: Select & Download */}
+                  {/* All events can select and download individual items */}
                   <button
                     onClick={() => setSelectMode(!selectMode)}
                     className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
@@ -456,6 +473,13 @@ export default function SimpleEventGallery({
                     <CheckSquare className="w-5 h-5" />
                     {selectMode ? `Download Selected (${selectedItems.size})` : 'Select Items to Download'}
                   </button>
+                  
+                  {/* Info text for basic/free events */}
+                  {!allowBulkDownload && (
+                    <p className="text-xs text-gray-400 text-center px-2">
+                      💡 Individual downloads available. Upgrade to Premium for bulk download.
+                    </p>
+                  )}
 
                   {/* Selection Controls - Only show if in select mode */}
                   {selectMode && (
@@ -656,9 +680,46 @@ export default function SimpleEventGallery({
           )}
         </AnimatePresence>
 
-        {/* MASONRY GRID */}
-        <div className="p-4 md:p-6">
-          <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+        {/* Layout Toggle and Gallery Header */}
+        <div className="p-4 md:p-6 pb-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Gallery ({allItems.filter(item => item.type !== 'header' && item.type !== 'profile').length} photos)
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLayout('masonry')}
+                className={`p-2 rounded-lg transition-colors ${
+                  layout === 'masonry'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+                title="Masonry Layout"
+              >
+                <LayoutGrid className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setLayout('grid')}
+                className={`p-2 rounded-lg transition-colors ${
+                  layout === 'grid'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+                title="Grid Layout"
+              >
+                <Grid3x3 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* GALLERY - Dynamic Layout */}
+        <div className="p-4 md:p-6 pt-0">
+          <div className={
+            layout === 'masonry'
+              ? 'columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4'
+              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+          }>
             {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item, index) => {
               // Adjust index for filtered items
               const actualIndex = allItems.findIndex(i => i.id === item.id);
@@ -668,7 +729,7 @@ export default function SimpleEventGallery({
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`break-inside-avoid group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              className={`${layout === 'masonry' ? 'break-inside-avoid' : ''} group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer ${
                 selectMode && selectedItems.has(item.id)
                   ? 'ring-2 ring-green-500 shadow-green-500/50'
                   : ''
@@ -683,29 +744,87 @@ export default function SimpleEventGallery({
               }}
             >
               {/* Image */}
-              <div className="relative w-full bg-gray-200 overflow-hidden">
+              <div className={`relative w-full bg-gray-200 overflow-hidden ${layout === 'grid' ? 'aspect-square' : ''}`}>
                 {item.isVideo ? (
                   <video
                     src={item.url}
-                    className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-300"
+                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
                   />
                 ) : (
                   <img
                     src={item.url}
                     alt={item.title || 'Gallery item'}
-                    className="w-full h-auto object-cover group-hover:scale-110 transition-transform duration-300"
+                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
                   />
                 )}
 
-                {/* Overlay on Hover */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-                  {item.type === 'video' && (
+                {/* Overlay on Hover - with Share and Download buttons */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2">
+                  {/* Top row: View/Play */}
+                  <div className="flex items-center gap-3">
+                    {item.isVideo && (
+                      <div className="text-white">
+                        <Play className="w-8 h-8 fill-current" />
+                      </div>
+                    )}
                     <div className="text-white">
-                      <Play className="w-8 h-8 fill-current" />
+                      <ZoomIn className="w-8 h-8" />
                     </div>
-                  )}
-                  <div className="text-white">
-                    <ZoomIn className="w-8 h-8" />
+                  </div>
+                  
+                  {/* Bottom row: Share and Download buttons */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (navigator.share) {
+                          try {
+                            await navigator.share({
+                              title: item.title || 'Photo',
+                              text: `Check out this photo from ${eventName}`,
+                              url: item.url,
+                            });
+                          } catch (error) {
+                            if (error instanceof Error && error.name !== 'AbortError') {
+                              console.error('Share failed:', error);
+                              navigator.clipboard.writeText(item.url);
+                              alert('Share failed. Link copied to clipboard instead!');
+                            }
+                          }
+                        } else {
+                          navigator.clipboard.writeText(item.url);
+                          alert('Photo link copied to clipboard!');
+                        }
+                      }}
+                      className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const response = await fetch(item.url);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = item.title || `photo-${item.id}`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                          alert('Download failed. Please try again.');
+                        }
+                      }}
+                      className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
                   </div>
                 </div>
 
