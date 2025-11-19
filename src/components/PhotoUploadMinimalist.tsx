@@ -86,8 +86,24 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
 
       try {
         console.log(`🚀 Starting upload for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        console.log(`📋 File details:`, {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          extension: file.name.split('.').pop()?.toLowerCase()
+        });
 
-        const isVideo = file.type.startsWith('video/');
+        // Determine if file is video - support .mov files explicitly
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        const isVideo = file.type.startsWith('video/') || 
+                       fileExtension === 'mov' || 
+                       fileExtension === 'mp4' || 
+                       fileExtension === 'avi' || 
+                       fileExtension === 'mkv' || 
+                       fileExtension === 'webm';
+        
+        console.log(`🎬 Is video: ${isVideo}, Extension: ${fileExtension}, MIME: ${file.type}`);
+        
         let processedFile = file;
         let filePublicUrl = '';
 
@@ -113,10 +129,16 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 10;
         setUploadProgress({ ...progress });
 
-        // Upload to Supabase
+        // Upload to Supabase with explicit content type
+        const contentType = file.type || (fileExtension === 'mov' ? 'video/quicktime' : 'application/octet-stream');
+        
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
-          .upload(filePath, processedFile, { cacheControl: '3600', upsert: false });
+          .upload(filePath, processedFile, { 
+            cacheControl: '3600', 
+            upsert: false,
+            contentType: contentType
+          });
 
         if (uploadError) {
           throw uploadError;
@@ -144,14 +166,17 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           }]);
         }
 
-        // Save photo metadata
+        // Save photo metadata with explicit MIME type for .mov files
+        const mimeType = file.type || (fileExtension === 'mov' ? 'video/quicktime' : 'application/octet-stream');
+        
         await supabase.from('photos').insert([{
           event_id: eventData.id,
           filename: file.name,
           url: filePublicUrl,
           file_path: filePath,
           size: processedFile.size,
-          type: file.type,
+          type: mimeType,
+          mime_type: mimeType,
           is_video: isVideo,
           created_at: new Date().toISOString()
         }]);
