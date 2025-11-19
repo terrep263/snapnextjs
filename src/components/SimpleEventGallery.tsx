@@ -24,6 +24,8 @@ interface SimpleEventGalleryProps {
   packageType?: 'basic' | 'premium' | 'freebie'; // basic = individual downloads only, premium/freebie = bulk + individual
   isFree?: boolean;
   isFreebie?: boolean;
+  eventSlug?: string; // For upload navigation
+  eventId?: string; // For dashboard navigation
 }
 
 export default function SimpleEventGallery({
@@ -33,7 +35,9 @@ export default function SimpleEventGallery({
   photos,
   packageType = 'premium', // default to premium (full features)
   isFree = false,
-  isFreebie = false
+  isFreebie = false,
+  eventSlug,
+  eventId
 }: SimpleEventGalleryProps) {
   console.log('🎨 SimpleEventGallery mounted with:', { 
     eventName, 
@@ -553,9 +557,15 @@ export default function SimpleEventGallery({
             <Menu className="w-6 h-6 text-gray-700" />
           </button>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">{eventName}</h1>
-          <div className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-            {allItems.length}
-          </div>
+          <a
+            href={`${window.location.pathname}/upload`}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span className="hidden sm:inline">Upload</span>
+          </a>
         </div>
       </div>
 
