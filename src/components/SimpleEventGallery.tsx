@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
 
 interface GalleryItem {
   id: string;
@@ -64,6 +64,7 @@ export default function SimpleEventGallery({
   const [shareOpen, setShareOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
+  const [deleting, setDeleting] = useState<string | null>(null);
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Build gallery items including header and profile images
@@ -261,6 +262,31 @@ export default function SimpleEventGallery({
       setDownloading(false);
       setSelectMode(false);
       setSelectedItems(new Set());
+    }
+  };
+
+  // Delete photo
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!confirm('Are you sure you want to delete this photo?')) return;
+    
+    setDeleting(photoId);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      
+      const response = await fetch(`/api/photos/${photoId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete photo');
+      }
+
+      // Refresh page to update gallery
+      window.location.reload();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete photo. Please try again.');
+      setDeleting(null);
     }
   };
 
@@ -765,7 +791,7 @@ export default function SimpleEventGallery({
                     </div>
                   </div>
                   
-                  {/* Bottom row: Share and Download buttons */}
+                  {/* Bottom row: Share, Download, and Delete buttons */}
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={async (e) => {
@@ -817,6 +843,17 @@ export default function SimpleEventGallery({
                     >
                       <Download className="w-4 h-4" />
                       Download
+                    </button>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await handleDeletePhoto(item.id);
+                      }}
+                      disabled={deleting === item.id}
+                      className="flex items-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
                     </button>
                   </div>
                 </div>
