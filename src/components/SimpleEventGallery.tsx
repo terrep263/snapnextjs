@@ -748,7 +748,7 @@ export default function SimpleEventGallery({
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`${layout === 'masonry' ? 'break-inside-avoid' : ''} group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              className={`${layout === 'masonry' ? 'break-inside-avoid' : ''} group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer touch-manipulation ${
                 selectMode && selectedItems.has(item.id)
                   ? 'ring-2 ring-green-500 shadow-green-500/50'
                   : ''
@@ -778,9 +778,9 @@ export default function SimpleEventGallery({
                 )}
 
                 {/* Overlay on Hover - with Share and Download buttons */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
                   {/* Top row: View/Play */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 pointer-events-auto">
                     {item.isVideo && (
                       <div className="text-white">
                         <Play className="w-8 h-8 fill-current" />
@@ -791,8 +791,8 @@ export default function SimpleEventGallery({
                     </div>
                   </div>
                   
-                  {/* Bottom row: Share, Download, and Delete buttons */}
-                  <div className="flex items-center gap-2 mt-2">
+                  {/* Bottom row: Share, Download, and Delete buttons - Mobile optimized */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
@@ -815,10 +815,10 @@ export default function SimpleEventGallery({
                           alert('Photo link copied to clipboard!');
                         }
                       }}
-                      className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
                     >
                       <Share2 className="w-4 h-4" />
-                      Share
+                      <span className="sm:inline">Share</span>
                     </button>
                     <button
                       onClick={async (e) => {
@@ -839,10 +839,10 @@ export default function SimpleEventGallery({
                           alert('Download failed. Please try again.');
                         }
                       }}
-                      className="flex items-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
                     >
                       <Download className="w-4 h-4" />
-                      Download
+                      <span className="sm:inline">Download</span>
                     </button>
                     <button
                       onClick={async (e) => {
@@ -850,10 +850,10 @@ export default function SimpleEventGallery({
                         await handleDeletePhoto(item.id);
                       }}
                       disabled={deleting === item.id}
-                      className="flex items-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                     >
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      <span className="sm:inline">Delete</span>
                     </button>
                   </div>
                 </div>
