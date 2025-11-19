@@ -453,19 +453,9 @@ export default function SimpleEventGallery({
 
                 {/* Download Controls - Package-based */}
                 <div className="space-y-2 pt-4 border-t border-gray-800">
-                  {/* Show bulk download only for premium/freebie events */}
-                  {allowBulkDownload && (
-                    <button
-                      onClick={downloadAllItems}
-                      disabled={downloading}
-                      className="w-full flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Download className="w-5 h-5" />
-                      Download All ({allItems.length})
-                    </button>
-                  )}
-
-                  {/* All events can select and download individual items */}
+                  {/* Bulk download removed - only event planner can bulk download from dashboard */}
+                  
+                  {/* All users can select and download individual items */}
                   <button
                     onClick={() => setSelectMode(!selectMode)}
                     className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
@@ -477,13 +467,6 @@ export default function SimpleEventGallery({
                     <CheckSquare className="w-5 h-5" />
                     {selectMode ? `Download Selected (${selectedItems.size})` : 'Select Items to Download'}
                   </button>
-                  
-                  {/* Info text for basic/free events */}
-                  {!allowBulkDownload && (
-                    <p className="text-xs text-gray-400 text-center px-2">
-                      💡 Individual downloads available. Upgrade to Premium for bulk download.
-                    </p>
-                  )}
 
                   {/* Selection Controls - Only show if in select mode */}
                   {selectMode && (
