@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         console.log('Payment successful:', session.id);
 
+        // Extract PushLap affiliate ID from session (metadata takes precedence, fallback to client_reference_id)
+        const pushLapAffiliateId = session.metadata?.pushLapAffiliateId || session.client_reference_id || null;
+        if (pushLapAffiliateId) {
+          console.log('PushLap affiliate detected in webhook:', pushLapAffiliateId);
+          // TODO: Store pushLapAffiliateId with the event/user record in your database for commission tracking
+          // Example: When creating event record, include affiliate_id: pushLapAffiliateId
+        }
+
         // Extract metadata
         const metadata = session.metadata;
         if (metadata) {

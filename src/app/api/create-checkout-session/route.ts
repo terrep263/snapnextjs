@@ -10,7 +10,8 @@ export async function POST(request: NextRequest) {
       yourName, 
       package: selectedPackage, 
       price,
-      promoCodeId
+      promoCodeId,
+      affiliateId // PushLap affiliate tracking ID from frontend
     } = await request.json();
 
     if (!eventName || !emailAddress) {
@@ -69,12 +70,16 @@ export async function POST(request: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/create`,
       customer_email: emailAddress,
       allow_promotion_codes: true,
+      // PushLap affiliate tracking: client_reference_id is used by PushLap to track conversions
+      client_reference_id: affiliateId || undefined,
       metadata: {
         eventName,
         eventDate: eventDate || '',
         emailAddress,
         yourName: yourName || '',
         package: selectedPackage,
+        // PushLap affiliate tracking: store affiliate ID in metadata as backup
+        ...(affiliateId ? { pushLapAffiliateId: String(affiliateId) } : {}),
       },
     };
 

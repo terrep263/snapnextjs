@@ -154,6 +154,13 @@ export default function CreateEventContent() {
     try {
       const basePrice = selectedPackage === 'premium' ? 4900 : 2900;
 
+      // Capture PushLap affiliate ID from frontend if present
+      let affiliateId: string | undefined;
+      if (typeof window !== 'undefined' && (window as any).affiliateId) {
+        affiliateId = (window as any).affiliateId;
+        console.log('PushLap affiliate detected:', affiliateId);
+      }
+
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -167,6 +174,7 @@ export default function CreateEventContent() {
           package: selectedPackage,
           price: basePrice,
           promoCodeId: promoCodeId || undefined,
+          affiliateId: affiliateId || undefined, // PushLap affiliate tracking
         }),
       });
 
