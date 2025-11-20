@@ -39,6 +39,12 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/purple logo/purplelogo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/purple logo/purplelogo.png" />
+        <script 
+          src="https://pushlapgrowth.com/affiliate-tracker.js" 
+          data-affiliate 
+          data-program-id="e4fb576e-d34e-49f4-aec3-66f6d36f1ef2" 
+          async
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
