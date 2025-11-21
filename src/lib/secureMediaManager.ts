@@ -35,8 +35,8 @@ export interface ChunkMetadata {
 
 export class SecureMediaManager {
   private static readonly ALLOWED_MIME_TYPES = {
-    images: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-    videos: ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm', 'application/octet-stream'],
+    images: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'],
+    videos: ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska', 'video/webm', 'video/3gpp', 'video/3gpp2', 'application/octet-stream', ''],
     audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac'],
   };
 

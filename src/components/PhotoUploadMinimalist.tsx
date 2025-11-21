@@ -94,11 +94,17 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         });
 
         // Determine if file is video - support all video formats explicitly
+        // iPhone videos often have empty MIME types, so rely on extension
         const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        const videoExtensions = ['mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv'];
-        const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension || '');
+        const videoExtensions = ['mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv', '3gp', '3g2'];
+        const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension || '') || (!file.type && videoExtensions.includes(fileExtension || ''));
         
-        console.log(`🎬 Is video: ${isVideo}, Extension: ${fileExtension}, MIME: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`🎬 iPhone/Video Upload - Is video: ${isVideo}, Extension: ${fileExtension}, MIME: '${file.type}', Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+        
+        // Warn about large files early
+        if (file.size > 500 * 1024 * 1024) {
+          console.warn(`⚠️ Large file detected (${(file.size / 1024 / 1024).toFixed(2)}MB). This may take a while to upload.`);
+        }
         
         let processedFile = file;
         let filePublicUrl = '';
@@ -132,8 +138,9 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         setUploadProgress({ ...progress });
 
         // Upload to Supabase with explicit content type - comprehensive MIME mapping
+        // iPhone videos often come with empty MIME type, must set explicitly
         let contentType = file.type;
-        if (!contentType || contentType === 'application/octet-stream' || contentType === '') {
+        if (!contentType || contentType === 'application/octet-stream' || contentType === '' || contentType === 'video/quicktime') {
           const mimeMap: Record<string, string> = {
             'mov': 'video/quicktime',
             'mp4': 'video/mp4',
@@ -142,15 +149,19 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             'webm': 'video/webm',
             'flv': 'video/x-flv',
             'wmv': 'video/x-ms-wmv',
+            '3gp': 'video/3gpp',
+            '3g2': 'video/3gpp2',
             'jpg': 'image/jpeg',
             'jpeg': 'image/jpeg',
             'png': 'image/png',
             'gif': 'image/gif',
-            'webp': 'image/webp'
+            'webp': 'image/webp',
+            'heic': 'image/heic',
+            'heif': 'image/heif'
           };
           contentType = mimeMap[fileExtension || ''] || 'application/octet-stream';
         }
-        console.log(`📤 Uploading with MIME type: ${contentType}`);
+        console.log(`📤 Uploading with MIME type: ${contentType} (original was: '${file.type}')`);
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
@@ -191,8 +202,9 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         }
 
         // Save photo metadata with explicit MIME type for all video formats
+        // Handle iPhone videos that come with empty or generic MIME types
         let mimeType = file.type;
-        if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
+        if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '' || mimeType === 'video/quicktime') {
           const mimeMap: Record<string, string> = {
             'mov': 'video/quicktime',
             'mp4': 'video/mp4',
@@ -200,10 +212,13 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             'mkv': 'video/x-matroska',
             'webm': 'video/webm',
             'flv': 'video/x-flv',
-            'wmv': 'video/x-ms-wmv'
+            'wmv': 'video/x-ms-wmv',
+            '3gp': 'video/3gpp',
+            '3g2': 'video/3gpp2'
           };
-          mimeType = mimeMap[fileExtension || ''] || 'application/octet-stream';
+          mimeType = mimeMap[fileExtension || ''] || (isVideo ? 'video/quicktime' : 'application/octet-stream');
         }
+        console.log(`💾 Saving to database with MIME: ${mimeType}`);
         
         const { error: insertError } = await supabase.from('photos').insert([{
           event_id: eventData.id,
@@ -230,6 +245,13 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
 
       } catch (err) {
         console.error(`❌ Upload error for ${file.name}:`, err);
+        console.error(`File size: ${(file.size / 1024 / 1024).toFixed(2)}MB, MIME type: '${file.type}'`);
+        
+        // Provide user-friendly error message
+        if (file.size > 500 * 1024 * 1024) {
+          console.error('💡 Large file detected - consider reducing video quality on your iPhone (Settings > Camera > Record Video)');
+        }
+        
         results[key] = 'error';
         setUploadResults({ ...results });
       }
@@ -298,7 +320,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv"
+          accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv,.3gp"
           onChange={handleChange}
           disabled={disabled || uploading}
           className="hidden"
