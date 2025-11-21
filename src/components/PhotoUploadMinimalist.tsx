@@ -93,32 +93,34 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           extension: file.name.split('.').pop()?.toLowerCase()
         });
 
-        // Determine if file is video - support .mov files explicitly
+        // Determine if file is video - support all video formats explicitly
         const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        const isVideo = file.type.startsWith('video/') || 
-                       fileExtension === 'mov' || 
-                       fileExtension === 'mp4' || 
-                       fileExtension === 'avi' || 
-                       fileExtension === 'mkv' || 
-                       fileExtension === 'webm';
+        const videoExtensions = ['mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv'];
+        const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension || '');
         
-        console.log(`🎬 Is video: ${isVideo}, Extension: ${fileExtension}, MIME: ${file.type}`);
+        console.log(`🎬 Is video: ${isVideo}, Extension: ${fileExtension}, MIME: ${file.type}, Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
         
         let processedFile = file;
         let filePublicUrl = '';
 
-        // Video compression if needed
-        if (isVideo && file.size > 50 * 1024 * 1024) {
+        // Video compression is OPTIONAL - skip if it fails or file is under 100MB
+        if (isVideo && file.size > 100 * 1024 * 1024) {
           try {
+            console.log(`🔄 Attempting video compression for large file...`);
             const compressionResult = await videoCompressor.compressVideo(file);
             if (compressionResult.success && compressionResult.file) {
               processedFile = compressionResult.file;
               console.log(`✅ Video compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+            } else {
+              console.log(`⚠️ Compression not needed or failed - uploading original file`);
+              processedFile = file;
             }
           } catch (err) {
-            console.warn(`⚠️ Compression skipped: ${err}`);
+            console.warn(`⚠️ Compression error (uploading original): ${err}`);
             processedFile = file;
           }
+        } else if (isVideo) {
+          console.log(`📹 Video under 100MB - uploading without compression`);
         }
 
         // Create file path
@@ -129,8 +131,26 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 10;
         setUploadProgress({ ...progress });
 
-        // Upload to Supabase with explicit content type
-        const contentType = file.type || (fileExtension === 'mov' ? 'video/quicktime' : 'application/octet-stream');
+        // Upload to Supabase with explicit content type - comprehensive MIME mapping
+        let contentType = file.type;
+        if (!contentType || contentType === 'application/octet-stream' || contentType === '') {
+          const mimeMap: Record<string, string> = {
+            'mov': 'video/quicktime',
+            'mp4': 'video/mp4',
+            'avi': 'video/x-msvideo',
+            'mkv': 'video/x-matroska',
+            'webm': 'video/webm',
+            'flv': 'video/x-flv',
+            'wmv': 'video/x-ms-wmv',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp'
+          };
+          contentType = mimeMap[fileExtension || ''] || 'application/octet-stream';
+        }
+        console.log(`📤 Uploading with MIME type: ${contentType}`);
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('photos')
@@ -141,8 +161,12 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           });
 
         if (uploadError) {
+          console.error(`❌ Supabase upload error for ${file.name}:`, uploadError);
+          console.error(`Upload details - Path: ${filePath}, Size: ${processedFile.size}, Type: ${contentType}`);
           throw uploadError;
         }
+        
+        console.log(`✅ File uploaded to storage: ${filePath}`);
 
         const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(filePath);
         filePublicUrl = publicUrl;
@@ -166,10 +190,22 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           }]);
         }
 
-        // Save photo metadata with explicit MIME type for .mov files
-        const mimeType = file.type || (fileExtension === 'mov' ? 'video/quicktime' : 'application/octet-stream');
+        // Save photo metadata with explicit MIME type for all video formats
+        let mimeType = file.type;
+        if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '') {
+          const mimeMap: Record<string, string> = {
+            'mov': 'video/quicktime',
+            'mp4': 'video/mp4',
+            'avi': 'video/x-msvideo',
+            'mkv': 'video/x-matroska',
+            'webm': 'video/webm',
+            'flv': 'video/x-flv',
+            'wmv': 'video/x-ms-wmv'
+          };
+          mimeType = mimeMap[fileExtension || ''] || 'application/octet-stream';
+        }
         
-        await supabase.from('photos').insert([{
+        const { error: insertError } = await supabase.from('photos').insert([{
           event_id: eventData.id,
           filename: file.name,
           url: filePublicUrl,
@@ -180,6 +216,11 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           is_video: isVideo,
           created_at: new Date().toISOString()
         }]);
+        
+        if (insertError) {
+          console.error(`❌ Database insert error for ${file.name}:`, insertError);
+          throw insertError;
+        }
 
         console.log(`✅ Upload successful: ${file.name}`);
         progress[key] = 100;
@@ -257,7 +298,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm"
+          accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv"
           onChange={handleChange}
           disabled={disabled || uploading}
           className="hidden"
@@ -276,7 +317,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             </p>
 
             <p className="text-xs text-gray-500">
-              JPG, PNG, MP4, MOV • Up to 50MB per file
+              Images & Videos • JPG, PNG, MP4, MOV, MKV, WEBM • Up to 100MB
             </p>
           </div>
         </div>
