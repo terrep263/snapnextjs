@@ -616,6 +616,8 @@ export default function SimpleEventGallery({
                         src={allItems[selectedIndex].url}
                         controls
                         autoPlay
+                        preload="metadata"
+                        playsInline
                         className="max-w-full max-h-full object-contain rounded-lg"
                       />
                     ) : (
@@ -768,6 +770,14 @@ export default function SimpleEventGallery({
                   <video
                     src={item.url}
                     className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    onLoadedMetadata={(e) => {
+                      // Set to 1 second to show a meaningful frame as thumbnail
+                      const video = e.target as HTMLVideoElement;
+                      video.currentTime = Math.min(1, video.duration / 4);
+                    }}
                   />
                 ) : (
                   <img
