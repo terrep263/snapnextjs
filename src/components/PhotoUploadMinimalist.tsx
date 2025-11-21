@@ -227,13 +227,19 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           file_path: filePath,
           size: processedFile.size,
           type: mimeType,
-          mime_type: mimeType,
           is_video: isVideo,
           created_at: new Date().toISOString()
         }]);
         
         if (insertError) {
           console.error(`❌ Database insert error for ${file.name}:`, insertError);
+          console.error(`Insert details:`, {
+            event_id: eventData.id,
+            filename: file.name,
+            size: processedFile.size,
+            type: mimeType,
+            is_video: isVideo
+          });
           throw insertError;
         }
 
