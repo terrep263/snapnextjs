@@ -38,6 +38,29 @@ export default function CreateEventContent() {
       }));
       validateAffiliateCode(refCode);
     }
+    
+    // Check if PushLap affiliate tracking is available
+    const checkAffiliateId = () => {
+      if (typeof window !== 'undefined') {
+        const affiliateId = (window as any).affiliateId;
+        if (affiliateId) {
+          console.log('✅ PushLap affiliateId detected:', affiliateId);
+        } else {
+          console.log('⚠️ PushLap affiliateId not set yet');
+          // Check again after a delay in case script is still loading
+          setTimeout(() => {
+            const delayedCheck = (window as any).affiliateId;
+            if (delayedCheck) {
+              console.log('✅ PushLap affiliateId detected (delayed):', delayedCheck);
+            } else {
+              console.log('❌ PushLap affiliateId still not available');
+            }
+          }, 2000);
+        }
+      }
+    };
+    
+    checkAffiliateId();
   }, [searchParams]);
 
   const validateAffiliateCode = async (code: string) => {

@@ -45,6 +45,19 @@ export default function RootLayout({
           data-program-id="e4fb576e-d34e-49f4-aec3-66f6d36f1ef2" 
           async
         />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                if (window.affiliateId) {
+                  console.log('✅ PushLap affiliateId loaded:', window.affiliateId);
+                } else {
+                  console.log('⚠️ PushLap affiliateId not detected - script may not have loaded or no referral in URL');
+                }
+              }, 1000);
+            });
+          `
+        }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
