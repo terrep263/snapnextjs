@@ -42,29 +42,25 @@ export default function CreateEventContent() {
     // Check if PushLap affiliate tracking is available
     const checkAffiliateId = () => {
       if (typeof window !== 'undefined') {
-        // PushLap stores affiliate in localStorage with key "affiliate"
-        const affiliateFromStorage = localStorage.getItem('affiliate');
-        const affiliateFromWindow = (window as any).affiliateId;
+        const windowAffiliate = (window as any).affiliateId;
+        const storageAffiliate = localStorage.getItem('affiliate');
         
-        if (affiliateFromStorage || affiliateFromWindow) {
-          console.log('✅ PushLap affiliate detected:', {
-            localStorage: affiliateFromStorage,
-            window: affiliateFromWindow
-          });
+        console.log('🔍 Affiliate check on create page:', {
+          'window.affiliateId': windowAffiliate,
+          'localStorage.affiliate': storageAffiliate
+        });
+        
+        if (windowAffiliate || storageAffiliate) {
+          console.log('✅ Affiliate tracking ready for checkout');
         } else {
-          console.log('⚠️ PushLap affiliate not set yet');
-          // Check again after a delay in case script is still loading
+          // Check again after delay for async script
           setTimeout(() => {
-            const delayedStorage = localStorage.getItem('affiliate');
             const delayedWindow = (window as any).affiliateId;
-            if (delayedStorage || delayedWindow) {
-              console.log('✅ PushLap affiliate detected (delayed):', {
-                localStorage: delayedStorage,
-                window: delayedWindow
-              });
-            } else {
-              console.log('❌ PushLap affiliate still not available');
-            }
+            const delayedStorage = localStorage.getItem('affiliate');
+            console.log('🔍 Delayed affiliate check:', {
+              'window.affiliateId': delayedWindow,
+              'localStorage.affiliate': delayedStorage
+            });
           }, 2000);
         }
       }
@@ -187,17 +183,22 @@ export default function CreateEventContent() {
     try {
       const basePrice = selectedPackage === 'premium' ? 4900 : 2900;
 
-      // Capture PushLap affiliate ID from localStorage (where PushLap stores it)
+      // Capture PushLap affiliate ID - check window.affiliateId first (as per docs)
       let affiliateId: string | undefined;
       if (typeof window !== 'undefined') {
-        // PushLap stores in localStorage with key "affiliate"
-        const storedAffiliate = localStorage.getItem('affiliate');
+        // PushLap sets window.affiliateId globally (preferred method)
         const windowAffiliate = (window as any).affiliateId;
+        // Fallback to localStorage in case script stores it there
+        const storageAffiliate = localStorage.getItem('affiliate');
         
-        affiliateId = storedAffiliate || windowAffiliate || undefined;
+        affiliateId = windowAffiliate || storageAffiliate || undefined;
         
         if (affiliateId) {
-          console.log('PushLap affiliate detected for checkout:', affiliateId);
+          console.log('✅ Sending affiliate to Stripe:', affiliateId, {
+            source: windowAffiliate ? 'window.affiliateId' : 'localStorage'
+          });
+        } else {
+          console.log('⚠️ No affiliate ID found for checkout');
         }
       }
 

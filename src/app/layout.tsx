@@ -47,21 +47,21 @@ export default function RootLayout({
         />
         <script dangerouslySetInnerHTML={{
           __html: `
+            // Check for PushLap window.affiliateId after script loads
             window.addEventListener('load', function() {
               setTimeout(function() {
-                // PushLap stores affiliate in localStorage, not window.affiliateId
-                var affiliateFromStorage = localStorage.getItem('affiliate');
-                var affiliateFromWindow = window.affiliateId;
+                console.log('🔍 Checking PushLap affiliate tracking...');
+                console.log('window.affiliateId:', window.affiliateId);
+                console.log('localStorage affiliate:', localStorage.getItem('affiliate'));
                 
-                if (affiliateFromStorage || affiliateFromWindow) {
-                  console.log('✅ PushLap affiliate detected:', {
-                    localStorage: affiliateFromStorage,
-                    window: affiliateFromWindow
-                  });
+                if (window.affiliateId) {
+                  console.log('✅ PushLap window.affiliateId detected:', window.affiliateId);
+                } else if (localStorage.getItem('affiliate')) {
+                  console.log('✅ Affiliate in localStorage:', localStorage.getItem('affiliate'));
                 } else {
-                  console.log('⚠️ No PushLap affiliate detected');
+                  console.log('⚠️ No affiliate tracking detected');
                 }
-              }, 1000);
+              }, 1500);
             });
           `
         }} />

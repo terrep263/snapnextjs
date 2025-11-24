@@ -82,6 +82,16 @@ export async function POST(request: NextRequest) {
         ...(affiliateId ? { pushLapAffiliateId: String(affiliateId) } : {}),
       },
     };
+    
+    // Log affiliate tracking setup for debugging
+    if (affiliateId) {
+      console.log('🎯 PushLap affiliate tracking configured:', {
+        client_reference_id: affiliateId,
+        metadata_pushLapAffiliateId: affiliateId
+      });
+    } else {
+      console.log('⚠️ No affiliate ID provided for this checkout');
+    }
 
     // Add promotion code if provided
     if (promoCodeId) {
