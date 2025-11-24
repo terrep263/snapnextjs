@@ -42,18 +42,28 @@ export default function CreateEventContent() {
     // Check if PushLap affiliate tracking is available
     const checkAffiliateId = () => {
       if (typeof window !== 'undefined') {
-        const affiliateId = (window as any).affiliateId;
-        if (affiliateId) {
-          console.log('✅ PushLap affiliateId detected:', affiliateId);
+        // PushLap stores affiliate in localStorage with key "affiliate"
+        const affiliateFromStorage = localStorage.getItem('affiliate');
+        const affiliateFromWindow = (window as any).affiliateId;
+        
+        if (affiliateFromStorage || affiliateFromWindow) {
+          console.log('✅ PushLap affiliate detected:', {
+            localStorage: affiliateFromStorage,
+            window: affiliateFromWindow
+          });
         } else {
-          console.log('⚠️ PushLap affiliateId not set yet');
+          console.log('⚠️ PushLap affiliate not set yet');
           // Check again after a delay in case script is still loading
           setTimeout(() => {
-            const delayedCheck = (window as any).affiliateId;
-            if (delayedCheck) {
-              console.log('✅ PushLap affiliateId detected (delayed):', delayedCheck);
+            const delayedStorage = localStorage.getItem('affiliate');
+            const delayedWindow = (window as any).affiliateId;
+            if (delayedStorage || delayedWindow) {
+              console.log('✅ PushLap affiliate detected (delayed):', {
+                localStorage: delayedStorage,
+                window: delayedWindow
+              });
             } else {
-              console.log('❌ PushLap affiliateId still not available');
+              console.log('❌ PushLap affiliate still not available');
             }
           }, 2000);
         }
@@ -177,11 +187,18 @@ export default function CreateEventContent() {
     try {
       const basePrice = selectedPackage === 'premium' ? 4900 : 2900;
 
-      // Capture PushLap affiliate ID from frontend if present
+      // Capture PushLap affiliate ID from localStorage (where PushLap stores it)
       let affiliateId: string | undefined;
-      if (typeof window !== 'undefined' && (window as any).affiliateId) {
-        affiliateId = (window as any).affiliateId;
-        console.log('PushLap affiliate detected:', affiliateId);
+      if (typeof window !== 'undefined') {
+        // PushLap stores in localStorage with key "affiliate"
+        const storedAffiliate = localStorage.getItem('affiliate');
+        const windowAffiliate = (window as any).affiliateId;
+        
+        affiliateId = storedAffiliate || windowAffiliate || undefined;
+        
+        if (affiliateId) {
+          console.log('PushLap affiliate detected for checkout:', affiliateId);
+        }
       }
 
       const response = await fetch('/api/create-checkout-session', {

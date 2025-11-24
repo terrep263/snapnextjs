@@ -49,10 +49,17 @@ export default function RootLayout({
           __html: `
             window.addEventListener('load', function() {
               setTimeout(function() {
-                if (window.affiliateId) {
-                  console.log('✅ PushLap affiliateId loaded:', window.affiliateId);
+                // PushLap stores affiliate in localStorage, not window.affiliateId
+                var affiliateFromStorage = localStorage.getItem('affiliate');
+                var affiliateFromWindow = window.affiliateId;
+                
+                if (affiliateFromStorage || affiliateFromWindow) {
+                  console.log('✅ PushLap affiliate detected:', {
+                    localStorage: affiliateFromStorage,
+                    window: affiliateFromWindow
+                  });
                 } else {
-                  console.log('⚠️ PushLap affiliateId not detected - script may not have loaded or no referral in URL');
+                  console.log('⚠️ No PushLap affiliate detected');
                 }
               }, 1000);
             });
