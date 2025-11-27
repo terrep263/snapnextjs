@@ -129,10 +129,7 @@ export async function POST(req: NextRequest) {
           payment_type: 'magic_link', // Special payment type for magic link claims
           max_photos: 999999, // Unlimited
           max_storage_bytes: 999999999, // ~1GB (unlimited for practical purposes)
-          feed_enabled: true, // Premium feature
           created_at: new Date().toISOString(),
-          // Store event details in metadata if you have such columns
-          // Otherwise they'll be in the event name/slug
         },
       ])
       .select()
