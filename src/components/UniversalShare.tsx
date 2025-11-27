@@ -92,7 +92,7 @@ export default function UniversalShare({
           <div className="text-xs text-gray-500 mb-3 font-medium">Share to:</div>
           
           {/* Social Share Buttons */}
-          <div className="flex gap-3 mb-4 justify-center">
+          <div className="flex gap-3 mb-4 justify-center flex-wrap">
             <FacebookShareButton url={shareUrl} hashtag="#snapworxx">
               <FacebookIcon size={40} round />
             </FacebookShareButton>
@@ -104,6 +104,23 @@ export default function UniversalShare({
             <WhatsappShareButton url={shareUrl} title={shareTitle}>
               <WhatsappIcon size={40} round />
             </WhatsappShareButton>
+
+            {/* TikTok Share - Opens TikTok app/web with content ready */}
+            <button
+              onClick={async () => {
+                // TikTok doesn't have a direct share API, so we copy to clipboard and open TikTok
+                await navigator.clipboard.writeText(`${shareTitle}\n\n${imageUrl}`);
+                // Try to open TikTok - on mobile it will open the app
+                window.open('https://www.tiktok.com/upload', '_blank');
+                alert('📋 Caption copied! Paste it in TikTok when uploading.');
+              }}
+              className="w-10 h-10 rounded-full bg-black flex items-center justify-center hover:opacity-80 transition-opacity"
+              title="Share to TikTok"
+            >
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+              </svg>
+            </button>
           </div>
 
           <div className="border-t border-gray-200 pt-3 space-y-2">
