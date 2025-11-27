@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       })
       .toBuffer();
 
-    return new NextResponse(watermarkedImage, {
+    return new NextResponse(new Uint8Array(watermarkedImage), {
       headers: {
         'Content-Type': 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
