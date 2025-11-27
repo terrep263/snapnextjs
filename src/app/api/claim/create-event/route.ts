@@ -192,58 +192,70 @@ export async function POST(req: NextRequest) {
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc; }
-                .container { max-width: 600px; margin: 0 auto; background: white; }
-                .header { background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
-                .content { padding: 40px 20px; }
-                .button { display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
-                .link { color: #9333ea; word-break: break-all; }
-                .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; background: #f9fafb; }
-                .info-box { background: linear-gradient(135deg, #f3e8ff 0%, #fdf2f8 100%); border-radius: 12px; padding: 25px; margin: 20px 0; border-left: 4px solid #9333ea; }
-                .qr-section { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 25px; text-align: center; margin: 20px 0; }
-                .features-box { background: #f9fafb; border-radius: 12px; padding: 20px; margin: 20px 0; }
-              </style>
             </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1 style="margin: 0; font-size: 28px;">🎉 Your Event is Ready!</h1>
-                  <p style="margin: 10px 0 0 0; opacity: 0.9;">Your free SnapWorxx event has been created</p>
+            <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f8fafc;">
+              <div style="max-width: 600px; margin: 0 auto; background: white;">
+                <!-- Header with Logo -->
+                <div style="padding: 20px; display: flex; align-items: center;">
+                  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td width="120" valign="middle">
+                        <img src="https://snapworxx.com/purple%20logo/purplelogo.png" alt="SnapWorxx" width="100" height="100" style="display: block;">
+                      </td>
+                      <td valign="middle">
+                        <div style="background: #7C3AED; padding: 20px 30px; border-radius: 8px;">
+                          <h1 style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold;">Your Event is Ready!</h1>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
                 </div>
-                <div class="content">
-                  <h2 style="color: #1f2937;">Hi ${yourName},</h2>
-                  <p>Great news! Your SnapWorxx event <strong>"${eventName}"</strong> has been created successfully. Here's everything you need to get started:</p>
+                
+                <!-- Main Content -->
+                <div style="padding: 30px 20px;">
+                  <p style="font-size: 16px; color: #1f2937;">Hi <strong>${yourName}</strong>,</p>
+                  <p style="font-size: 16px; color: #4b5563;">Great news! Your SnapWorxx event <strong>"${eventName}"</strong> has been created successfully. Here's everything you need to get started:</p>
 
-                  <!-- Event Details -->
-                  <div class="info-box">
-                    <h3 style="color: #6b21a8; margin: 0 0 15px 0;">📸 Your Event Details</h3>
-                    <p style="margin: 8px 0;"><strong>Event:</strong> ${eventName}</p>
-                    <p style="margin: 8px 0;"><strong>Date:</strong> ${eventDate}</p>
-                    ${location ? `<p style="margin: 8px 0;"><strong>Location:</strong> ${location}</p>` : ''}
-                    <p style="margin: 8px 0;"><strong>Active Until:</strong> ${expirationDate}</p>
+                  <!-- Event Details Box -->
+                  <div style="background: linear-gradient(135deg, #f3e8ff 0%, #fdf2f8 100%); border-radius: 12px; padding: 25px; margin: 25px 0; border-left: 4px solid #7C3AED;">
+                    <h3 style="color: #6b21a8; margin: 0 0 15px 0; font-size: 18px;">📸 Your Event Details</h3>
+                    <p style="margin: 8px 0; color: #1f2937;"><strong>Event:</strong> ${eventName}</p>
+                    <p style="margin: 8px 0; color: #1f2937;"><strong>Date:</strong> ${eventDate}</p>
+                    ${location ? `<p style="margin: 8px 0; color: #1f2937;"><strong>Location:</strong> ${location}</p>` : ''}
+                    <p style="margin: 8px 0; color: #1f2937;"><strong>Active Until:</strong> ${expirationDate}</p>
                   </div>
 
-                  <!-- Dashboard Link -->
-                  <h3>🎛️ Your Dashboard</h3>
-                  <p>Manage your event, view uploads, and download all photos:</p>
-                  <p><a href="${dashboardUrl}" class="button" style="color: #ffffff !important; display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Dashboard →</a></p>
+                  <!-- Dashboard Button -->
+                  <h3 style="color: #1f2937; margin: 25px 0 10px 0;">🎛️ Your Dashboard</h3>
+                  <p style="color: #4b5563; margin: 0 0 15px 0;">Manage your event, view uploads, and download all photos:</p>
+                  <table cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="background: #7C3AED; border-radius: 8px;">
+                        <a href="${dashboardUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 16px;">Go to Dashboard →</a>
+                      </td>
+                    </tr>
+                  </table>
 
                   <!-- Gallery Link -->
-                  <h3>📱 Event Gallery Link</h3>
-                  <p>Share this link with your guests so they can upload and view photos:</p>
-                  <p class="link" style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-size: 14px;">${galleryUrl}</p>
-
-                  <!-- QR Code -->
-                  <div class="qr-section">
-                    <h3 style="color: #1f2937; margin: 0 0 15px 0;">📱 Share with Guests Using QR Code</h3>
-                    <img src="${qrCodeUrl}" alt="QR Code" style="width: 150px; height: 150px; margin: 0 auto; display: block;">
-                    <p style="color: #6b7280; margin: 15px 0 0 0; font-size: 13px;">Print or share this QR code - guests can scan to access your event</p>
+                  <h3 style="color: #1f2937; margin: 30px 0 10px 0;">📱 Event Gallery Link</h3>
+                  <p style="color: #4b5563; margin: 0 0 10px 0;">Share this link with your guests so they can upload and view photos:</p>
+                  <div style="background: #f3f4f6; padding: 12px 15px; border-radius: 8px; word-break: break-all;">
+                    <a href="${galleryUrl}" style="color: #7C3AED; font-size: 14px; text-decoration: none;">${galleryUrl}</a>
                   </div>
 
-                  <!-- Features -->
-                  <div class="features-box">
-                    <h3 style="color: #1f2937; margin: 0 0 15px 0;">✨ What's Included</h3>
+                  <!-- QR Code Section - SnapWorxx Branded -->
+                  <div style="background: white; border: 2px solid #7C3AED; border-radius: 12px; padding: 25px; text-align: center; margin: 30px 0;">
+                    <h3 style="color: #7C3AED; margin: 0 0 5px 0; font-size: 18px;">📱 Share with Guests</h3>
+                    <p style="color: #6b7280; margin: 0 0 20px 0; font-size: 14px;">Scan this QR code to access the event gallery</p>
+                    <div style="display: inline-block; padding: 15px; background: white; border: 3px solid #7C3AED; border-radius: 12px;">
+                      <img src="${qrCodeUrl}" alt="QR Code" style="width: 150px; height: 150px; display: block;">
+                    </div>
+                    <p style="color: #7C3AED; margin: 15px 0 0 0; font-size: 12px; font-weight: bold;">SNAPWORXX</p>
+                  </div>
+
+                  <!-- Features Box -->
+                  <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 25px 0;">
+                    <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 16px;">✨ What's Included</h3>
                     <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 1.8;">
                       <li>Unlimited photo & video uploads</li>
                       <li>Unlimited storage space</li>
@@ -254,13 +266,16 @@ export async function POST(req: NextRequest) {
                     </ul>
                   </div>
 
-                  <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-                    <strong>Note:</strong> Your event will remain active until ${expirationDate}. Make sure to download your photos before then!
+                  <p style="color: #6b7280; font-size: 14px; margin-top: 25px; padding: 15px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                    <strong>⏰ Note:</strong> Your event will remain active until ${expirationDate}. Make sure to download your photos before then!
                   </p>
                 </div>
-                <div class="footer">
-                  <p>&copy; 2025 SnapWorxx. All rights reserved.</p>
-                  <p style="font-size: 12px;">Questions? Reply to this email or visit <a href="https://snapworxx.com" style="color: #9333ea;">snapworxx.com</a></p>
+
+                <!-- Footer -->
+                <div style="text-align: center; padding: 25px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+                  <img src="https://snapworxx.com/purple%20logo/purplelogo.png" alt="SnapWorxx" width="40" height="40" style="display: inline-block; margin-bottom: 10px;">
+                  <p style="color: #6b7280; font-size: 14px; margin: 0;">&copy; 2025 SnapWorxx. All rights reserved.</p>
+                  <p style="color: #9ca3af; font-size: 12px; margin: 10px 0 0 0;">Questions? Reply to this email or visit <a href="https://snapworxx.com" style="color: #7C3AED;">snapworxx.com</a></p>
                 </div>
               </div>
             </body>
