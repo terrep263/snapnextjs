@@ -58,12 +58,10 @@ export default function AdminDashboardPage() {
   const [blockEmail, setBlockEmail] = useState('');
   const [isBlockingEmail, setIsBlockingEmail] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);
-  const [freebieEventName, setFreebieEventName] = useState('');
-  const [freebieEventDate, setFreebieEventDate] = useState('');
-  const [freebieHostName, setFreebieHostName] = useState('');
-  const [freebieHostEmail, setFreebieHostEmail] = useState('');
-  const [isCreatingFreebieEvent, setIsCreatingFreebieEvent] = useState(false);
-  const [freebieCount, setFreebieCount] = useState(0);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [claimLinks, setClaimLinks] = useState<any[]>([]);
+  const [claimLinksLoading, setClaimLinksLoading] = useState(false);
   const [eventPageIndex, setEventPageIndex] = useState(0);
   const EVENTS_PER_PAGE = 20;
 
@@ -103,12 +101,32 @@ export default function AdminDashboardPage() {
     false
   );
 
+  // Load claim links
+  const loadClaimLinks = async () => {
+    setClaimLinksLoading(true);
+    try {
+      const res = await fetch('/api/admin/claim-links');
+      const result = await res.json();
+      if (result.success) {
+        setClaimLinks(result.data.links || []);
+      } else {
+        toast.error('Failed to load claim links');
+      }
+    } catch (err) {
+      console.error('Error loading claim links:', err);
+      toast.error('Failed to load claim links');
+    } finally {
+      setClaimLinksLoading(false);
+    }
+  };
+
   // Load data when authenticated
   useEffect(() => {
     if (authenticated) {
       loadStats().catch((err) => toast.error('Failed to load stats'));
       loadEvents().catch((err) => toast.error('Failed to load events'));
       loadBlockedEmails().catch((err) => toast.error('Failed to load blocked emails'));
+      loadClaimLinks();
     }
   }, [authenticated]);
 
@@ -145,72 +163,41 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleCreateFreebieEvent = async () => {
-    // Validate required fields
-    if (!freebieHostName.trim()) {
-      toast.error('Please enter Host Name');
-      return;
-    }
-    if (!freebieHostEmail.trim()) {
-      toast.error('Please enter Host Email');
-      return;
-    }
-    if (!freebieEventName.trim()) {
-      toast.error('Please enter Event Name');
-      return;
-    }
-    if (!freebieEventDate.trim()) {
-      toast.error('Please enter Event Date');
-      return;
-    }
-
-    setIsCreatingFreebieEvent(true);
+  const handleGenerateMagicLink = async () => {
+    setIsGeneratingLink(true);
     try {
-      const res = await fetch('/api/admin/create-freebie-event-for-customer', {
+      const res = await fetch('/api/admin/generate-claim-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          hostName: freebieHostName,
-          hostEmail: freebieHostEmail,
-          eventName: freebieEventName,
-          eventDate: freebieEventDate,
-          adminAuthToken: adminEmail, // Pass admin email as proof of admin action
+          expiresInDays: 30, // Links expire in 30 days
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        toast.error(data.error || 'Failed to create freebie event');
+        toast.error(data.error || 'Failed to generate magic link');
         return;
       }
 
-      // Show success with email status
-      if (data.emailSent) {
-        toast.success(
-          `🎉 Freebie created! Email sent to ${freebieHostEmail}\n\n📊 Host Dashboard: ${data.urls.hostDashboard}\n\n🖼️ Guest Gallery: ${data.urls.guestGallery}`
-        );
-      } else {
-        toast.error(
-          `⚠️ Freebie created but email failed. Share manually:\n\n🖼️ Gallery: ${data.urls.guestGallery}`
-        );
-      }
-      
-      // Clear form
-      setFreebieHostName('');
-      setFreebieHostEmail('');
-      setFreebieEventName('');
-      setFreebieEventDate('');
-      
-      // Reload data
-      loadEvents();
-      loadStats();
+      // Show success and set generated link
+      setGeneratedLink(data.data.claimUrl);
+      toast.success('🎉 Magic link generated! Copy and share it with your lead.');
+
+      // Reload claim links
+      loadClaimLinks();
     } catch (err) {
-      console.error('Error creating freebie event:', err);
+      console.error('Error generating magic link:', err);
       toast.error('Server error');
     } finally {
-      setIsCreatingFreebieEvent(false);
+      setIsGeneratingLink(false);
     }
+  };
+
+  const handleCopyLink = (link: string) => {
+    navigator.clipboard.writeText(link);
+    toast.success('Link copied to clipboard!');
   };
 
   const handleDeleteEvent = async (eventId: string, eventName: string) => {
@@ -354,71 +341,100 @@ export default function AdminDashboardPage() {
           </div>
         )}
         
-        {/* Freebie Events Section */}
+        {/* Magic Link Generation Section */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Gift className="w-6 h-6 text-amber-500" />
-            Create Freebie Event (Master Email)
+            <Gift className="w-6 h-6 text-purple-500" />
+            Generate Free Event Magic Links
           </h2>
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl shadow-sm border-2 border-amber-200 p-6">
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-sm border-2 border-purple-200 p-6">
             <p className="text-gray-700 mb-4 font-medium">
-              Create unlimited free promo events for freebie@snapworxx.com
+              Generate unique claim links for lead generation campaigns
             </p>
             <p className="text-sm text-gray-600 mb-6">
-              Limit: 100 freebie events total • Unlimited storage per event
+              Each link can be claimed once • Links expire in 30 days • Unlimited claims per link
             </p>
-            
+
             <div className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <TextInput
-                  type="text"
-                  value={freebieHostName}
-                  onChange={(e) => setFreebieHostName(e.target.value)}
-                  placeholder="Host Name"
-                  className="w-full"
-                />
-                <TextInput
-                  type="email"
-                  value={freebieHostEmail}
-                  onChange={(e) => setFreebieHostEmail(e.target.value)}
-                  placeholder="Host Email"
-                  className="w-full"
-                />
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <TextInput
-                  type="text"
-                  value={freebieEventName}
-                  onChange={(e) => setFreebieEventName(e.target.value)}
-                  placeholder="Event Name (e.g., Birthday Party)"
-                  className="w-full"
-                />
-                <TextInput
-                  type="date"
-                  value={freebieEventDate}
-                  onChange={(e) => setFreebieEventDate(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              
               <Button
-                onClick={handleCreateFreebieEvent}
-                loading={isCreatingFreebieEvent}
+                onClick={handleGenerateMagicLink}
+                loading={isGeneratingLink}
                 icon={<Gift className="w-4 h-4" />}
                 className="w-full md:w-auto"
               >
-                Create Freebie Event
+                Generate New Magic Link
               </Button>
+
+              {generatedLink && (
+                <div className="mt-4 p-4 bg-white rounded-lg border-2 border-purple-300">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">✨ New Link Generated!</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={generatedLink}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm font-mono"
+                    />
+                    <Button
+                      onClick={() => handleCopyLink(generatedLink)}
+                      size="sm"
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Claim Links List */}
+              {claimLinks.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-purple-200">
+                  <h3 className="font-semibold text-gray-900 mb-4">
+                    Recent Claim Links ({claimLinks.filter(l => !l.claimed).length} unclaimed / {claimLinks.length} total)
+                  </h3>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {claimLinks.slice(0, 10).map((link: any) => (
+                      <div
+                        key={link.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          link.claimed
+                            ? 'bg-gray-50 border-gray-200'
+                            : link.isExpired
+                            ? 'bg-red-50 border-red-200'
+                            : 'bg-green-50 border-green-200'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono text-gray-600 truncate">
+                            {link.claimUrl}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {link.claimed ? (
+                              <>
+                                ✅ Claimed {new Date(link.claimedAt).toLocaleDateString()}
+                                {link.eventId && ` • Event: ${link.eventId}`}
+                              </>
+                            ) : link.isExpired ? (
+                              <>❌ Expired {new Date(link.expiresAt).toLocaleDateString()}</>
+                            ) : (
+                              <>🔗 Active • Expires {new Date(link.expiresAt).toLocaleDateString()}</>
+                            )}
+                          </p>
+                        </div>
+                        {!link.claimed && !link.isExpired && (
+                          <Button
+                            onClick={() => handleCopyLink(link.claimUrl)}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            Copy
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            
-            {freebieCount > 0 && (
-              <div className="mt-4 p-3 bg-white rounded-lg border border-amber-200">
-                <p className="text-sm text-amber-900">
-                  <span className="font-semibold">{freebieCount}/100</span> freebie events created
-                </p>
-              </div>
-            )}
           </div>
         </div>
         
