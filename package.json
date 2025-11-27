@@ -24,6 +24,7 @@
     "react-dropzone": "^14.3.8",
     "react-masonry-css": "^1.0.16",
     "resend": "^6.3.0",
+    "sharp": "^0.33.5",
     "sonner": "^2.0.7",
     "stripe": "^19.1.0",
     "yet-another-react-lightbox": "^3.25.0"
