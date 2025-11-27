@@ -85,17 +85,22 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   
   // Draw a box for the link
   doc.setFillColor(91, 33, 182); // Darker purple
-  doc.roundedRect(8, yPos - 5, 79, 14, 2, 2, 'F');
+  doc.roundedRect(8, yPos - 5, 79, 18, 2, 2, 'F');
   
-  // Truncate link if too long
-  const displayLink = magicLink.length > 35 
-    ? magicLink.substring(0, 32) + '...' 
-    : magicLink;
+  // Show full link (wrapped if needed)
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
-  doc.text(displayLink, 47.5, yPos + 2, { align: 'center' });
+  doc.setFontSize(7);
   
-  yPos += 20;
+  // Split the link for display
+  const linkLines = doc.splitTextToSize(magicLink, 70);
+  linkLines.forEach((line: string, index: number) => {
+    doc.text(line, 47.5, yPos + (index * 4), { align: 'center' });
+  });
+  
+  // Make the link clickable
+  doc.link(8, yPos - 5, 79, 18, { url: magicLink });
+  
+  yPos += 24;
 
   // More content
   doc.setFontSize(12);
