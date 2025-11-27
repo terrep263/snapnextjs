@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Check, AlertCircle, Gift, Calendar, MapPin, User, Mail } from 'lucide-react';
 import { Button, TextInput } from '@/components/forms';
 
@@ -166,17 +167,31 @@ export default function ClaimEventPage() {
 
   // Valid token - show event creation form
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full mb-6">
-            <Gift className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-white">
+      {/* Header with Logo - matching email style */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-2xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-6">
+            <Image 
+              src="/purple logo/purplelogo.png" 
+              alt="SnapWorxx" 
+              width={80} 
+              height={80}
+              className="object-contain"
+            />
+            <div className="bg-purple-600 px-6 py-4 rounded-lg flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold text-white">
+                Your Event is Ready!
+              </h1>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Claim Your Free Event! 🎉
-          </h1>
-          <p className="text-xl text-gray-600 mb-2">
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Subtitle */}
+        <div className="text-center mb-8">
+          <p className="text-lg text-gray-600 mb-2">
             Create your event gallery with unlimited uploads and storage
           </p>
           <p className="text-sm text-gray-500">
@@ -185,32 +200,32 @@ export default function ClaimEventPage() {
         </div>
 
         {/* Features Banner */}
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 mb-8 text-white">
-          <h2 className="text-xl font-bold mb-4">What You Get (Free!) ✨</h2>
-          <ul className="grid md:grid-cols-2 gap-3 text-sm">
+        <div className="bg-gradient-to-r from-purple-100 to-pink-100 border-l-4 border-purple-600 rounded-xl p-6 mb-8">
+          <h2 className="text-xl font-bold text-purple-800 mb-4">✨ What's Included</h2>
+          <ul className="grid md:grid-cols-2 gap-3 text-sm text-gray-700">
             <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
               <span>Unlimited photo & video uploads</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
               <span>Unlimited storage space</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span>All premium features</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span>QR code sharing</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
               <span>Beautiful gallery display</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <span>Bulk download ZIP</span>
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <span>QR code sharing</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <span>Download all photos as ZIP</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <span>30-day event duration</span>
             </li>
           </ul>
         </div>
@@ -312,10 +327,10 @@ export default function ClaimEventPage() {
             <Button
               type="submit"
               loading={loading}
-              className="w-full"
+              className="w-full bg-purple-600 hover:bg-purple-700"
               size="lg"
             >
-              {loading ? 'Creating Your Event...' : 'Claim Free Event →'}
+              {loading ? 'Creating Your Event...' : 'Claim Event →'}
             </Button>
 
             <p className="text-xs text-gray-500 text-center">
@@ -331,12 +346,22 @@ export default function ClaimEventPage() {
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
+        {/* Footer - matching email style */}
+        <div className="text-center mt-8 pt-8 border-t border-gray-200">
+          <Image 
+            src="/purple logo/purplelogo.png" 
+            alt="SnapWorxx" 
+            width={40} 
+            height={40}
+            className="mx-auto mb-3"
+          />
           <p className="text-sm text-gray-500">
-            Powered by{' '}
-            <Link href="/" className="text-purple-600 hover:underline font-semibold">
-              SnapWorxx
+            © 2025 SnapWorxx. All rights reserved.
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Questions? Visit{' '}
+            <Link href="/" className="text-purple-600 hover:underline">
+              snapworxx.com
             </Link>
           </p>
         </div>
