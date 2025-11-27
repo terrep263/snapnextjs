@@ -89,7 +89,12 @@ export default function ClaimEventPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        setError(result.error || 'Failed to create event');
+        // Show detailed error for debugging
+        const errorMsg = result.details
+          ? `${result.error}: ${result.details}${result.hint ? ` (${result.hint})` : ''}`
+          : result.error || 'Failed to create event';
+        setError(errorMsg);
+        console.error('Event creation failed:', result);
         setLoading(false);
         return;
       }
@@ -118,7 +123,7 @@ export default function ClaimEventPage() {
 
   // Invalid token states
   if (!validation?.valid) {
-    const errorMessages = {
+    const errorMessages: Record<string, { title: string; description: string; extra?: string }> = {
       not_found: {
         title: 'Invalid Link',
         description: 'This promotional link is invalid or does not exist.',

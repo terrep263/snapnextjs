@@ -83,8 +83,14 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (tokenError || !claimLink) {
+      console.error('Token validation error:', tokenError);
       return NextResponse.json(
-        { success: false, error: 'Invalid token' },
+        {
+          success: false,
+          error: tokenError?.message || 'Invalid token',
+          details: tokenError?.details || 'Token not found',
+          hint: tokenError?.hint || 'Make sure the database migration has been run'
+        },
         { status: 404 }
       );
     }
@@ -135,7 +141,12 @@ export async function POST(req: NextRequest) {
     if (createError) {
       console.error('Error creating free event:', createError);
       return NextResponse.json(
-        { success: false, error: 'Failed to create event' },
+        {
+          success: false,
+          error: 'Failed to create event',
+          details: createError.message,
+          code: createError.code
+        },
         { status: 500 }
       );
     }
