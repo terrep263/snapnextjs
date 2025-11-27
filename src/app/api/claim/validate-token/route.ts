@@ -59,25 +59,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Check if expired
-    if (claimLink.expires_at && new Date(claimLink.expires_at) <= new Date()) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          valid: false,
-          reason: 'expired',
-          expiresAt: claimLink.expires_at,
-        },
-      });
-    }
-
-    // Token is valid
+    // Token is valid (no expiration check)
     return NextResponse.json({
       success: true,
       data: {
         valid: true,
         token: claimLink.token,
-        expiresAt: claimLink.expires_at,
+        expiresAt: null,
       },
     });
   } catch (err) {

@@ -103,13 +103,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if expired
-    if (claimLink.expires_at && new Date(claimLink.expires_at) <= new Date()) {
-      return NextResponse.json(
-        { success: false, error: 'Token expired' },
-        { status: 410 }
-      );
-    }
+    // Set event expiration to 30 days from creation
+    const eventExpiresAt = new Date();
+    eventExpiresAt.setDate(eventExpiresAt.getDate() + 30);
 
     // Generate event details
     const eventId = generateEventId();
@@ -131,6 +127,7 @@ export async function POST(req: NextRequest) {
           max_storage_bytes: 999999999, // ~1GB (unlimited for practical purposes)
           feed_enabled: true, // Premium feature
           created_at: new Date().toISOString(),
+          expires_at: eventExpiresAt.toISOString(), // Set event expiration
           // Store event details in metadata if you have such columns
           // Otherwise they'll be in the event name/slug
         },

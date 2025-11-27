@@ -169,9 +169,7 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/admin/generate-claim-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expiresInDays: 30, // Links expire in 30 days
-        }),
+        body: JSON.stringify({}), // No expiration
       });
 
       const data = await res.json();
@@ -352,7 +350,7 @@ export default function AdminDashboardPage() {
               Generate unique claim links for lead generation campaigns
             </p>
             <p className="text-sm text-gray-600 mb-6">
-              Each link can be claimed once • Links expire in 30 days • Unlimited claims per link
+              Each link can be claimed once • Unlimited claims per link
             </p>
 
             <div className="space-y-4">
@@ -398,8 +396,6 @@ export default function AdminDashboardPage() {
                         className={`flex items-center justify-between p-3 rounded-lg border ${
                           link.claimed
                             ? 'bg-gray-50 border-gray-200'
-                            : link.isExpired
-                            ? 'bg-red-50 border-red-200'
                             : 'bg-green-50 border-green-200'
                         }`}
                       >
@@ -413,14 +409,12 @@ export default function AdminDashboardPage() {
                                 ✅ Claimed {new Date(link.claimedAt).toLocaleDateString()}
                                 {link.eventId && ` • Event: ${link.eventId}`}
                               </>
-                            ) : link.isExpired ? (
-                              <>❌ Expired {new Date(link.expiresAt).toLocaleDateString()}</>
                             ) : (
-                              <>🔗 Active • Expires {new Date(link.expiresAt).toLocaleDateString()}</>
+                              <>🔗 Active</>
                             )}
                           </p>
                         </div>
-                        {!link.claimed && !link.isExpired && (
+                        {!link.claimed && (
                           <Button
                             onClick={() => handleCopyLink(link.claimUrl)}
                             variant="secondary"
