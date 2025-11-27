@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap, Gift } from 'lucide-react';
+import { LogOut, Trash2, Ban, BarChart3, Lock, Users, Calendar, Zap, Gift, Download } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -10,6 +10,7 @@ import { useAuth, useAsync } from '@/hooks';
 import { adminApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Button, TextInput } from '@/components/forms';
+import { downloadMagicLinkPDF } from '@/lib/generateMagicLinkPDF';
 
 interface PromoStats {
   totalEvents: number;
@@ -378,6 +379,14 @@ export default function AdminDashboardPage() {
                       size="sm"
                     >
                       Copy
+                    </Button>
+                    <Button
+                      onClick={() => downloadMagicLinkPDF(generatedLink)}
+                      size="sm"
+                      variant="secondary"
+                      icon={<Download className="w-4 h-4" />}
+                    >
+                      PDF
                     </Button>
                   </div>
                 </div>
