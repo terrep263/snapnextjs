@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
                 .container { max-width: 600px; margin: 0 auto; background: white; }
                 .header { background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 40px 20px; text-align: center; border-radius: 8px 8px 0 0; }
                 .content { padding: 40px 20px; }
-                .button { display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
+                .button { display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: #ffffff !important; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
                 .link { color: #9333ea; word-break: break-all; }
                 .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; background: #f9fafb; }
                 .info-box { background: linear-gradient(135deg, #f3e8ff 0%, #fdf2f8 100%); border-radius: 12px; padding: 25px; margin: 20px 0; border-left: 4px solid #9333ea; }
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
                   <!-- Dashboard Link -->
                   <h3>🎛️ Your Dashboard</h3>
                   <p>Manage your event, view uploads, and download all photos:</p>
-                  <p><a href="${dashboardUrl}" class="button">Go to Dashboard →</a></p>
+                  <p><a href="${dashboardUrl}" class="button" style="color: #ffffff !important; display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Dashboard →</a></p>
 
                   <!-- Gallery Link -->
                   <h3>📱 Event Gallery Link</h3>
