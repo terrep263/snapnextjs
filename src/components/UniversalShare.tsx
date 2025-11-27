@@ -6,12 +6,14 @@ interface UniversalShareProps {
   imageUrl: string;
   eventName?: string;
   eventCode?: string;
+  isVideo?: boolean;
 }
 
 export default function UniversalShare({ 
   imageUrl, 
   eventName = 'this event',
-  eventCode = ''
+  eventCode = '',
+  isVideo = false
 }: UniversalShareProps) {
   const [isSharing, setIsSharing] = useState(false);
 
@@ -19,7 +21,37 @@ export default function UniversalShare({
     setIsSharing(true);
     
     try {
-      // Get branded image from API
+      // Prepare share text with clickable link
+      const mediaType = isVideo ? 'video' : 'photo';
+      const shareText = eventCode 
+        ? `📸 Check out my ${mediaType} from ${eventName}!\n\nEvent code: ${eventCode}\nGet your event photos at https://snapworxx.com`
+        : `📸 Check out my ${mediaType} from ${eventName}!\n\nGet your event photos at https://snapworxx.com`;
+
+      // For videos, share the URL directly (no watermarking)
+      if (isVideo) {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `Video from ${eventName}`,
+              text: shareText,
+              url: imageUrl
+            });
+            console.log('Video share successful');
+          } catch (shareError: any) {
+            if (shareError.name !== 'AbortError') {
+              console.error('Video share failed:', shareError);
+              await navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}`);
+              alert('📋 Video link and caption copied to clipboard!');
+            }
+          }
+        } else {
+          await navigator.clipboard.writeText(`${shareText}\n\n${imageUrl}`);
+          alert('📋 Video link and caption copied to clipboard!');
+        }
+        return;
+      }
+
+      // For images, get branded image from API
       const response = await fetch('/api/share-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,11 +64,6 @@ export default function UniversalShare({
       
       const blob = await response.blob();
       const file = new File([blob], 'snapworxx-photo.jpg', { type: 'image/jpeg' });
-      
-      // Prepare share text with clickable link
-      const shareText = eventCode 
-        ? `📸 Check out my photos from ${eventName}!\n\nEvent code: ${eventCode}\nGet your event photos at https://snapworxx.com`
-        : `📸 Check out my photos from ${eventName}!\n\nGet your event photos at https://snapworxx.com`;
       
       // Try native share API first (works on mobile + modern browsers)
       if (navigator.share) {

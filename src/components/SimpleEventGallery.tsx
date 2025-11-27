@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
+import UniversalShare from './UniversalShare';
 
 interface GalleryItem {
   id: string;
@@ -26,6 +27,8 @@ interface SimpleEventGalleryProps {
   isFreebie?: boolean;
   eventSlug?: string; // For upload navigation
   eventId?: string; // For dashboard navigation
+  isSharedView?: boolean; // If true, hide upload button (viewing shared gallery)
+  eventCode?: string; // Event code for share captions
 }
 
 export default function SimpleEventGallery({
@@ -37,7 +40,9 @@ export default function SimpleEventGallery({
   isFree = false,
   isFreebie = false,
   eventSlug,
-  eventId
+  eventId,
+  isSharedView = false,
+  eventCode = ''
 }: SimpleEventGalleryProps) {
   console.log('🎨 SimpleEventGallery mounted with:', { 
     eventName, 
@@ -566,15 +571,17 @@ export default function SimpleEventGallery({
             <Menu className="w-6 h-6 text-gray-700" />
           </button>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">{eventName}</h1>
-          <a
-            href={`${window.location.pathname}/upload`}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            <span className="hidden sm:inline">Upload</span>
-          </a>
+          {!isSharedView && (
+            <a
+              href={`${window.location.pathname}/upload`}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span className="hidden sm:inline">Upload</span>
+            </a>
+          )}
         </div>
       </div>
 
@@ -670,7 +677,14 @@ export default function SimpleEventGallery({
                 <span className="text-white text-sm">
                   {selectedIndex + 1} / {allItems.length}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {/* Share button for current item */}
+                  <UniversalShare
+                    imageUrl={allItems[selectedIndex]?.url || ''}
+                    eventName={eventName}
+                    eventCode={eventCode}
+                    isVideo={allItems[selectedIndex]?.isVideo}
+                  />
                   {selectMode && (
                     <button
                       onClick={() => toggleItemSelection(allItems[selectedIndex].id)}
@@ -803,33 +817,14 @@ export default function SimpleEventGallery({
                   
                   {/* Bottom row: Share, Download, and Delete buttons - Mobile optimized */}
                   <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (navigator.share) {
-                          try {
-                            await navigator.share({
-                              title: item.title || 'Photo',
-                              text: `Check out this photo from ${eventName}`,
-                              url: item.url,
-                            });
-                          } catch (error) {
-                            if (error instanceof Error && error.name !== 'AbortError') {
-                              console.error('Share failed:', error);
-                              navigator.clipboard.writeText(item.url);
-                              alert('Share failed. Link copied to clipboard instead!');
-                            }
-                          }
-                        } else {
-                          navigator.clipboard.writeText(item.url);
-                          alert('Photo link copied to clipboard!');
-                        }
-                      }}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
-                    >
-                      <Share2 className="w-4 h-4" />
-                      <span className="sm:inline">Share</span>
-                    </button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <UniversalShare
+                        imageUrl={item.url}
+                        eventName={eventName}
+                        eventCode={eventCode}
+                        isVideo={item.isVideo}
+                      />
+                    </div>
                     <button
                       onClick={async (e) => {
                         e.stopPropagation();
