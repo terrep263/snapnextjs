@@ -118,7 +118,7 @@ export default function ClaimEventPage() {
 
   // Invalid token states
   if (!validation?.valid) {
-    const errorMessages = {
+    const errorMessages: Record<string, { title: string; description: string; extra?: string }> = {
       not_found: {
         title: 'Invalid Link',
         description: 'This promotional link is invalid or does not exist.',
