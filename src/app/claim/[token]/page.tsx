@@ -126,12 +126,12 @@ export default function ClaimEventPage() {
       already_claimed: {
         title: 'Already Claimed',
         description: 'This promotional link has already been used.',
-        extra: validation.claimedAt ? `Claimed on ${new Date(validation.claimedAt).toLocaleDateString()}` : undefined,
+        extra: validation?.claimedAt ? `Claimed on ${new Date(validation.claimedAt).toLocaleDateString()}` : undefined,
       },
       expired: {
         title: 'Link Expired',
         description: 'This promotional link has expired.',
-        extra: validation.expiresAt ? `Expired on ${new Date(validation.expiresAt).toLocaleDateString()}` : undefined,
+        extra: validation?.expiresAt ? `Expired on ${new Date(validation.expiresAt).toLocaleDateString()}` : undefined,
       },
     };
 
