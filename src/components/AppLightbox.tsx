@@ -234,8 +234,8 @@ export default function AppLightbox({
         autoPlay: false,
         controls: true,
         playsInline: true,
-        crossOrigin: 'anonymous',
-        preload: 'metadata',
+        preload: 'auto',
+        muted: false,
       }}
       carousel={{
         finite: false,
@@ -253,6 +253,19 @@ export default function AppLightbox({
       }}
       styles={{
         container: { backgroundColor: 'rgba(0, 0, 0, 0.95)' },
+        video: { 
+          width: '100%',
+          height: '100%',
+          maxWidth: '100vw',
+          maxHeight: '80vh',
+          objectFit: 'contain',
+          background: 'transparent',
+        },
+        slide: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
       }}
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
