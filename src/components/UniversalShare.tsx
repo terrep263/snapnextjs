@@ -88,8 +88,12 @@ export default function UniversalShare({
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-2xl p-4 z-50 min-w-[200px] border border-gray-200">
-          <div className="text-xs text-gray-500 mb-3 font-medium">Share to:</div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setIsOpen(false)}>
+          <div 
+            className="bg-white rounded-xl shadow-2xl p-4 min-w-[280px] max-w-[90vw] border border-gray-200 mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+          <div className="text-sm text-gray-500 mb-3 font-medium text-center">Share to:</div>
           
           {/* Social Share Buttons */}
           <div className="flex gap-3 mb-4 justify-center flex-wrap">
@@ -195,12 +199,13 @@ export default function UniversalShare({
           {/* Close button */}
           <button
             onClick={() => setIsOpen(false)}
-            className="absolute -top-2 -right-2 bg-gray-800 text-white rounded-full p-1 hover:bg-gray-700"
+            className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-1.5"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+          </div>
         </div>
       )}
     </div>
