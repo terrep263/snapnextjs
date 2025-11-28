@@ -9,6 +9,7 @@ import { AdaptiveUploadLimits } from '@/lib/adaptiveUploadLimits';
 import { SecureMediaManager } from '@/lib/secureMediaManager';
 import { MediaAuditLogger } from '@/lib/mediaAuditLogger';
 import { MediaBackupManager } from '@/lib/mediaBackupManager';
+import { getPhotoPublicUrl } from '@/lib/supabase';
 import VideoCompressionHelp from './VideoCompressionHelp';
 
 interface PhotoUploadProps {
@@ -275,11 +276,8 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             continue;
           }
 
-          const { data: { publicUrl: standardUrl } } = supabase.storage
-            .from('photos')
-            .getPublicUrl(filePath);
-            
-          filePublicUrl = standardUrl;
+          // Use custom domain for public URL
+          filePublicUrl = getPhotoPublicUrl(filePath);
         }
 
         console.log(`✅ Upload successful: ${processedFile.name}`);

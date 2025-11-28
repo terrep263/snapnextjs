@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, QrCode, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import { getEventUrl } from '@/lib/utils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import MasonryGallery from '@/components/MasonryGallery';
@@ -113,7 +113,12 @@ export default function Dashboard() {
       if (error) {
         console.error('Error loading photos:', error);
       } else {
-        setPhotos(photos || []);
+        // Transform URLs to use custom domain
+        const transformedPhotos = (photos || []).map(photo => ({
+          ...photo,
+          url: transformToCustomDomain(photo.url)
+        }));
+        setPhotos(transformedPhotos);
       }
     } catch (error) {
       console.error('Error loading photos:', error);

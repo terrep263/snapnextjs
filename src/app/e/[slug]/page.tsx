@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Lock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import SimpleEventGallery from '@/components/SimpleEventGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
@@ -180,8 +180,14 @@ export default function EventPage() {
         throw new Error(`Failed to fetch photos: ${fetchError.message}`);
       }
 
-      console.log('✅ Loaded photos:', data?.length || 0);
-      setPhotos(data || []);
+      // Transform URLs to use custom domain
+      const transformedPhotos = (data || []).map(photo => ({
+        ...photo,
+        url: transformToCustomDomain(photo.url)
+      }));
+
+      console.log('✅ Loaded photos:', transformedPhotos.length);
+      setPhotos(transformedPhotos);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';

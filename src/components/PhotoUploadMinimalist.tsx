@@ -9,6 +9,7 @@ import { AdaptiveUploadLimits } from '@/lib/adaptiveUploadLimits';
 import { SecureMediaManager } from '@/lib/secureMediaManager';
 import { MediaAuditLogger } from '@/lib/mediaAuditLogger';
 import { MediaBackupManager } from '@/lib/mediaBackupManager';
+import { getPhotoPublicUrl } from '@/lib/supabase';
 
 interface PhotoUploadProps {
   eventData: any;
@@ -179,8 +180,8 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         
         console.log(`✅ File uploaded to storage: ${filePath}`);
 
-        const { data: { publicUrl } } = supabase.storage.from('photos').getPublicUrl(filePath);
-        filePublicUrl = publicUrl;
+        // Use custom domain for public URL
+        filePublicUrl = getPhotoPublicUrl(filePath);
 
         progress[key] = 80;
         setUploadProgress({ ...progress });

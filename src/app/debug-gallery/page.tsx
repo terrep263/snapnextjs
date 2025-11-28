@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, transformToCustomDomain } from '@/lib/supabase';
 
 interface Photo {
   id: string;
@@ -30,7 +30,12 @@ export default function SimpleGalleryTest() {
       if (error) {
         console.error('Error loading photos:', error);
       } else {
-        setPhotos(photos || []);
+        // Transform URLs to use custom domain
+        const transformedPhotos = (photos || []).map(photo => ({
+          ...photo,
+          url: transformToCustomDomain(photo.url)
+        }));
+        setPhotos(transformedPhotos);
       }
     } catch (error) {
       console.error('Error loading photos:', error);

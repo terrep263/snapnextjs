@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, getPhotoPublicUrl, transformToCustomDomain } from '@/lib/supabase';
 
 interface Photo {
   id: string;
@@ -50,8 +50,14 @@ export function usePhotos(eventId: string | null): UsePhotosResult {
         throw new Error(`Failed to fetch photos: ${fetchError.message}`);
       }
 
-      console.log('✅ Fetched photos:', data?.length || 0);
-      setPhotos(data || []);
+      // Transform URLs to use custom domain
+      const transformedPhotos = (data || []).map(photo => ({
+        ...photo,
+        url: transformToCustomDomain(photo.url)
+      }));
+
+      console.log('✅ Fetched photos:', transformedPhotos.length);
+      setPhotos(transformedPhotos);
       
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Unknown error occurred');
@@ -80,10 +86,8 @@ export function usePhotos(eventId: string | null): UsePhotosResult {
         throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('photos')
-        .getPublicUrl(filePath);
+      // Get public URL using custom domain
+      const publicUrl = getPhotoPublicUrl(filePath);
 
       // Save to database
       const { error: dbError } = await supabase

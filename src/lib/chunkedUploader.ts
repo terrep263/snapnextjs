@@ -1,3 +1,5 @@
+import { getPhotoPublicUrl } from '@/lib/supabase';
+
 // Utility for handling large file uploads with retry logic
 // NOTE: Renamed from "ChunkedUploader" but now uses direct upload with retries
 // for better reliability. Supabase handles large files well without chunking.
@@ -82,9 +84,8 @@ export class ChunkedUploader {
             onProgress(100);
           }
 
-          const { data: { publicUrl } } = supabaseClient.storage
-            .from('photos')
-            .getPublicUrl(uploadPath);
+          // Use custom domain for public URL
+          const publicUrl = getPhotoPublicUrl(uploadPath);
 
           console.log(`✅ Upload completed successfully: ${file.name}`);
           return { success: true, url: publicUrl };
