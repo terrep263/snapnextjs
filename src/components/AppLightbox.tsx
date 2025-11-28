@@ -1,6 +1,7 @@
 'use client';
 
-import Lightbox, { SlideImage, SlideVideo } from 'yet-another-react-lightbox';
+import Lightbox, { Slide, SlideImage } from 'yet-another-react-lightbox';
+import Video from 'yet-another-react-lightbox/plugins/video';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Download from 'yet-another-react-lightbox/plugins/download';
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
@@ -8,12 +9,22 @@ import Counter from 'yet-another-react-lightbox/plugins/counter';
 import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
 import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
 import Share from 'yet-another-react-lightbox/plugins/share';
-// Note: Video plugin removed - using custom native video render instead
 
 // CSS imports
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
+
+// Define video slide type (not exported from the library)
+interface SlideVideo {
+  type: 'video';
+  sources: Array<{ src: string; type: string }>;
+  poster?: string;
+  width?: number;
+  height?: number;
+  autoPlay?: boolean;
+  controls?: boolean;
+}
 
 export interface LightboxSlide {
   id: string;
@@ -66,7 +77,7 @@ function getVideoMimeType(url: string): string {
 }
 
 // Transform our slide format to yet-another-react-lightbox format
-function transformSlide(slide: LightboxSlide): SlideImage | SlideVideo {
+function transformSlide(slide: LightboxSlide): Slide {
   // Check if video either by explicit type or URL extension
   const isVideo = slide.type === 'video' || isVideoUrl(slide.src);
   
@@ -90,16 +101,15 @@ function transformSlide(slide: LightboxSlide): SlideImage | SlideVideo {
       // Use larger default dimensions for better display
       width: slide.width || 1920,
       height: slide.height || 1080,
-    } as SlideVideo;
+    };
   }
   
   return {
     src: slide.src,
     alt: slide.alt || slide.title || 'Image',
-    title: slide.title,
     width: slide.width,
     height: slide.height,
-  } as SlideImage;
+  };
 }
 
 export default function AppLightbox({
@@ -127,34 +137,19 @@ export default function AppLightbox({
   if (showSlideshow) plugins.push(Slideshow);
   if (showShare) plugins.push(Share);
   
-  // Always include Counter (NOT Video - we use custom render for videos)
+  // Always include Counter and Video plugins
   plugins.push(Counter);
+  plugins.push(Video);
 
-  // Transform slides and log for debugging
-  const transformedSlides = slides.map((slide, i) => {
-    const transformed = transformSlide(slide);
-    if (slide.type === 'video' || isVideoUrl(slide.src)) {
-      console.log(`🎬 Video slide ${i}:`, { 
-        originalType: slide.type,
-        src: slide.src,
-        transformed 
-      });
-    }
-    return transformed;
-  });
-
-  // Log video count
-  const videoCount = transformedSlides.filter(s => s.type === 'video').length;
-  if (videoCount > 0) {
-    console.log(`📹 AppLightbox: ${videoCount} videos out of ${transformedSlides.length} total slides`);
-  }
+  // Transform slides for lightbox
+  const transformedSlides = slides.map(slide => transformSlide(slide));
 
   // Handle download with custom filename
-  const handleDownload = async ({ slide, saveAs }: { slide: SlideImage | SlideVideo; saveAs: (source: string, name: string) => void }) => {
+  const handleDownload = async ({ slide, saveAs }: { slide: Slide; saveAs: (source: string, name: string) => void }) => {
     const slideIndex = transformedSlides.indexOf(slide);
     const originalSlide = slides[slideIndex];
     const filename = originalSlide?.title || originalSlide?.alt || `${eventName}-${slideIndex + 1}`;
-    const src = 'src' in slide ? slide.src : slide.sources?.[0]?.src || '';
+    const src = 'src' in slide ? slide.src : (slide as any).sources?.[0]?.src || '';
     
     // Trigger download
     try {
@@ -264,44 +259,6 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
-        // Custom video render - bypasses Video plugin entirely
-        slide: ({ slide, rect }) => {
-          // Check if this is a video slide
-          const isVideoSlide = slide.type === 'video' || ('sources' in slide && Array.isArray(slide.sources));
-          
-          if (isVideoSlide && 'sources' in slide) {
-            const videoSrc = slide.sources?.[0]?.src || '';
-            console.log('🎥 Rendering video with native element:', videoSrc);
-            return (
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                width: '100%',
-                height: '100%',
-                padding: '16px'
-              }}>
-                <video
-                  src={videoSrc}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="metadata"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '80vh',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
-                    borderRadius: '8px',
-                  }}
-                />
-              </div>
-            );
-          }
-          // Return undefined to use default rendering for images
-          return undefined;
-        },
       }}
     />
   );

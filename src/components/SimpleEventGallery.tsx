@@ -104,7 +104,11 @@ export default function SimpleEventGallery({
     console.log('⚠️ No profile image to add');
   }
   allItems.push(...photos);
+  
+  // Debug: Log video items
+  const videoItems = allItems.filter(item => item.isVideo);
   console.log('📊 Total gallery items:', allItems.length, 'items');
+  console.log('🎬 Video items in gallery:', videoItems.length, videoItems.map(v => v.url));
 
   // Slideshow effect
   useEffect(() => {

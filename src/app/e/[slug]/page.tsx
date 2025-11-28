@@ -164,6 +164,13 @@ export default function EventPage() {
     }
   };
 
+  // Helper to detect video from URL extension
+  const isVideoUrl = (url: string): boolean => {
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.m4v'];
+    const lowercaseUrl = url.toLowerCase();
+    return videoExtensions.some(ext => lowercaseUrl.includes(ext));
+  };
+
   const loadPhotos = async () => {
     if (!eventData?.id) return;
     
@@ -180,13 +187,25 @@ export default function EventPage() {
         throw new Error(`Failed to fetch photos: ${fetchError.message}`);
       }
 
-      // Transform URLs to use custom domain
-      const transformedPhotos = (data || []).map(photo => ({
-        ...photo,
-        url: transformToCustomDomain(photo.url)
-      }));
+      // Transform URLs to use custom domain and detect videos
+      const transformedPhotos = (data || []).map(photo => {
+        const url = transformToCustomDomain(photo.url);
+        // Detect video from DB fields OR URL extension
+        const detectedIsVideo = photo.is_video || 
+                               photo.type?.startsWith('video/') || 
+                               photo.mime_type?.startsWith('video/') ||
+                               isVideoUrl(url);
+        if (detectedIsVideo) {
+          console.log('🎬 Detected video:', url);
+        }
+        return {
+          ...photo,
+          url,
+          is_video: detectedIsVideo // Override with detected value
+        };
+      });
 
-      console.log('✅ Loaded photos:', transformedPhotos.length);
+      console.log('✅ Loaded photos:', transformedPhotos.length, 'videos:', transformedPhotos.filter(p => p.is_video).length);
       setPhotos(transformedPhotos);
       
     } catch (err) {
@@ -361,15 +380,22 @@ export default function EventPage() {
         isFreebie={eventData.is_freebie}
         viewMode={viewMode}
         eventId={eventData.id}
-        photos={photos.map(photo => ({
-          id: photo.id,
-          url: photo.url || photo.file_path || photo.storage_path || '',
-          title: photo.title || photo.filename,
-          description: photo.description,
-          uploadedAt: photo.created_at,
-          isVideo: photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/'),
-          type: 'photo'
-        }))}
+        photos={photos.map(photo => {
+          const photoUrl = photo.url || photo.file_path || photo.storage_path || '';
+          const isVideoItem = photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/') || isVideoUrl(photoUrl);
+          if (isVideoItem) {
+            console.log('🎥 Passing video to gallery:', photoUrl);
+          }
+          return {
+            id: photo.id,
+            url: photoUrl,
+            title: photo.title || photo.filename,
+            description: photo.description,
+            uploadedAt: photo.created_at,
+            isVideo: isVideoItem,
+            type: 'photo'
+          };
+        })}
       />
     </ErrorBoundary>
   );
