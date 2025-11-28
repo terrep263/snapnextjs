@@ -259,6 +259,44 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
+        // Custom render for video slides - use native HTML5 video to avoid plugin issues
+        slide: ({ slide }) => {
+          if (slide.type === 'video' && 'sources' in slide) {
+            const videoSrc = (slide as any).sources?.[0]?.src || '';
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%',
+                  height: '100%',
+                  padding: '20px',
+                }}
+              >
+                <video
+                  key={videoSrc}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="auto"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '80vh',
+                    width: 'auto',
+                    height: 'auto',
+                    backgroundColor: '#000',
+                  }}
+                >
+                  <source src={videoSrc} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            );
+          }
+          // Return undefined to use default rendering for images
+          return undefined;
+        },
       }}
     />
   );
