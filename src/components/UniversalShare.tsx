@@ -1,213 +1,441 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   FacebookShareButton,
   TwitterShareButton,
   WhatsappShareButton,
+  LinkedinShareButton,
+  PinterestShareButton,
+  RedditShareButton,
+  TelegramShareButton,
+  EmailShareButton,
+  FacebookMessengerShareButton,
   FacebookIcon,
   TwitterIcon,
   WhatsappIcon,
+  LinkedinIcon,
+  PinterestIcon,
+  RedditIcon,
+  TelegramIcon,
+  EmailIcon,
+  FacebookMessengerIcon,
+  XIcon,
 } from 'react-share';
+import { toast } from 'sonner';
 
 interface UniversalShareProps {
-  imageUrl: string;
+  // New API (generic)
+  url?: string;
+  title?: string;
+  description?: string;
+  
+  // Legacy API (gallery-specific)
+  imageUrl?: string;
   eventName?: string;
   eventCode?: string;
   isVideo?: boolean;
+  
+  // Common props
+  hashtags?: string[];
+  onShareComplete?: (platform: string) => void;
+  children?: React.ReactNode;
+  className?: string;
 }
 
-export default function UniversalShare({ 
-  imageUrl, 
-  eventName = 'this event',
+/**
+ * UniversalShare - Premium Share Component
+ * 
+ * Strategy:
+ * 1. Mobile-first: Use native Web Share API when available (iOS/Android)
+ * 2. Desktop fallback: Show share modal with popular platforms
+ * 3. Deep link support for messaging apps
+ * 
+ * Supports: Facebook, X/Twitter, WhatsApp, LinkedIn, Pinterest, 
+ * Reddit, Telegram, Messenger, Email, Copy Link, Native Share
+ */
+export function UniversalShare({
+  // New API
+  url: providedUrl,
+  title: providedTitle,
+  description = '',
+  
+  // Legacy API
+  imageUrl = '',
+  eventName = '',
   eventCode = '',
-  isVideo = false
+  isVideo = false,
+  
+  // Common
+  hashtags = [],
+  onShareComplete,
+  children,
+  className = '',
 }: UniversalShareProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
 
-  const mediaType = isVideo ? 'video' : 'photo';
-  const shareTitle = `📸 Check out my ${mediaType} from ${eventName}!${eventCode ? ` Event code: ${eventCode}` : ''} - Get your event photos at snapworxx.com`;
+  // Compute the share URL - support both legacy and new API
+  const shareUrl = providedUrl || (
+    typeof window !== 'undefined' 
+      ? (eventCode 
+          ? `${window.location.origin}/e/${eventCode}` 
+          : window.location.href)
+      : ''
+  );
   
-  // For social share, we'll use the direct URL
-  const shareUrl = imageUrl;
+  // Compute the title
+  const shareTitle = providedTitle || (
+    eventName 
+      ? `${isVideo ? 'Video' : 'Photo'} from ${eventName}`
+      : (isVideo ? 'Check out this video!' : 'Check out this photo!')
+  );
+  
+  // Media URL for Pinterest
+  const mediaUrl = imageUrl;
 
-  async function handleDownloadWithWatermark() {
-    if (isVideo) {
-      // For videos, just download directly
-      window.open(imageUrl, '_blank');
-      return;
+  // Check for native share support on mount
+  useEffect(() => {
+    setCanNativeShare(
+      typeof navigator !== 'undefined' && 
+      typeof navigator.share === 'function'
+    );
+  }, []);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
     }
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
-    setIsProcessing(true);
+  // Handle click outside modal
+  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      setIsOpen(false);
+    }
+  }, []);
+
+  // Native Web Share API (best mobile experience)
+  const handleNativeShare = useCallback(async () => {
+    if (!canNativeShare) return false;
+    
     try {
-      const response = await fetch('/api/share-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl })
+      await navigator.share({
+        title: shareTitle || 'Check out this photo!',
+        text: description || '',
+        url: shareUrl,
       });
-
-      if (!response.ok) throw new Error('Failed to create branded image');
-      
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'snapworxx-photo.jpg';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
-    } finally {
-      setIsProcessing(false);
+      onShareComplete?.('native');
+      setIsOpen(false);
+      return true;
+    } catch (err: unknown) {
+      // User cancelled or share failed
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Native share failed:', err);
+      }
+      return false;
     }
-  }
+  }, [canNativeShare, shareTitle, description, shareUrl, onShareComplete]);
 
-  async function handleCopyLink() {
+  // Copy to clipboard
+  const handleCopyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(`${shareTitle}\n\n${imageUrl}`);
-      alert('📋 Link and caption copied to clipboard!');
-    } catch (error) {
-      console.error('Copy failed:', error);
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('Link copied to clipboard!');
+      onShareComplete?.('copy');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      toast.error('Failed to copy link');
     }
-  }
+  }, [shareUrl, onShareComplete]);
+
+  // Handle share button click
+  const handleShareClick = useCallback(async () => {
+    // On mobile, try native share first
+    if (canNativeShare) {
+      const success = await handleNativeShare();
+      if (success) return;
+    }
+    // Otherwise show modal
+    setIsOpen(true);
+  }, [canNativeShare, handleNativeShare]);
+
+  // Track share events
+  const handleShareEvent = useCallback((platform: string) => {
+    onShareComplete?.(platform);
+    // Don't close modal - let user share to multiple platforms
+  }, [onShareComplete]);
+
+  const shareIconSize = 48;
+  const shareIconRound = true;
+
+  // Default trigger button
+  const TriggerButton = children || (
+    <button
+      className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl ${className}`}
+      aria-label="Share"
+    >
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        className="h-5 w-5" 
+        viewBox="0 0 20 20" 
+        fill="currentColor"
+      >
+        <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+      </svg>
+      Share
+    </button>
+  );
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-sm"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-        </svg>
-        Share
-      </button>
+    <>
+      {/* Trigger */}
+      <div onClick={handleShareClick} className="cursor-pointer inline-flex">
+        {TriggerButton}
+      </div>
 
+      {/* Share Modal - Portal to body to avoid overflow issues */}
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setIsOpen(false)}>
-          <div 
-            className="bg-white rounded-xl shadow-2xl p-4 min-w-[280px] max-w-[90vw] border border-gray-200 mx-4"
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+          onClick={handleBackdropClick}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-modal-title"
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          
+          {/* Modal Content */}
+          <div
+            ref={modalRef}
+            className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-          <div className="text-sm text-gray-500 mb-3 font-medium text-center">Share to:</div>
-          
-          {/* Social Share Buttons */}
-          <div className="flex gap-3 mb-4 justify-center flex-wrap">
-            <FacebookShareButton url={shareUrl} hashtag="#snapworxx">
-              <FacebookIcon size={40} round />
-            </FacebookShareButton>
-            
-            <TwitterShareButton url={shareUrl} title={shareTitle}>
-              <TwitterIcon size={40} round />
-            </TwitterShareButton>
-            
-            <WhatsappShareButton url={shareUrl} title={shareTitle}>
-              <WhatsappIcon size={40} round />
-            </WhatsappShareButton>
-
-            {/* Instagram Share - Downloads image and copies caption */}
-            <button
-              onClick={async () => {
-                // Instagram doesn't allow direct sharing via web - must download and post manually
-                await navigator.clipboard.writeText(shareTitle);
-                // Download the image with watermark for posting
-                if (!isVideo) {
-                  try {
-                    const response = await fetch('/api/share-image', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ imageUrl })
-                    });
-                    if (response.ok) {
-                      const blob = await response.blob();
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = 'snapworxx-photo.jpg';
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }
-                  } catch (e) {
-                    console.error('Download failed:', e);
-                  }
-                }
-                alert('📸 Photo downloaded & caption copied!\n\nOpen Instagram and create a new post with the downloaded photo.');
-              }}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-opacity"
-              style={{ background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)' }}
-              title="Share to Instagram"
-            >
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-              </svg>
-            </button>
-
-            {/* TikTok Share - Opens TikTok app/web with content ready */}
-            <button
-              onClick={async () => {
-                // TikTok doesn't have a direct share API, so we copy to clipboard and open TikTok
-                await navigator.clipboard.writeText(`${shareTitle}\n\n${imageUrl}`);
-                // Try to open TikTok - on mobile it will open the app
-                window.open('https://www.tiktok.com/upload', '_blank');
-                alert('📋 Caption copied! Paste it in TikTok when uploading.');
-              }}
-              className="w-10 h-10 rounded-full bg-black flex items-center justify-center hover:opacity-80 transition-opacity"
-              title="Share to TikTok"
-            >
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
-              </svg>
-            </button>
-          </div>
-
-          <div className="border-t border-gray-200 pt-3 space-y-2">
-            {/* Copy Link */}
-            <button
-              onClick={handleCopyLink}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Copy Link
-            </button>
-
-            {/* Download with Watermark (images only) */}
-            <button
-              onClick={handleDownloadWithWatermark}
-              disabled={isProcessing}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            {/* Header */}
+            <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+              <h2 
+                id="share-modal-title" 
+                className="text-xl font-semibold text-gray-900 dark:text-white"
+              >
+                Share
+              </h2>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                aria-label="Close share dialog"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 text-gray-500" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" 
+                    clipRule="evenodd" 
+                  />
                 </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+              </button>
+            </div>
+
+            {/* Share Options Grid */}
+            <div className="p-6">
+              {/* Native Share (Mobile) */}
+              {canNativeShare && (
+                <button
+                  onClick={handleNativeShare}
+                  className="w-full mb-4 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-6 w-6" 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
+                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                  </svg>
+                  <span className="font-medium">Share via device...</span>
+                </button>
               )}
-              {isVideo ? 'Open Video' : 'Download with Watermark'}
-            </button>
-          </div>
 
-          {/* Close button */}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-1.5"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+              {/* Social Share Buttons */}
+              <div className="grid grid-cols-4 gap-4">
+                {/* Facebook */}
+                <div className="flex flex-col items-center gap-1">
+                  <FacebookShareButton
+                    url={shareUrl}
+                    hashtag={hashtags.length > 0 ? `#${hashtags[0]}` : undefined}
+                    onClick={() => handleShareEvent('facebook')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <FacebookIcon size={shareIconSize} round={shareIconRound} />
+                  </FacebookShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Facebook</span>
+                </div>
+
+                {/* X (Twitter) */}
+                <div className="flex flex-col items-center gap-1">
+                  <TwitterShareButton
+                    url={shareUrl}
+                    title={shareTitle}
+                    hashtags={hashtags}
+                    onClick={() => handleShareEvent('twitter')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <XIcon size={shareIconSize} round={shareIconRound} />
+                  </TwitterShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">X</span>
+                </div>
+
+                {/* WhatsApp */}
+                <div className="flex flex-col items-center gap-1">
+                  <WhatsappShareButton
+                    url={shareUrl}
+                    title={shareTitle}
+                    onClick={() => handleShareEvent('whatsapp')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <WhatsappIcon size={shareIconSize} round={shareIconRound} />
+                  </WhatsappShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">WhatsApp</span>
+                </div>
+
+                {/* Messenger */}
+                <div className="flex flex-col items-center gap-1">
+                  <FacebookMessengerShareButton
+                    url={shareUrl}
+                    appId=""
+                    onClick={() => handleShareEvent('messenger')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <FacebookMessengerIcon size={shareIconSize} round={shareIconRound} />
+                  </FacebookMessengerShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Messenger</span>
+                </div>
+
+                {/* LinkedIn */}
+                <div className="flex flex-col items-center gap-1">
+                  <LinkedinShareButton
+                    url={shareUrl}
+                    title={shareTitle}
+                    summary={description}
+                    onClick={() => handleShareEvent('linkedin')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <LinkedinIcon size={shareIconSize} round={shareIconRound} />
+                  </LinkedinShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">LinkedIn</span>
+                </div>
+
+                {/* Telegram */}
+                <div className="flex flex-col items-center gap-1">
+                  <TelegramShareButton
+                    url={shareUrl}
+                    title={shareTitle}
+                    onClick={() => handleShareEvent('telegram')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <TelegramIcon size={shareIconSize} round={shareIconRound} />
+                  </TelegramShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Telegram</span>
+                </div>
+
+                {/* Pinterest */}
+                <div className="flex flex-col items-center gap-1">
+                  <PinterestShareButton
+                    url={shareUrl}
+                    media={mediaUrl}
+                    description={description || shareTitle}
+                    onClick={() => handleShareEvent('pinterest')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <PinterestIcon size={shareIconSize} round={shareIconRound} />
+                  </PinterestShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Pinterest</span>
+                </div>
+
+                {/* Reddit */}
+                <div className="flex flex-col items-center gap-1">
+                  <RedditShareButton
+                    url={shareUrl}
+                    title={shareTitle}
+                    onClick={() => handleShareEvent('reddit')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <RedditIcon size={shareIconSize} round={shareIconRound} />
+                  </RedditShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Reddit</span>
+                </div>
+
+                {/* Email */}
+                <div className="flex flex-col items-center gap-1">
+                  <EmailShareButton
+                    url={shareUrl}
+                    subject={shareTitle || 'Check out this photo!'}
+                    body={description || 'I wanted to share this with you:'}
+                    onClick={() => handleShareEvent('email')}
+                    className="hover:scale-110 transition-transform"
+                  >
+                    <EmailIcon size={shareIconSize} round={shareIconRound} />
+                  </EmailShareButton>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Email</span>
+                </div>
+              </div>
+
+              {/* Copy Link Section */}
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl}
+                    className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm truncate"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    onClick={handleCopyLink}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      copied
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {copied ? (
+                      <span className="flex items-center gap-1">
+                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Copied
+                      </span>
+                    ) : (
+                      'Copy'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
+
+export default UniversalShare;
