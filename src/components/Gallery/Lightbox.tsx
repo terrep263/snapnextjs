@@ -89,7 +89,6 @@ const Lightbox = forwardRef<any, LightboxProps>(({
         // Mobile touch gestures
         pinchToClose: true,
         closeOnVerticalDrag: true,
-        closeOnScroll: false,
 
         // Mobile performance
         maxWidthToAnimate: 800, // Disable animations on small screens for performance
