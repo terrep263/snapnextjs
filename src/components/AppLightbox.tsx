@@ -129,8 +129,24 @@ export default function AppLightbox({
   // Always include Counter and Video
   plugins.push(Counter, Video);
 
-  // Transform slides
-  const transformedSlides = slides.map(transformSlide);
+  // Transform slides and log for debugging
+  const transformedSlides = slides.map((slide, i) => {
+    const transformed = transformSlide(slide);
+    if (slide.type === 'video' || isVideoUrl(slide.src)) {
+      console.log(`🎬 Video slide ${i}:`, { 
+        originalType: slide.type,
+        src: slide.src,
+        transformed 
+      });
+    }
+    return transformed;
+  });
+
+  // Log video count
+  const videoCount = transformedSlides.filter(s => s.type === 'video').length;
+  if (videoCount > 0) {
+    console.log(`📹 AppLightbox: ${videoCount} videos out of ${transformedSlides.length} total slides`);
+  }
 
   // Handle download with custom filename
   const handleDownload = async ({ slide, saveAs }: { slide: SlideImage | SlideVideo; saveAs: (source: string, name: string) => void }) => {
