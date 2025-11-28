@@ -436,7 +436,9 @@ export default function SimpleEventGallery({
                     >
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(window.location.href);
+                          // Get clean URL without query parameters
+                          const cleanUrl = window.location.origin + window.location.pathname;
+                          navigator.clipboard.writeText(cleanUrl);
                           alert('Gallery link copied to clipboard!');
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
@@ -445,23 +447,25 @@ export default function SimpleEventGallery({
                       </button>
                       <button
                         onClick={async () => {
+                          // Get clean URL without query parameters
+                          const cleanUrl = window.location.origin + window.location.pathname;
                           if (navigator.share) {
                             try {
                               await navigator.share({
                                 title: eventName,
                                 text: `Check out this gallery: ${eventName}`,
-                                url: window.location.href,
+                                url: cleanUrl,
                               });
                             } catch (error) {
                               // User cancelled or share failed
                               if (error instanceof Error && error.name !== 'AbortError') {
                                 console.error('Share failed:', error);
-                                navigator.clipboard.writeText(window.location.href);
+                                navigator.clipboard.writeText(cleanUrl);
                                 alert('Share failed. Link copied to clipboard instead!');
                               }
                             }
                           } else {
-                            navigator.clipboard.writeText(window.location.href);
+                            navigator.clipboard.writeText(cleanUrl);
                             alert('Link copied to clipboard!');
                           }
                         }}
@@ -471,7 +475,8 @@ export default function SimpleEventGallery({
                       </button>
                       <button
                         onClick={() => {
-                          const text = `Check out this gallery: ${eventName} - ${window.location.href}`;
+                          const cleanUrl = window.location.origin + window.location.pathname;
+                          const text = `Check out this gallery: ${eventName} - ${cleanUrl}`;
                           window.open(`mailto:?subject=${encodeURIComponent(eventName)}&body=${encodeURIComponent(text)}`);
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
