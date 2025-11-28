@@ -39,11 +39,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    // Fetch all published events from database
+    // Fetch all active events from database (no is_public column exists)
     const { data: events, error } = await supabase
       .from('events')
       .select('slug, updated_at, created_at')
-      .eq('is_public', true)
+      .eq('status', 'active')
       .order('updated_at', { ascending: false })
       .limit(50000); // Sitemap limit
 
