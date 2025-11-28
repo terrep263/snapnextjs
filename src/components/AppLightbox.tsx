@@ -1,7 +1,7 @@
 'use client';
 
 import Lightbox, { Slide, SlideImage } from 'yet-another-react-lightbox';
-import Video from 'yet-another-react-lightbox/plugins/video';
+// Not using Video plugin - using custom render.slide for better cross-browser compatibility
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Download from 'yet-another-react-lightbox/plugins/download';
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
@@ -77,38 +77,14 @@ function getVideoMimeType(url: string): string {
 }
 
 // Transform our slide format to yet-another-react-lightbox format
+// Videos are treated as images with special src that we detect in render
 function transformSlide(slide: LightboxSlide): Slide {
-  // Check if video either by explicit type or URL extension
-  const isVideo = slide.type === 'video' || isVideoUrl(slide.src);
-  
-  if (isVideo) {
-    const mimeType = getVideoMimeType(slide.src);
-    
-    // Provide multiple source formats for better compatibility
-    const sources = [
-      { src: slide.src, type: mimeType },
-    ];
-    
-    // If not mp4, also add mp4 as fallback (browser will try in order)
-    if (mimeType !== 'video/mp4') {
-      sources.push({ src: slide.src, type: 'video/mp4' });
-    }
-    
-    return {
-      type: 'video',
-      sources,
-      poster: slide.poster || undefined,
-      // Use larger default dimensions for better display
-      width: slide.width || 1920,
-      height: slide.height || 1080,
-    };
-  }
-  
+  // All slides are images - we handle video rendering in the custom render.slide
   return {
     src: slide.src,
     alt: slide.alt || slide.title || 'Image',
-    width: slide.width,
-    height: slide.height,
+    width: slide.width || 1920,
+    height: slide.height || 1080,
   };
 }
 
@@ -137,9 +113,9 @@ export default function AppLightbox({
   if (showSlideshow) plugins.push(Slideshow);
   if (showShare) plugins.push(Share);
   
-  // Always include Counter and Video plugins
+  // Always include Counter plugin
+  // NOTE: Not using Video plugin - using custom render.slide instead for better compatibility
   plugins.push(Counter);
-  plugins.push(Video);
 
   // Transform slides for lightbox
   const transformedSlides = slides.map(slide => transformSlide(slide));
@@ -149,7 +125,7 @@ export default function AppLightbox({
     const slideIndex = transformedSlides.indexOf(slide);
     const originalSlide = slides[slideIndex];
     const filename = originalSlide?.title || originalSlide?.alt || `${eventName}-${slideIndex + 1}`;
-    const src = 'src' in slide ? slide.src : (slide as any).sources?.[0]?.src || '';
+    const src = 'src' in slide ? slide.src : '';
     
     // Trigger download
     try {
@@ -185,7 +161,7 @@ export default function AppLightbox({
         share: async ({ slide }) => {
           const slideIndex = transformedSlides.indexOf(slide);
           const originalSlide = slides[slideIndex];
-          const src = 'src' in slide ? slide.src : slide.sources?.[0]?.src || '';
+          const src = 'src' in slide ? slide.src : '';
           const title = `${eventName}${eventCode ? ` | Code: ${eventCode}` : ''}`;
           
           if (navigator.share) {
@@ -226,14 +202,7 @@ export default function AppLightbox({
         autoplay: false,
         delay: 5000,
       }}
-      video={{
-        autoPlay: false,
-        controls: true,
-        playsInline: true,
-        preload: 'auto',
-        muted: false,
-        crossOrigin: undefined,
-      }}
+      // Not using video plugin config - using custom render.slide instead
       carousel={{
         finite: false,
         preload: 2,
@@ -259,13 +228,21 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
-        // Custom render for video slides - use native HTML5 video to avoid plugin issues
-        slide: ({ slide }) => {
-          console.log('🎬 Rendering slide:', { type: slide.type, hasSources: 'sources' in slide, slide });
+        // Custom render for video slides - detect by URL extension or original slide type
+        slide: ({ slide, rect }) => {
+          // Get the src from the slide
+          const src = 'src' in slide ? slide.src : '';
           
-          if (slide.type === 'video' && 'sources' in slide) {
-            const videoSrc = (slide as any).sources?.[0]?.src || '';
-            console.log('🎥 Rendering video with custom element:', videoSrc);
+          // Find the original slide to check if it was marked as video
+          const slideIndex = transformedSlides.findIndex(s => 'src' in s && s.src === src);
+          const originalSlide = slideIndex >= 0 ? slides[slideIndex] : null;
+          const isVideo = originalSlide?.type === 'video' || isVideoUrl(src);
+          
+          console.log('🎬 Rendering slide:', { src, isVideo, originalType: originalSlide?.type });
+          
+          if (isVideo) {
+            const mimeType = getVideoMimeType(src);
+            console.log('🎥 Rendering video with custom element:', src, mimeType);
             return (
               <div
                 style={{
@@ -278,7 +255,7 @@ export default function AppLightbox({
                 }}
               >
                 <video
-                  key={videoSrc}
+                  key={src}
                   controls
                   autoPlay
                   muted
@@ -303,7 +280,7 @@ export default function AppLightbox({
                   onError={(e) => console.error('🎬 Video error:', e)}
                   onPlay={() => console.log('🎬 Video playing')}
                 >
-                  <source src={videoSrc} type="video/mp4" />
+                  <source src={src} type={mimeType} />
                   Your browser does not support the video tag.
                 </video>
               </div>
