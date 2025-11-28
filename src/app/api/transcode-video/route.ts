@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Transcoding completed in ${(duration / 1000).toFixed(1)}s`);
 
     // Read transcoded file
-    const transcodedBuffer = await Bun.file(outputPath).arrayBuffer();
+    const transcodedBuffer = await readFile(outputPath);
     const transcodedBlob = new Blob([transcodedBuffer], { type: 'video/mp4' });
 
     // Clean up temp files
