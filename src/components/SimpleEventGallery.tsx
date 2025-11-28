@@ -73,7 +73,6 @@ export default function SimpleEventGallery({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -422,76 +421,18 @@ export default function SimpleEventGallery({
 
                 {/* Share Controls */}
                 <div className="space-y-2 pt-4 border-t border-gray-800">
-                  <button
-                    onClick={() => setShareOpen(!shareOpen)}
-                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
-                      shareOpen
-                        ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    }`}
+                  <UniversalShare
+                    url={typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}
+                    title={`${eventName} | Snapworxx`}
+                    description={`Check out this event gallery: ${eventName}`}
                   >
-                    <Share2 className="w-5 h-5" />
-                    Share Gallery
-                  </button>
-                  
-                  {shareOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="bg-gray-800 p-4 rounded-lg space-y-2"
+                    <button
+                      className="w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors bg-gray-800 hover:bg-gray-700 text-gray-300"
                     >
-                      <button
-                        onClick={() => {
-                          // Get clean URL without query parameters
-                          const cleanUrl = window.location.origin + window.location.pathname;
-                          navigator.clipboard.writeText(cleanUrl);
-                          alert('Gallery link copied to clipboard!');
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
-                      >
-                        📋 Copy Link
-                      </button>
-                      <button
-                        onClick={async () => {
-                          // Get clean URL without query parameters
-                          const cleanUrl = window.location.origin + window.location.pathname;
-                          if (navigator.share) {
-                            try {
-                              await navigator.share({
-                                title: eventName,
-                                text: `Check out this gallery: ${eventName}`,
-                                url: cleanUrl,
-                              });
-                            } catch (error) {
-                              // User cancelled or share failed
-                              if (error instanceof Error && error.name !== 'AbortError') {
-                                console.error('Share failed:', error);
-                                navigator.clipboard.writeText(cleanUrl);
-                                alert('Share failed. Link copied to clipboard instead!');
-                              }
-                            }
-                          } else {
-                            navigator.clipboard.writeText(cleanUrl);
-                            alert('Link copied to clipboard!');
-                          }
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
-                      >
-                        🔗 Share via Device
-                      </button>
-                      <button
-                        onClick={() => {
-                          const cleanUrl = window.location.origin + window.location.pathname;
-                          const text = `Check out this gallery: ${eventName} - ${cleanUrl}`;
-                          window.open(`mailto:?subject=${encodeURIComponent(eventName)}&body=${encodeURIComponent(text)}`);
-                        }}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-700 rounded-md text-sm text-gray-300 transition-colors"
-                      >
-                        ✉️ Share via Email
-                      </button>
-                    </motion.div>
-                  )}
+                      <Share2 className="w-5 h-5" />
+                      Share Gallery
+                    </button>
+                  </UniversalShare>
                 </div>
 
                 {/* Download Controls - Package-based */}
