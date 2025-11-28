@@ -1,10 +1,5 @@
 import { Metadata } from 'next';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getServiceRoleClient } from '@/lib/supabase';
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -12,6 +7,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const supabase = getServiceRoleClient();
 
   try {
     // Get event data
@@ -56,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       openGraph: {
         title,
         description,
-        url: `https://snapworxx.com/e/${slug}`,
+        url: `https://sharedfrom.snapworxx.com/e/${slug}`,
         siteName: 'Snapworxx',
         images: [
           {
