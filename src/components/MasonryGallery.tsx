@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Download, ExternalLink, X, CheckSquare, Square, Download as DownloadIcon, Eye, Trash2, Share2, Play } from 'lucide-react';
-import AppLightbox, { LightboxSlide } from './AppLightbox';
+import AppGallery, { GalleryItem } from './AppGallery';
 
 interface Photo {
   id: string;
@@ -411,9 +411,9 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDe
         </div>
       )}
 
-      {/* Lightbox using yet-another-react-lightbox */}
-      <AppLightbox
-        slides={photos.map((photo): LightboxSlide => ({
+      {/* Lightbox using LightGallery */}
+      <AppGallery
+        items={photos.map((photo): GalleryItem => ({
           id: photo.id,
           src: photo.url,
           alt: photo.alt || photo.filename || 'Photo',
@@ -424,12 +424,6 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDe
         index={selectedIndex}
         onClose={closeLightbox}
         onIndexChange={setSelectedIndex}
-        showThumbnails={true}
-        showDownload={!!onDownload}
-        showShare={true}
-        showZoom={true}
-        showFullscreen={true}
-        showSlideshow={true}
       />
     </>
   );

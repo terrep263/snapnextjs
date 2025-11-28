@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
 import UniversalShare from './UniversalShare';
-import AppLightbox, { LightboxSlide } from './AppLightbox';
+import AppGallery, { GalleryItem as LightboxItem } from './AppGallery';
 
 interface GalleryItem {
   id: string;
@@ -545,9 +545,9 @@ export default function SimpleEventGallery({
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        {/* LIGHTBOX using yet-another-react-lightbox */}
-        <AppLightbox
-          slides={allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item): LightboxSlide => ({
+        {/* LIGHTBOX using LightGallery */}
+        <AppGallery
+          items={allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item): LightboxItem => ({
             id: item.id,
             src: item.url,
             alt: item.title || 'Gallery item',
@@ -562,13 +562,6 @@ export default function SimpleEventGallery({
           }}
           onIndexChange={setSelectedIndex}
           eventName={eventName}
-          eventCode={eventCode}
-          showThumbnails={true}
-          showDownload={true}
-          showShare={true}
-          showZoom={true}
-          showFullscreen={true}
-          showSlideshow={true}
         />
 
         {/* Layout Toggle and Gallery Header */}
