@@ -6,9 +6,9 @@ import Download from 'yet-another-react-lightbox/plugins/download';
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
 import Counter from 'yet-another-react-lightbox/plugins/counter';
 import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
-import Video from 'yet-another-react-lightbox/plugins/video';
 import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
 import Share from 'yet-another-react-lightbox/plugins/share';
+// Note: Video plugin removed - using custom native video render instead
 
 // CSS imports
 import 'yet-another-react-lightbox/styles.css';
@@ -127,8 +127,8 @@ export default function AppLightbox({
   if (showSlideshow) plugins.push(Slideshow);
   if (showShare) plugins.push(Share);
   
-  // Always include Counter and Video
-  plugins.push(Counter, Video);
+  // Always include Counter (NOT Video - we use custom render for videos)
+  plugins.push(Counter);
 
   // Transform slides and log for debugging
   const transformedSlides = slides.map((slide, i) => {
@@ -264,10 +264,14 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
-        // Custom video render to bypass the Video plugin issues
-        slide: ({ slide }) => {
-          if (slide.type === 'video' && 'sources' in slide) {
+        // Custom video render - bypasses Video plugin entirely
+        slide: ({ slide, rect }) => {
+          // Check if this is a video slide
+          const isVideoSlide = slide.type === 'video' || ('sources' in slide && Array.isArray(slide.sources));
+          
+          if (isVideoSlide && 'sources' in slide) {
             const videoSrc = slide.sources?.[0]?.src || '';
+            console.log('🎥 Rendering video with native element:', videoSrc);
             return (
               <div style={{ 
                 display: 'flex', 
@@ -282,7 +286,7 @@ export default function AppLightbox({
                   controls
                   autoPlay
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                   style={{
                     maxWidth: '100%',
                     maxHeight: '80vh',
