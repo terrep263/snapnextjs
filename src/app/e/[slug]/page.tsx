@@ -393,7 +393,7 @@ export default function EventPage() {
             description: photo.description,
             uploadedAt: photo.created_at,
             isVideo: isVideoItem,
-            type: 'photo'
+            type: isVideoItem ? 'video' : 'photo'
           };
         })}
       />

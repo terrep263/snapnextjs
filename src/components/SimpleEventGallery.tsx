@@ -552,7 +552,7 @@ export default function SimpleEventGallery({
             src: item.url,
             alt: item.title || 'Gallery item',
             title: item.title,
-            type: item.isVideo ? 'video' : 'image',
+            type: (item.isVideo || item.type === 'video') ? 'video' : 'image',
           }))}
           open={selectedIndex >= 0}
           index={selectedIndex}
@@ -636,7 +636,7 @@ export default function SimpleEventGallery({
             >
               {/* Image */}
               <div className={`relative w-full bg-gray-200 overflow-hidden ${layout === 'grid' ? 'aspect-square' : ''}`}>
-                {item.isVideo ? (
+                {(item.isVideo || item.type === 'video') ? (
                   <video
                     src={item.url}
                     className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
@@ -661,7 +661,7 @@ export default function SimpleEventGallery({
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
                   {/* Top row: View/Play */}
                   <div className="flex items-center gap-3 pointer-events-auto">
-                    {item.isVideo && (
+                    {(item.isVideo || item.type === 'video') && (
                       <div className="text-white">
                         <Play className="w-8 h-8 fill-current" />
                       </div>
@@ -678,7 +678,7 @@ export default function SimpleEventGallery({
                         imageUrl={item.url}
                         eventName={eventName}
                         eventCode={eventCode}
-                        isVideo={item.isVideo}
+                        isVideo={item.isVideo || item.type === 'video'}
                       />
                     </div>
                     <button
@@ -741,7 +741,7 @@ export default function SimpleEventGallery({
                 {/* Type Badge */}
                 {item.type && (
                   <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                    {item.type === 'header' ? '📸' : item.type === 'profile' ? '👤' : item.isVideo ? '🎬' : '📷'}
+                    {item.type === 'header' ? '📸' : item.type === 'profile' ? '👤' : (item.isVideo || item.type === 'video') ? '🎬' : '📷'}
                   </div>
                 )}
               </div>
