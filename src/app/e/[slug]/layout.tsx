@@ -66,25 +66,54 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     let event = null;
     let eventError = null;
     
-    // Try slug first (note: events table has no description column)
+    // Try slug first - query basic fields first, cover_photo_url may not exist yet
     const { data: eventBySlug, error: slugError } = await supabase
       .from('events')
-      .select('id, name, header_image, cover_photo_url')
+      .select('id, name, header_image')
       .eq('slug', slug)
       .single();
     
     if (eventBySlug) {
       event = eventBySlug;
+      // Try to get cover_photo_url separately (column may not exist)
+      try {
+        const { data: coverData } = await supabase
+          .from('events')
+          .select('cover_photo_url')
+          .eq('id', eventBySlug.id)
+          .single();
+        if (coverData?.cover_photo_url) {
+          event.cover_photo_url = coverData.cover_photo_url;
+        }
+      } catch (e) {
+        // cover_photo_url column may not exist yet, ignore
+      }
     } else {
       // Try by id as fallback
       const { data: eventById, error: idError } = await supabase
         .from('events')
-        .select('id, name, header_image, cover_photo_url')
+        .select('id, name, header_image')
         .eq('id', slug)
         .single();
       
       event = eventById;
       eventError = idError;
+      
+      // Try to get cover_photo_url separately
+      if (eventById) {
+        try {
+          const { data: coverData } = await supabase
+            .from('events')
+            .select('cover_photo_url')
+            .eq('id', eventById.id)
+            .single();
+          if (coverData?.cover_photo_url) {
+            event.cover_photo_url = coverData.cover_photo_url;
+          }
+        } catch (e) {
+          // cover_photo_url column may not exist yet, ignore
+        }
+      }
     }
 
     console.log('Event query result:', { event, eventError });
