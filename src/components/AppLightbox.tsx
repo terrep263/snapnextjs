@@ -1,7 +1,7 @@
 'use client';
 
 import Lightbox, { Slide, SlideImage } from 'yet-another-react-lightbox';
-// Not using Video plugin - using custom render.slide for better cross-browser compatibility
+import Video from 'yet-another-react-lightbox/plugins/video';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Download from 'yet-another-react-lightbox/plugins/download';
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
@@ -15,7 +15,7 @@ import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
 
-// Define video slide type (not exported from the library)
+// Define video slide type for the Video plugin
 interface SlideVideo {
   type: 'video';
   sources: Array<{ src: string; type: string }>;
@@ -77,9 +77,25 @@ function getVideoMimeType(url: string): string {
 }
 
 // Transform our slide format to yet-another-react-lightbox format
-// Videos are treated as images with special src that we detect in render
-function transformSlide(slide: LightboxSlide): Slide {
-  // All slides are images - we handle video rendering in the custom render.slide
+function transformSlide(slide: LightboxSlide): Slide | SlideVideo {
+  // Check if video either by explicit type or URL extension
+  const isVideo = slide.type === 'video' || isVideoUrl(slide.src);
+  
+  if (isVideo) {
+    const mimeType = getVideoMimeType(slide.src);
+    console.log('🎬 Creating video slide:', slide.src, mimeType);
+    
+    // Return video slide format for Video plugin
+    return {
+      type: 'video',
+      sources: [{ src: slide.src, type: mimeType }],
+      poster: slide.poster,
+      width: slide.width || 1920,
+      height: slide.height || 1080,
+    } as SlideVideo;
+  }
+  
+  // Return image slide
   return {
     src: slide.src,
     alt: slide.alt || slide.title || 'Image',
@@ -106,6 +122,9 @@ export default function AppLightbox({
   // Build plugins array based on props
   const plugins = [];
   
+  // Video plugin MUST be included for video slides to work
+  plugins.push(Video);
+  
   if (showZoom) plugins.push(Zoom);
   if (showDownload) plugins.push(Download);
   if (showThumbnails) plugins.push(Thumbnails);
@@ -114,7 +133,6 @@ export default function AppLightbox({
   if (showShare) plugins.push(Share);
   
   // Always include Counter plugin
-  // NOTE: Not using Video plugin - using custom render.slide instead for better compatibility
   plugins.push(Counter);
 
   // Transform slides for lightbox
@@ -202,7 +220,12 @@ export default function AppLightbox({
         autoplay: false,
         delay: 5000,
       }}
-      // Not using video plugin config - using custom render.slide instead
+      video={{
+        autoPlay: true,
+        controls: true,
+        playsInline: true,
+        muted: true, // Start muted for autoplay policy, user can unmute
+      }}
       carousel={{
         finite: false,
         preload: 2,
@@ -228,67 +251,6 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
-        // Custom render for video slides - detect by URL extension or original slide type
-        slide: ({ slide, rect }) => {
-          // Get the src from the slide
-          const src = 'src' in slide ? slide.src : '';
-          
-          // Find the original slide to check if it was marked as video
-          const slideIndex = transformedSlides.findIndex(s => 'src' in s && s.src === src);
-          const originalSlide = slideIndex >= 0 ? slides[slideIndex] : null;
-          const isVideo = originalSlide?.type === 'video' || isVideoUrl(src);
-          
-          console.log('🎬 Rendering slide:', { src, isVideo, originalType: originalSlide?.type });
-          
-          if (isVideo) {
-            const mimeType = getVideoMimeType(src);
-            console.log('🎥 Rendering video with custom element:', src, mimeType);
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: '100%',
-                  padding: '20px',
-                }}
-              >
-                <video
-                  key={src}
-                  controls
-                  autoPlay
-                  muted
-                  playsInline
-                  preload="auto"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '80vh',
-                    width: 'auto',
-                    height: 'auto',
-                    backgroundColor: '#000',
-                  }}
-                  onLoadStart={() => console.log('🎬 Video loadstart')}
-                  onLoadedMetadata={(e) => {
-                    console.log('🎬 Video metadata loaded:', (e.target as HTMLVideoElement).videoWidth, 'x', (e.target as HTMLVideoElement).videoHeight);
-                    // Unmute after a short delay once video is ready
-                    setTimeout(() => {
-                      const video = e.target as HTMLVideoElement;
-                      video.muted = false;
-                    }, 100);
-                  }}
-                  onError={(e) => console.error('🎬 Video error:', e)}
-                  onPlay={() => console.log('🎬 Video playing')}
-                >
-                  <source src={src} type={mimeType} />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            );
-          }
-          // Return undefined to use default rendering for images
-          return undefined;
-        },
       }}
     />
   );
