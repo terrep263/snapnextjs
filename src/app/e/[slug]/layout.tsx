@@ -19,20 +19,20 @@ const transformToCustomDomain = (url: string): string => {
 };
 
 // Transform URL to use Supabase Image Transformations for OG image (1200x630)
-// Using 'contain' mode to fit the full image without cropping
+// Using 'cover' mode to ensure exact dimensions for Facebook large card
 const transformToOgImage = (url: string): string => {
   if (!url) return url;
   
   // Convert to render endpoint with resize params
-  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=contain
+  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=cover
   const storagePattern = /(.*)\/storage\/v1\/object\/public\/photos\/(.*)/;
   const match = url.match(storagePattern);
   
   if (match) {
     const baseUrl = match[1];
     const path = match[2];
-    // Use 'contain' to fit the full image without cropping (may add letterboxing)
-    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=contain`;
+    // Use 'cover' to guarantee 1200x630 output (required for Facebook large card)
+    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=cover`;
   }
   return url;
 };
@@ -97,28 +97,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // Try to find a photo that meets Facebook's OG image requirements (1200x630 minimum)
-    // First, look for photos with dimensions stored that are large enough
-    const { data: largePhotos } = await supabase
+    // Try to find a LANDSCAPE photo for Facebook OG image (crops better with cover mode)
+    // Landscape photos (width > height) look best when cropped to 1200x630
+    const { data: landscapePhotos } = await supabase
       .from('photos')
       .select('url, thumbnail_url, width, height')
       .eq('event_id', event.id)
-      .gte('width', 1200)
-      .gte('height', 630)
+      .not('width', 'is', null)
+      .not('height', 'is', null)
       .order('created_at', { ascending: true })
-      .limit(1);
+      .limit(20);
+    
+    // Filter for landscape orientation (width > height) and large enough
+    const suitablePhotos = landscapePhotos?.filter(p => 
+      p.width && p.height && p.width > p.height && p.width >= 800
+    ) || [];
 
-    // Fallback: get any photos if no large ones found
+    // Fallback: get any photos if no landscape ones found
     const { data: allPhotos } = await supabase
       .from('photos')
       .select('url, thumbnail_url, width, height')
       .eq('event_id', event.id)
-      .order('width', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: true })
       .limit(5);
 
-    // Use the largest photo available, preferring ones that meet FB requirements
+    // Prefer landscape photos, then fall back to any photo
     let previewImage = 'https://snapworxx.com/og-default.jpg';
-    let selectedPhoto = largePhotos?.[0] || allPhotos?.[0];
+    let selectedPhoto = suitablePhotos[0] || allPhotos?.[0];
 
     if (selectedPhoto) {
       const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
