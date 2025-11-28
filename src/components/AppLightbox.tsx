@@ -261,8 +261,11 @@ export default function AppLightbox({
         buttonNext: slides.length <= 1 ? () => null : undefined,
         // Custom render for video slides - use native HTML5 video to avoid plugin issues
         slide: ({ slide }) => {
+          console.log('🎬 Rendering slide:', { type: slide.type, hasSources: 'sources' in slide, slide });
+          
           if (slide.type === 'video' && 'sources' in slide) {
             const videoSrc = (slide as any).sources?.[0]?.src || '';
+            console.log('🎥 Rendering video with custom element:', videoSrc);
             return (
               <div
                 style={{
@@ -278,6 +281,7 @@ export default function AppLightbox({
                   key={videoSrc}
                   controls
                   autoPlay
+                  muted
                   playsInline
                   preload="auto"
                   style={{
@@ -287,6 +291,17 @@ export default function AppLightbox({
                     height: 'auto',
                     backgroundColor: '#000',
                   }}
+                  onLoadStart={() => console.log('🎬 Video loadstart')}
+                  onLoadedMetadata={(e) => {
+                    console.log('🎬 Video metadata loaded:', (e.target as HTMLVideoElement).videoWidth, 'x', (e.target as HTMLVideoElement).videoHeight);
+                    // Unmute after a short delay once video is ready
+                    setTimeout(() => {
+                      const video = e.target as HTMLVideoElement;
+                      video.muted = false;
+                    }, 100);
+                  }}
+                  onError={(e) => console.error('🎬 Video error:', e)}
+                  onPlay={() => console.log('🎬 Video playing')}
                 >
                   <source src={videoSrc} type="video/mp4" />
                   Your browser does not support the video tag.
