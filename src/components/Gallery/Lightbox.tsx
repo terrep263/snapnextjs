@@ -73,24 +73,53 @@ const Lightbox = forwardRef<any, LightboxProps>(({
     <Gallery
       ref={galleryRef}
       options={{
+        // Display
         counter: true,
         zoom: true,
-        closeOnVerticalDrag: true,
         showHideAnimationType: 'fade',
         bgOpacity: 0.95,
         spacing: 0.1,
-        allowPanToNext: true,
         loop: true,
-        pinchToClose: true,
-        closeOnScroll: false,
+
+        // Navigation
+        allowPanToNext: true,
         arrowKeys: true,
         preload: [1, 2], // Preload 1 prev and 2 next slides
+
+        // Mobile touch gestures
+        pinchToClose: true,
+        closeOnVerticalDrag: true,
+        closeOnScroll: false,
+
+        // Mobile performance
+        maxWidthToAnimate: 800, // Disable animations on small screens for performance
+        initialZoomLevel: 'fit', // Ensure images fit on screen
+        secondaryZoomLevel: 1.5,
+        maxZoomLevel: 3,
+
+        // Video-specific on mobile
+        tapAction: (point, originalEvent) => {
+          // On mobile, prevent tap-to-zoom on videos (breaks controls)
+          const target = originalEvent?.target as HTMLElement;
+          if (target?.tagName === 'VIDEO' || target?.closest('video')) {
+            return; // Do nothing - let video controls handle it
+          }
+          return 'toggle-controls';
+        },
       }}
       onBeforeOpen={() => {
         isOpenRef.current = true;
+        // Prevent body scroll on mobile when lightbox opens
+        if (typeof document !== 'undefined') {
+          document.body.style.overflow = 'hidden';
+        }
       }}
       onClose={() => {
         isOpenRef.current = false;
+        // Restore body scroll
+        if (typeof document !== 'undefined') {
+          document.body.style.overflow = '';
+        }
         onClose();
       }}
     >
