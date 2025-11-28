@@ -10,11 +10,39 @@ import type { GalleryItem, LightboxProps } from './types';
  * Clean, native HTML5 video support with no encoding hacks
  */
 
-// Helper function to detect video URLs
+// Helper function to detect video URLs - supports all Android formats
 function isVideoUrl(url: string): boolean {
-  const videoExtensions = ['mp4', 'm4v', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', '3gp', 'wmv', 'flv'];
+  const videoExtensions = ['mp4', 'm4v', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', '3gp', '3g2', 'wmv', 'flv', 'ts', 'mts', 'm2ts', 'vob', 'divx', 'xvid', 'asf', 'f4v'];
   const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
   return videoExtensions.includes(ext);
+}
+
+// Helper to get the correct MIME type for a video URL
+function getVideoMimeType(url: string): string {
+  const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
+  const mimeTypes: Record<string, string> = {
+    'mp4': 'video/mp4',
+    'm4v': 'video/mp4',
+    'webm': 'video/webm',
+    'ogv': 'video/ogg',
+    'ogg': 'video/ogg',
+    'mov': 'video/quicktime',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+    '3gp': 'video/3gpp',
+    '3g2': 'video/3gpp2',
+    'wmv': 'video/x-ms-wmv',
+    'flv': 'video/x-flv',
+    'ts': 'video/mp2t',
+    'mts': 'video/mp2t',
+    'm2ts': 'video/mp2t',
+    'vob': 'video/mpeg',
+    'divx': 'video/x-msvideo',
+    'xvid': 'video/x-msvideo',
+    'asf': 'video/x-ms-asf',
+    'f4v': 'video/mp4',
+  };
+  return mimeTypes[ext] || 'video/mp4';
 }
 
 // Helper to get video dimensions (default to 16:9 aspect ratio)
@@ -127,7 +155,8 @@ const Lightbox = forwardRef<any, LightboxProps>(({
         const caption = item.title || item.filename || '';
 
         if (isVideo) {
-          // Video item with HTML5 video element
+          // Video item with HTML5 video element - supports all Android formats
+          const mimeType = getVideoMimeType(item.url);
           return (
             <Item
               key={item.id}
@@ -137,12 +166,17 @@ const Lightbox = forwardRef<any, LightboxProps>(({
                     class="pswp__video"
                     controls
                     playsinline
-                    preload="metadata"
+                    preload="auto"
+                    autoplay
                     ${item.poster ? `poster="${item.poster}"` : ''}
                     style="width:100%;height:auto;max-height:90vh;object-fit:contain;"
                   >
+                    <source src="${item.url}" type="${mimeType}" />
                     <source src="${item.url}" type="video/mp4" />
                     <source src="${item.url}" type="video/webm" />
+                    <source src="${item.url}" type="video/ogg" />
+                    <source src="${item.url}" type="video/3gpp" />
+                    <source src="${item.url}" type="video/quicktime" />
                     Your browser doesn't support HTML5 video.
                   </video>
                 </div>

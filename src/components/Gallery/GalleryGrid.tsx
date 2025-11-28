@@ -6,6 +6,13 @@ import { Play, CheckSquare, Square, Download, Share2, Trash2, Eye, ZoomIn } from
 import UniversalShare from '../UniversalShare';
 import type { GalleryItem, LayoutType } from './types';
 
+// Helper function to detect video URLs - supports all Android formats
+function isVideoUrl(url: string): boolean {
+  const videoExtensions = ['mp4', 'm4v', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', '3gp', '3g2', 'wmv', 'flv', 'ts', 'mts', 'm2ts', 'vob', 'divx', 'xvid', 'asf', 'f4v'];
+  const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
+  return videoExtensions.includes(ext);
+}
+
 interface GalleryGridProps {
   items: GalleryItem[];
   layout?: LayoutType;
@@ -52,7 +59,7 @@ export default function GalleryGrid({
 
   const renderItem = (item: GalleryItem, index: number) => {
     const isSelected = selectedItems.has(item.id);
-    const isVideo = item.isVideo || item.type === 'video';
+    const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
 
     return (
       <motion.div

@@ -797,7 +797,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/mov,video/avi,video/quicktime"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,video/mp4,video/webm,video/ogg,video/mov,video/avi,video/quicktime,video/x-msvideo,video/3gpp,video/3gpp2,video/x-matroska,video/x-flv,video/x-ms-wmv,video/x-m4v,.mp4,.webm,.ogg,.ogv,.mov,.avi,.mkv,.3gp,.3g2,.wmv,.flv,.m4v"
           onChange={handleFileInputChange}
           disabled={disabled || uploading}
           className="hidden"

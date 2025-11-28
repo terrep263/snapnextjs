@@ -43,9 +43,9 @@ export default function SimpleEventGallery({
 
   const [navOpen, setNavOpen] = useState(false);
 
-  // Helper function to detect if URL is a video
+  // Helper function to detect if URL is a video - supports all Android formats
   const isVideoUrl = (url: string): boolean => {
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.wmv', '.flv'];
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.3g2', '.wmv', '.flv', '.ts', '.mts', '.m2ts', '.vob', '.divx', '.xvid', '.asf', '.f4v'];
     const lowercaseUrl = url.toLowerCase();
     return videoExtensions.some(ext => lowercaseUrl.includes(ext));
   };
