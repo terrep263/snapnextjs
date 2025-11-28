@@ -18,6 +18,23 @@ const transformToCustomDomain = (url: string): string => {
   return url;
 };
 
+// Transform URL to use Supabase Image Transformations for OG image (1200x630)
+const transformToOgImage = (url: string): string => {
+  if (!url) return url;
+  
+  // Convert to render endpoint with resize params
+  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=cover
+  const storagePattern = /(.*)\/storage\/v1\/object\/public\/photos\/(.*)/;
+  const match = url.match(storagePattern);
+  
+  if (match) {
+    const baseUrl = match[1];
+    const path = match[2];
+    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=cover`;
+  }
+  return url;
+};
+
 type Props = {
   params: Promise<{ slug: string }>;
 };
@@ -94,10 +111,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       const selectedPhoto = photos[2] || photos[1] || photos[0];
       const rawUrl = selectedPhoto?.url || selectedPhoto?.thumbnail_url || '';
       if (rawUrl) {
-        previewImage = transformToCustomDomain(rawUrl);
+        // First transform to custom domain, then apply OG image resize
+        const customDomainUrl = transformToCustomDomain(rawUrl);
+        previewImage = transformToOgImage(customDomainUrl);
       }
     } else if (event.header_image) {
-      previewImage = transformToCustomDomain(event.header_image);
+      const customDomainUrl = transformToCustomDomain(event.header_image);
+      previewImage = transformToOgImage(customDomainUrl);
     }
 
     const title = `${event.name} | Snapworxx`;
