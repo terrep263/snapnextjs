@@ -19,18 +19,20 @@ const transformToCustomDomain = (url: string): string => {
 };
 
 // Transform URL to use Supabase Image Transformations for OG image (1200x630)
+// Using 'contain' mode to fit the full image without cropping
 const transformToOgImage = (url: string): string => {
   if (!url) return url;
   
   // Convert to render endpoint with resize params
-  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=cover
+  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=contain
   const storagePattern = /(.*)\/storage\/v1\/object\/public\/photos\/(.*)/;
   const match = url.match(storagePattern);
   
   if (match) {
     const baseUrl = match[1];
     const path = match[2];
-    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=cover`;
+    // Use 'contain' to fit the full image without cropping (may add letterboxing)
+    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=contain`;
   }
   return url;
 };
