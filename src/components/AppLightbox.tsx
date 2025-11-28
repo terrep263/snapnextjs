@@ -42,6 +42,13 @@ interface AppLightboxProps {
   eventCode?: string;
 }
 
+// Check if URL is a video based on extension
+function isVideoUrl(url: string): boolean {
+  const videoExtensions = ['mp4', 'm4v', 'webm', 'ogv', 'ogg', 'mov', 'avi', 'mkv', '3gp', 'wmv', 'flv'];
+  const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
+  return videoExtensions.includes(ext);
+}
+
 // Detect video MIME type from URL
 function getVideoMimeType(url: string): string {
   const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
@@ -60,7 +67,10 @@ function getVideoMimeType(url: string): string {
 
 // Transform our slide format to yet-another-react-lightbox format
 function transformSlide(slide: LightboxSlide): SlideImage | SlideVideo {
-  if (slide.type === 'video') {
+  // Check if video either by explicit type or URL extension
+  const isVideo = slide.type === 'video' || isVideoUrl(slide.src);
+  
+  if (isVideo) {
     const mimeType = getVideoMimeType(slide.src);
     
     // Provide multiple source formats for better compatibility
@@ -205,9 +215,11 @@ export default function AppLightbox({
         delay: 5000,
       }}
       video={{
-        autoPlay: true,
+        autoPlay: false,
         controls: true,
         playsInline: true,
+        crossOrigin: 'anonymous',
+        preload: 'metadata',
       }}
       carousel={{
         finite: false,
