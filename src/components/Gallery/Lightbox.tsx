@@ -38,13 +38,12 @@ const Lightbox = forwardRef<any, LightboxProps>(({
   onIndexChange,
   eventName = ''
 }, ref) => {
-  const galleryRef = useRef<any>(null);
   const isOpenRef = useRef(false);
 
   // Expose imperative methods to parent
   useImperativeHandle(ref, () => ({
     open: (idx: number) => {
-      if (galleryRef.current && !isOpenRef.current) {
+      if (!isOpenRef.current) {
         isOpenRef.current = true;
         // PhotoSwipe will open via the click handlers on Item components
       }
@@ -71,7 +70,6 @@ const Lightbox = forwardRef<any, LightboxProps>(({
 
   return (
     <Gallery
-      ref={galleryRef}
       options={{
         // Display
         counter: true,
@@ -97,7 +95,7 @@ const Lightbox = forwardRef<any, LightboxProps>(({
         maxZoomLevel: 3,
 
         // Video-specific on mobile
-        tapAction: (point, originalEvent) => {
+        tapAction: (point: any, originalEvent: any) => {
           // On mobile, prevent tap-to-zoom on videos (breaks controls)
           const target = originalEvent?.target as HTMLElement;
           if (target?.tagName === 'VIDEO' || target?.closest('video')) {
@@ -106,20 +104,21 @@ const Lightbox = forwardRef<any, LightboxProps>(({
           return 'toggle-controls';
         },
       }}
-      onBeforeOpen={() => {
+      onOpen={(pswp: any) => {
         isOpenRef.current = true;
         // Prevent body scroll on mobile when lightbox opens
         if (typeof document !== 'undefined') {
           document.body.style.overflow = 'hidden';
         }
-      }}
-      onClose={() => {
-        isOpenRef.current = false;
-        // Restore body scroll
-        if (typeof document !== 'undefined') {
-          document.body.style.overflow = '';
-        }
-        onClose();
+        // Listen for close event
+        pswp.on('close', () => {
+          isOpenRef.current = false;
+          // Restore body scroll
+          if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+          }
+          onClose();
+        });
       }}
     >
       {items.map((item, idx) => {

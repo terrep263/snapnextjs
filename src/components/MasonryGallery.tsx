@@ -93,7 +93,7 @@ export default function MasonryGallery({
         canDelete={!!onDelete}
         canBulkDownload={!!onDownloadAll}
         onDownload={onDownload ? handleDownload : undefined}
-        onDownloadAll={onDownloadAll}
+        onDownloadAll={onDownloadAll ? async () => { await onDownloadAll(); } : undefined}
         onDelete={onDelete ? handleDelete : undefined}
       />
     </div>
