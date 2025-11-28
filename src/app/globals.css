@@ -78,3 +78,35 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
+
+/* Fancybox Video Display Fix */
+/* Ensure video elements are visible and properly sized */
+.fancybox__content video {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 90vh !important;
+  object-fit: contain !important;
+  background: #000 !important;
+}
+
+.fancybox__slide video {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure Fancybox video container is properly sized */
+.fancybox__html5video {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.fancybox__html5video video {
+  max-width: 100% !important;
+  max-height: 100% !important;
+}

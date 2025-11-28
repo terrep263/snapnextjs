@@ -52,9 +52,12 @@ export default function AppGallery({
           type: 'html5video' as const,
           thumb: item.thumb || item.poster,
           caption: item.title || '',
+          poster: item.poster,
           html5video: {
             controls: true,
             playsinline: true,
+            preload: 'metadata',
+            style: 'width: 100%; height: auto; max-height: 90vh; object-fit: contain; background: #000;',
           },
         };
       }

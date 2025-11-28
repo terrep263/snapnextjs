@@ -1,0 +1,97 @@
+'use client';
+
+import { useState } from 'react';
+import AppGallery, { GalleryItem } from '@/components/AppGallery';
+
+export default function VideoTestPage() {
+  const [open, setOpen] = useState(false);
+  const [index, setIndex] = useState(0);
+
+  const testItems: GalleryItem[] = [
+    {
+      id: '1',
+      src: '/12526894_720_1280_30fps.mp4',
+      type: 'video',
+      title: 'Test Video',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen p-8 bg-gray-100">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Video Display Test</h1>
+
+        {/* Direct Video Test */}
+        <div className="mb-8 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">1. Direct HTML5 Video Element</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            This should display the video directly in the page with controls.
+          </p>
+          <video
+            src="/12526894_720_1280_30fps.mp4"
+            controls
+            className="w-full max-w-2xl"
+            style={{ maxHeight: '500px', background: '#000' }}
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+
+        {/* Fancybox Test */}
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">2. Fancybox Lightbox Video</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Click the button below to open the video in Fancybox lightbox.
+          </p>
+          <button
+            onClick={() => setOpen(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Open Video in Lightbox
+          </button>
+
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-sm text-yellow-800">
+              <strong>Expected behavior:</strong> When you click the button, the video should open in a fullscreen lightbox
+              and display the video (not just play audio). You should see the video player with controls.
+            </p>
+          </div>
+        </div>
+
+        {/* Diagnostic Info */}
+        <div className="mt-8 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">Diagnostic Information</h2>
+          <div className="space-y-2 text-sm">
+            <p><strong>Video URL:</strong> /12526894_720_1280_30fps.mp4</p>
+            <p><strong>Browser:</strong> {typeof window !== 'undefined' ? window.navigator.userAgent : 'N/A'}</p>
+            <p><strong>Video Support:</strong> {typeof document !== 'undefined' ?
+              (document.createElement('video').canPlayType('video/mp4') ? '✅ MP4 supported' : '❌ MP4 not supported')
+              : 'N/A'}
+            </p>
+          </div>
+
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+            <p className="text-sm text-blue-800">
+              <strong>Debug Steps:</strong>
+            </p>
+            <ol className="list-decimal list-inside text-sm text-blue-700 mt-2 space-y-1">
+              <li>First, verify the direct video (test #1) plays correctly</li>
+              <li>If test #1 works but test #2 doesn't, it's a Fancybox CSS issue</li>
+              <li>If test #1 doesn't work, check the video file path and browser console for errors</li>
+              <li>Open browser DevTools (F12) and check for any JavaScript errors</li>
+              <li>In DevTools, inspect the video element when lightbox is open to check its CSS properties</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <AppGallery
+        items={testItems}
+        open={open}
+        index={index}
+        onClose={() => setOpen(false)}
+        onIndexChange={setIndex}
+      />
+    </div>
+  );
+}
