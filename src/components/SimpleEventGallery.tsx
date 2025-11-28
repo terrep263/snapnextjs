@@ -1,36 +1,25 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
+import { Menu, X, Share2 } from 'lucide-react';
 import UniversalShare from './UniversalShare';
-import AppGallery, { GalleryItem as LightboxItem } from './AppGallery';
-
-interface GalleryItem {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
-  type?: 'header' | 'profile' | 'photo' | 'video';
-  uploadedAt?: string;
-  isVideo?: boolean;
-  duration?: number;
-  size?: number;
-}
+import { Gallery } from './Gallery';
+import type { GalleryItem, ViewMode, PackageType } from './Gallery';
 
 interface SimpleEventGalleryProps {
   eventName: string;
   headerImage?: string;
   profileImage?: string;
   photos: GalleryItem[];
-  packageType?: 'basic' | 'premium' | 'freebie'; // basic = individual downloads only, premium/freebie = bulk + individual
+  packageType?: PackageType;
   isFree?: boolean;
   isFreebie?: boolean;
-  eventSlug?: string; // For upload navigation
-  eventId?: string; // For dashboard navigation
-  isSharedView?: boolean; // If true, hide upload button (viewing shared gallery)
-  eventCode?: string; // Event code for share captions
-  viewMode?: 'public' | 'owner' | 'admin'; // Controls what features are available
+  eventSlug?: string;
+  eventId?: string;
+  isSharedView?: boolean;
+  eventCode?: string;
+  viewMode?: ViewMode;
 }
 
 export default function SimpleEventGallery({
@@ -38,46 +27,21 @@ export default function SimpleEventGallery({
   headerImage,
   profileImage,
   photos,
-  packageType = 'premium', // default to premium (full features)
+  packageType = 'premium',
   isFree = false,
   isFreebie = false,
   eventSlug,
   eventId,
   isSharedView = false,
   eventCode = '',
-  viewMode = 'public' // default to public (most restricted)
+  viewMode = 'public',
 }: SimpleEventGalleryProps) {
   // Determine permissions based on viewMode
   const canUpload = viewMode === 'owner' || viewMode === 'admin';
   const canDelete = viewMode === 'owner' || viewMode === 'admin';
-  const canManage = viewMode === 'admin';
-  
-  console.log('🎨 SimpleEventGallery mounted with:', {
-    eventName,
-    headerImageExists: !!headerImage,
-    headerImagePreview: headerImage ? headerImage.substring(0, 50) : 'null',
-    profileImageExists: !!profileImage,
-    profileImagePreview: profileImage ? profileImage.substring(0, 50) : 'null',
-    photosCount: photos.length,
-    packageType,
-    isFree,
-    isFreebie
-  });
-
-  // Determine if bulk download is allowed
-  // Premium events and freebie events get bulk download
-  // Basic/free promo events only get individual downloads
-  const allowBulkDownload = packageType === 'premium' || isFreebie || packageType === 'freebie';
+  const canBulkDownload = packageType === 'premium' || isFreebie || packageType === 'freebie';
 
   const [navOpen, setNavOpen] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [slideshowActive, setSlideshowActive] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
-  const [deleting, setDeleting] = useState<string | null>(null);
-  const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to detect if URL is a video
   const isVideoUrl = (url: string): boolean => {
@@ -89,92 +53,41 @@ export default function SimpleEventGallery({
   // Build gallery items including header and profile images
   const allItems: GalleryItem[] = [];
   if (headerImage) {
-    const isHeaderVideo = isVideoUrl(headerImage);
-    console.log('📸 Adding header to gallery', isHeaderVideo ? '(VIDEO)' : '(image)');
     allItems.push({
       id: 'header',
       url: headerImage,
       title: 'Event Header',
       type: 'header',
-      isVideo: isHeaderVideo
+      isVideo: isVideoUrl(headerImage),
     });
-  } else {
-    console.log('⚠️ No header image to add');
   }
   if (profileImage) {
-    const isProfileVideo = isVideoUrl(profileImage);
-    console.log('👤 Adding profile to gallery', isProfileVideo ? '(VIDEO)' : '(image)');
     allItems.push({
       id: 'profile',
       url: profileImage,
       title: 'Event Profile',
       type: 'profile',
-      isVideo: isProfileVideo
+      isVideo: isVideoUrl(profileImage),
     });
-  } else {
-    console.log('⚠️ No profile image to add');
   }
   allItems.push(...photos);
-  
-  // Debug: Log video items
-  const videoItems = allItems.filter(item => item.isVideo);
-  console.log('📊 Total gallery items:', allItems.length, 'items');
-  console.log('🎬 Video items in gallery:', videoItems.length, videoItems.map(v => v.url));
 
-  // Slideshow effect
-  useEffect(() => {
-    if (!slideshowActive || allItems.length === 0) return;
+  // Filter out header/profile for main gallery display
+  const displayItems = allItems.filter(item => item.type !== 'header' && item.type !== 'profile');
 
-    const advance = () => {
-      setSelectedIndex((prev) => (prev + 1) % allItems.length);
-    };
-
-    slideshowIntervalRef.current = setInterval(advance, 5000);
-    return () => {
-      if (slideshowIntervalRef.current) {
-        clearInterval(slideshowIntervalRef.current);
-      }
-    };
-  }, [slideshowActive, allItems.length]);
-
-  // Handle item selection
-  const toggleItemSelection = (id: string) => {
-    const newSet = new Set(selectedItems);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    setSelectedItems(newSet);
-  };
-
-  const selectAll = () => {
-    if (selectedItems.size === allItems.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(allItems.map(item => item.id)));
-    }
-  };
-
-  // Download all items in gallery
-  const downloadAllItems = async () => {
+  // Download all items
+  const handleDownloadAll = async () => {
     try {
-      setDownloading(true);
-      console.log(`🔄 Download All: Starting bulk download of ${allItems.length} items`);
-
       if (allItems.length === 0) {
         alert('No items to download');
-        setDownloading(false);
         return;
       }
 
       if (allItems.length > 1000) {
         alert('Maximum 1000 files allowed per download');
-        setDownloading(false);
         return;
       }
 
-      // Call server-side bulk download endpoint
       const response = await fetch('/api/bulk-download', {
         method: 'POST',
         headers: {
@@ -185,7 +98,7 @@ export default function SimpleEventGallery({
           items: allItems.map(item => ({
             id: item.id,
             url: item.url,
-            title: item.title || `media-${item.id}`
+            title: item.title || `media-${item.id}`,
           })),
         }),
       });
@@ -195,14 +108,12 @@ export default function SimpleEventGallery({
         throw new Error(error.error || `HTTP ${response.status}`);
       }
 
-      // Get the ZIP blob from response
       const zipBlob = await response.blob();
 
       if (zipBlob.size === 0) {
         throw new Error('Downloaded file is empty');
       }
 
-      // Trigger download
       const url = window.URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
@@ -211,95 +122,16 @@ export default function SimpleEventGallery({
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      console.log(`✅ Download All completed: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
       console.error('❌ Download All failed:', errorMsg);
       alert(`Download failed: ${errorMsg}`);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  // Download selected items
-  const downloadSelectedItems = async () => {
-    try {
-      setDownloading(true);
-      const itemsForDownload = allItems.filter(item => selectedItems.has(item.id));
-      
-      console.log(`🔄 Download Selected: Starting bulk download of ${itemsForDownload.length} items`);
-
-      if (itemsForDownload.length === 0) {
-        alert('No items selected for download');
-        setDownloading(false);
-        return;
-      }
-
-      if (itemsForDownload.length > 1000) {
-        alert('Maximum 1000 files allowed per download');
-        setDownloading(false);
-        return;
-      }
-
-      // Call server-side bulk download endpoint
-      const response = await fetch('/api/bulk-download', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filename: eventName || 'event-gallery',
-          items: itemsForDownload.map(item => ({
-            id: item.id,
-            url: item.url,
-            title: item.title || `media-${item.id}`
-          })),
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(error.error || `HTTP ${response.status}`);
-      }
-
-      // Get the ZIP blob from response
-      const zipBlob = await response.blob();
-
-      if (zipBlob.size === 0) {
-        throw new Error('Downloaded file is empty');
-      }
-
-      // Trigger download
-      const url = window.URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${eventName || 'event-gallery'}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      console.log(`✅ Download Selected completed: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('❌ Download Selected failed:', errorMsg);
-      alert(`Download failed: ${errorMsg}`);
-    } finally {
-      setDownloading(false);
-      setSelectMode(false);
-      setSelectedItems(new Set());
     }
   };
 
   // Delete photo
   const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('Are you sure you want to delete this photo?')) return;
-    
-    setDeleting(photoId);
     try {
-      const { supabase } = await import('@/lib/supabase');
-      
       const response = await fetch(`/api/photos/${photoId}`, {
         method: 'DELETE',
       });
@@ -312,18 +144,8 @@ export default function SimpleEventGallery({
       window.location.reload();
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete photo. Please try again.');
-      setDeleting(null);
+      throw error;
     }
-  };
-
-  // Navigate slideshow
-  const goToPrevious = () => {
-    setSelectedIndex((prev) => (prev - 1 + allItems.length) % allItems.length);
-  };
-
-  const goToNext = () => {
-    setSelectedIndex((prev) => (prev + 1) % allItems.length);
   };
 
   return (
@@ -339,11 +161,10 @@ export default function SimpleEventGallery({
                 alt="Event Header"
                 className="w-full h-full object-cover"
               />
-              {/* Optional overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30"></div>
             </div>
           )}
-          
+
           {/* Profile Section */}
           <div className="relative -mt-20 z-10 flex flex-col items-center px-4 pb-8">
             {profileImage && (
@@ -358,7 +179,6 @@ export default function SimpleEventGallery({
             </h1>
           </div>
 
-          {/* Divider */}
           <div className="w-full h-px bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
         </div>
       )}
@@ -373,15 +193,12 @@ export default function SimpleEventGallery({
             transition={{ type: 'spring', damping: 20 }}
             className="fixed inset-0 z-40"
           >
-            {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/50"
               onClick={() => setNavOpen(false)}
             />
 
-            {/* Slide Panel */}
             <motion.div className="absolute left-0 top-0 bottom-0 w-72 bg-gray-900 shadow-xl flex flex-col">
-              {/* Header */}
               <div className="p-6 border-b border-gray-800">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-white">{eventName}</h2>
@@ -392,137 +209,28 @@ export default function SimpleEventGallery({
                     <X className="w-5 h-5 text-white" />
                   </button>
                 </div>
-                <p className="text-sm text-gray-400">{allItems.length} items in gallery</p>
+                <p className="text-sm text-gray-400">{displayItems.length} items in gallery</p>
               </div>
 
-              {/* Navigation Content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {/* Slideshow Controls */}
-                <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      setSlideshowActive(!slideshowActive);
-                      if (!slideshowActive) setSelectedIndex(0);
-                    }}
-                    className="w-full flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                  >
-                    {slideshowActive ? (
-                      <>
-                        <Pause className="w-5 h-5" />
-                        Stop Slideshow
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-5 h-5" />
-                        Start Slideshow
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Select Controls */}
-                <div className="space-y-2 pt-4 border-t border-gray-800">
-                  <button
-                    onClick={() => setSelectMode(!selectMode)}
-                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
-                      selectMode
-                        ? 'bg-green-600 hover:bg-green-700 text-white'
-                        : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    }`}
-                  >
-                    <ListChecks className="w-5 h-5" />
-                    {selectMode ? 'Selection Mode ON' : 'Enter Selection Mode'}
-                  </button>
-                </div>
-
                 {/* Share Controls */}
-                <div className="space-y-2 pt-4 border-t border-gray-800">
+                <div className="space-y-2 border-t border-gray-800 pt-4">
                   <UniversalShare
                     url={typeof window !== 'undefined' ? window.location.origin + window.location.pathname : ''}
                     title={`${eventName} | Snapworxx`}
                     description={`Check out this event gallery: ${eventName}`}
                   >
-                    <button
-                      className="w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors bg-gray-800 hover:bg-gray-700 text-gray-300"
-                    >
+                    <button className="w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors bg-gray-800 hover:bg-gray-700 text-gray-300">
                       <Share2 className="w-5 h-5" />
                       Share Gallery
                     </button>
                   </UniversalShare>
                 </div>
-
-                {/* Download Controls - Package-based */}
-                <div className="space-y-2 pt-4 border-t border-gray-800">
-                  {/* Bulk download removed - only event planner can bulk download from dashboard */}
-                  
-                  {/* All users can select and download individual items */}
-                  <button
-                    onClick={() => setSelectMode(!selectMode)}
-                    className={`w-full flex items-center gap-2 font-semibold py-3 px-4 rounded-lg transition-colors ${
-                      selectMode
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    <CheckSquare className="w-5 h-5" />
-                    {selectMode ? `Download Selected (${selectedItems.size})` : 'Select Items to Download'}
-                  </button>
-
-                  {/* Selection Controls - Only show if in select mode */}
-                  {selectMode && (
-                    <>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={selectAll}
-                          className={`flex-1 flex items-center justify-center gap-2 font-semibold py-2 px-3 rounded-lg transition-colors text-sm ${
-                            selectedItems.size === allItems.length
-                              ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                              : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                          }`}
-                        >
-                          {selectedItems.size === allItems.length ? (
-                            <CheckSquare className="w-4 h-4" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
-                          Select All ({allItems.length})
-                        </button>
-                        <button
-                          onClick={() => setSelectedItems(new Set())}
-                          className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 px-3 rounded-lg transition-colors text-sm"
-                        >
-                          Clear
-                        </button>
-                      </div>
-
-                      <button
-                        onClick={downloadSelectedItems}
-                        disabled={selectedItems.size === 0 || downloading}
-                        className={`w-full font-semibold py-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                          selectedItems.size === 0 || downloading
-                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                            : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
-                      >
-                        <Download className="w-4 h-4" />
-                        Download ({selectedItems.size}) Selected
-                      </button>
-
-                      <button
-                        onClick={() => setSelectMode(false)}
-                        className="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 rounded-lg transition-colors text-sm"
-                      >
-                        Cancel Selection
-                      </button>
-                    </>
-                  )}
-                </div>
               </div>
 
-              {/* Footer */}
               <div className="border-t border-gray-800 p-6 bg-gray-950">
                 <p className="text-xs text-gray-500 text-center">
-                  {selectMode ? `${selectedItems.size} items selected` : 'View and manage your gallery'}
+                  View and manage your gallery
                 </p>
               </div>
             </motion.div>
@@ -556,225 +264,15 @@ export default function SimpleEventGallery({
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        {/* LIGHTBOX using LightGallery */}
-        <AppGallery
-          items={allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item): LightboxItem => ({
-            id: item.id,
-            src: item.url,
-            alt: item.title || 'Gallery item',
-            title: item.title,
-            type: (item.isVideo || item.type === 'video') ? 'video' : 'image',
-          }))}
-          open={selectedIndex >= 0}
-          index={selectedIndex}
-          onClose={() => {
-            setSelectedIndex(-1);
-            setSlideshowActive(false);
-          }}
-          onIndexChange={setSelectedIndex}
+        <Gallery
+          items={displayItems}
           eventName={eventName}
+          eventCode={eventCode}
+          canDelete={canDelete}
+          canBulkDownload={canBulkDownload}
+          onDownloadAll={canBulkDownload ? handleDownloadAll : undefined}
+          onDelete={canDelete ? handleDeletePhoto : undefined}
         />
-
-        {/* Layout Toggle and Gallery Header */}
-        <div className="p-4 md:p-6 pb-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Gallery ({allItems.filter(item => item.type !== 'header' && item.type !== 'profile').length} photos)
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLayout('masonry')}
-                className={`p-2 rounded-lg transition-colors ${
-                  layout === 'masonry'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
-                title="Masonry Layout"
-              >
-                <LayoutGrid className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setLayout('grid')}
-                className={`p-2 rounded-lg transition-colors ${
-                  layout === 'grid'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
-                title="Grid Layout"
-              >
-                <Grid3x3 className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* GALLERY - Dynamic Layout */}
-        <div className="p-4 md:p-6 pt-0">
-          <div className={
-            layout === 'masonry'
-              ? 'columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4'
-              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
-          }>
-            {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item, index) => {
-              // Adjust index for filtered items
-              const actualIndex = allItems.findIndex(i => i.id === item.id);
-              return (
-            <motion.div
-              key={item.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className={`${layout === 'masonry' ? 'break-inside-avoid' : ''} group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer touch-manipulation ${
-                selectMode && selectedItems.has(item.id)
-                  ? 'ring-2 ring-green-500 shadow-green-500/50'
-                  : ''
-              }`}
-              onClick={() => {
-                if (selectMode) {
-                  toggleItemSelection(item.id);
-                } else {
-                  setSelectedIndex(index);
-                  setSlideshowActive(false);
-                }
-              }}
-            >
-              {/* Image */}
-              <div className={`relative w-full bg-gray-200 overflow-hidden ${layout === 'grid' ? 'aspect-square' : ''}`}>
-                {(item.isVideo || item.type === 'video') ? (
-                  <video
-                    src={item.url}
-                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
-                    preload="metadata"
-                    muted
-                    playsInline
-                    onLoadedMetadata={(e) => {
-                      // Set to 1 second to show a meaningful frame as thumbnail
-                      const video = e.target as HTMLVideoElement;
-                      video.currentTime = Math.min(1, video.duration / 4);
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={item.url}
-                    alt={item.title || 'Gallery item'}
-                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
-                  />
-                )}
-
-                {/* Overlay on Hover - with Share and Download buttons */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
-                  {/* Top row: View/Play */}
-                  <div className="flex items-center gap-3 pointer-events-auto">
-                    {(item.isVideo || item.type === 'video') && (
-                      <div className="text-white">
-                        <Play className="w-8 h-8 fill-current" />
-                      </div>
-                    )}
-                    <div className="text-white">
-                      <ZoomIn className="w-8 h-8" />
-                    </div>
-                  </div>
-                  
-                  {/* Bottom row: Share, Download, and Delete buttons - Mobile optimized */}
-                  <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <UniversalShare
-                        imageUrl={item.url}
-                        eventName={eventName}
-                        eventCode={eventCode}
-                        isVideo={item.isVideo || item.type === 'video'}
-                      />
-                    </div>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        try {
-                          const response = await fetch(item.url);
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const link = document.createElement('a');
-                          link.href = url;
-                          link.download = item.title || `photo-${item.id}`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                          window.URL.revokeObjectURL(url);
-                        } catch (error) {
-                          console.error('Download failed:', error);
-                          alert('Download failed. Please try again.');
-                        }
-                      }}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span className="sm:inline">Download</span>
-                    </button>
-                    {canDelete && (
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          await handleDeletePhoto(item.id);
-                        }}
-                        disabled={deleting === item.id}
-                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span className="sm:inline">Delete</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selection Checkbox (in select mode) */}
-                {selectMode && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleItemSelection(item.id);
-                    }}
-                    className="absolute top-3 left-3 z-10 p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    {selectedItems.has(item.id) ? (
-                      <CheckSquare className="w-5 h-5 text-purple-600" />
-                    ) : (
-                      <Square className="w-5 h-5 text-gray-600" />
-                    )}
-                  </button>
-                )}
-
-                {/* Type Badge */}
-                {item.type && (
-                  <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                    {item.type === 'header' ? '📸' : item.type === 'profile' ? '👤' : (item.isVideo || item.type === 'video') ? '🎬' : '📷'}
-                  </div>
-                )}
-              </div>
-
-              {/* Info */}
-              {item.title && (
-                <div className="p-3 bg-white">
-                  <p className="font-medium text-gray-900 text-sm truncate">{item.title}</p>
-                  {item.uploadedAt && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(item.uploadedAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              )}
-            </motion.div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Empty State */}
-        {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').length === 0 && (
-          <div className="text-center py-24">
-            <div className="text-6xl mb-4">📷</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">No photos yet</h2>
-            <p className="text-gray-600">Be the first to share your memories!</p>
-          </div>
-        )}
       </div>
     </div>
   );
