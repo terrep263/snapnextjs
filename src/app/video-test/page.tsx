@@ -99,24 +99,74 @@ export default function VideoTestPage() {
             <button
               onClick={() => {
                 console.log('=== VIDEO ELEMENT DEBUG ===');
+                console.log('User Agent:', navigator.userAgent);
+                console.log('Platform:', navigator.platform);
+                console.log('Viewport:', window.innerWidth, 'x', window.innerHeight);
+
                 const videos = document.querySelectorAll('video');
+                console.log('Total videos found:', videos.length);
+
                 videos.forEach((v, i) => {
                   const computed = window.getComputedStyle(v);
-                  console.log(`Video ${i}:`, {
+                  const rect = v.getBoundingClientRect();
+                  console.log(`\nVideo ${i}:`, {
                     src: v.src,
+                    // Intrinsic dimensions
+                    videoWidth: v.videoWidth,
+                    videoHeight: v.videoHeight,
+                    // Attributes
+                    attrWidth: v.getAttribute('width'),
+                    attrHeight: v.getAttribute('height'),
+                    // Client dimensions
+                    clientWidth: v.clientWidth,
+                    clientHeight: v.clientHeight,
+                    offsetWidth: v.offsetWidth,
+                    offsetHeight: v.offsetHeight,
+                    // Computed styles
                     display: computed.display,
                     visibility: computed.visibility,
                     opacity: computed.opacity,
                     width: computed.width,
                     height: computed.height,
+                    minWidth: computed.minWidth,
+                    minHeight: computed.minHeight,
+                    maxWidth: computed.maxWidth,
+                    maxHeight: computed.maxHeight,
                     zIndex: computed.zIndex,
                     position: computed.position,
+                    // Bounding rect
+                    rect: {
+                      width: rect.width,
+                      height: rect.height,
+                      top: rect.top,
+                      left: rect.left,
+                    },
+                    // Video state
+                    readyState: v.readyState,
+                    networkState: v.networkState,
+                    paused: v.paused,
+                    ended: v.ended,
+                    error: v.error,
+                  });
+                });
+
+                // Check Fancybox containers
+                const fancyboxContainers = document.querySelectorAll('[class*="fancybox"]');
+                console.log('\nFancybox containers found:', fancyboxContainers.length);
+                fancyboxContainers.forEach((el, i) => {
+                  const computed = window.getComputedStyle(el);
+                  console.log(`Fancybox container ${i}:`, {
+                    className: el.className,
+                    display: computed.display,
+                    width: computed.width,
+                    height: computed.height,
+                    opacity: computed.opacity,
                   });
                 });
               }}
               className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
             >
-              Debug All Videos in Console
+              Debug All Videos in Console (Extended)
             </button>
           </div>
         </div>

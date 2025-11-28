@@ -89,7 +89,7 @@ export default function AppGallery({
         // Ensure HTML5 video works properly
         Html: {
           videoAutoplay: false,
-          videoTpl: '<video class="fancybox__html5video" playsinline controls controlsList="nodownload" poster="{{poster}}" style="width:100%;height:auto;max-height:90vh;object-fit:contain;background:#000;display:block;"><source src="{{src}}" type="{{format}}" />Sorry, your browser doesn\'t support HTML5 video.</video>',
+          videoTpl: '<video class="fancybox__html5video" playsinline controls controlsList="nodownload" poster="{{poster}}" width="1280" height="720" style="width:100%;height:auto;min-height:240px;max-height:90vh;object-fit:contain;background:#000;display:block;"><source src="{{src}}" type="video/mp4" /><source src="{{src}}" type="video/webm" /><source src="{{src}}" />Sorry, your browser doesn\'t support HTML5 video.</video>',
         },
         // Make sure video is visible
         animated: false,
@@ -108,7 +108,37 @@ export default function AppGallery({
                 videoEl.style.visibility = 'visible';
                 videoEl.style.opacity = '1';
                 videoEl.style.zIndex = '9999';
-                console.log('🎬 Video element revealed:', videoEl);
+                videoEl.style.minHeight = '240px';
+                videoEl.style.minWidth = '320px';
+
+                // Force video to load
+                videoEl.load();
+
+                console.log('🎬 Video element revealed:', {
+                  src: videoEl.src,
+                  videoWidth: videoEl.videoWidth,
+                  videoHeight: videoEl.videoHeight,
+                  clientWidth: videoEl.clientWidth,
+                  clientHeight: videoEl.clientHeight,
+                  readyState: videoEl.readyState,
+                  networkState: videoEl.networkState,
+                });
+              }
+            }
+          },
+          done: (fancybox: any, slide: any) => {
+            // Additional check after everything is done
+            if (slide.type === 'html5video') {
+              const videoEl = slide.$el?.querySelector('video');
+              if (videoEl) {
+                const computed = window.getComputedStyle(videoEl);
+                console.log('🎬 Video final state:', {
+                  display: computed.display,
+                  width: computed.width,
+                  height: computed.height,
+                  opacity: computed.opacity,
+                  visibility: computed.visibility,
+                });
               }
             }
           },

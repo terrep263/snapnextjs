@@ -84,7 +84,9 @@ body {
 .fancybox__content video {
   display: block !important;
   width: 100% !important;
+  min-width: 320px !important;
   height: auto !important;
+  min-height: 240px !important;
   max-width: 100% !important;
   max-height: 90vh !important;
   object-fit: contain !important;
