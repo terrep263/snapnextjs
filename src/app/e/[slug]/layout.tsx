@@ -95,21 +95,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // Get first 3 photos for this event (ordered by upload time)
-    const { data: photos } = await supabase
+    // Try to find a photo that meets Facebook's OG image requirements (1200x630 minimum)
+    // First, look for photos with dimensions stored that are large enough
+    const { data: largePhotos } = await supabase
       .from('photos')
-      .select('url, thumbnail_url')
+      .select('url, thumbnail_url, width, height')
       .eq('event_id', event.id)
+      .gte('width', 1200)
+      .gte('height', 630)
       .order('created_at', { ascending: true })
-      .limit(3);
+      .limit(1);
 
-    // Use 3rd photo as OG image, fallback to 2nd, then 1st, then default
+    // Fallback: get any photos if no large ones found
+    const { data: allPhotos } = await supabase
+      .from('photos')
+      .select('url, thumbnail_url, width, height')
+      .eq('event_id', event.id)
+      .order('width', { ascending: false, nullsFirst: false })
+      .limit(5);
+
+    // Use the largest photo available, preferring ones that meet FB requirements
     let previewImage = 'https://snapworxx.com/og-default.jpg';
+    let selectedPhoto = largePhotos?.[0] || allPhotos?.[0];
 
-    if (photos && photos.length > 0) {
-      // Prefer 3rd photo, fallback to 2nd, then 1st
-      const selectedPhoto = photos[2] || photos[1] || photos[0];
-      const rawUrl = selectedPhoto?.url || selectedPhoto?.thumbnail_url || '';
+    if (selectedPhoto) {
+      const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
       if (rawUrl) {
         // First transform to custom domain, then apply OG image resize
         const customDomainUrl = transformToCustomDomain(rawUrl);
@@ -122,6 +132,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const title = `${event.name} | Snapworxx`;
     const description = 'View and share event photos on SnapWorxx';
+
 
 
     return {
