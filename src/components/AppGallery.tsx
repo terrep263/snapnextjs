@@ -51,18 +51,28 @@ export default function AppGallery({
         // Use poster if available, otherwise use a data URL placeholder
         const videoThumb = item.poster || item.thumb || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23000" width="100" height="100"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-size="40"%3E▶%3C/text%3E%3C/svg%3E';
 
+        // Use 'html' type with custom video HTML to avoid base64 conversion
         return {
           src: item.src,
-          type: 'html5video' as const,
+          type: 'html' as const,
           thumb: videoThumb,
           caption: item.title || '',
-          poster: item.poster,
-          html5video: {
-            controls: true,
-            playsinline: true,
-            preload: 'metadata',
-            style: 'width: 100%; height: auto; max-height: 90vh; object-fit: contain; background: #000;',
-          },
+          html: `
+            <video
+              class="fancybox__html5video"
+              playsinline
+              controls
+              preload="metadata"
+              width="1280"
+              height="720"
+              poster="${item.poster || ''}"
+              style="width:100%;height:auto;min-height:240px;max-height:90vh;object-fit:contain;background:#000;display:block;"
+            >
+              <source src="${item.src}" type="video/mp4" />
+              <source src="${item.src}" type="video/webm" />
+              Sorry, your browser doesn't support HTML5 video.
+            </video>
+          `,
         };
       }
       
