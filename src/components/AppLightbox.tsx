@@ -15,6 +15,33 @@ import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
 
+// Custom CSS for video slides - ensure video is visible
+const videoStyles = `
+  .yarl__slide video {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  .yarl__slide_video {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleId = 'yarl-video-fix';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = videoStyles;
+    document.head.appendChild(style);
+  }
+}
+
 // Define video slide type for the Video plugin
 interface SlideVideo {
   type: 'video';
