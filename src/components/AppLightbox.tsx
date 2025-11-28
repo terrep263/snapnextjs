@@ -226,10 +226,10 @@ export default function AppLightbox({
         delay: 5000,
       }}
       video={{
-        autoPlay: true,
+        autoPlay: false,  // Don't autoplay - let user click play for sound
         controls: true,
         playsInline: true,
-        muted: true, // Start muted for autoplay policy, user can unmute
+        muted: false,     // Sound enabled when user clicks play
       }}
       carousel={{
         finite: false,
