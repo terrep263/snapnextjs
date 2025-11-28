@@ -87,8 +87,9 @@ function transformSlide(slide: LightboxSlide): SlideImage | SlideVideo {
       type: 'video',
       sources,
       poster: slide.poster || undefined,
-      width: slide.width || 1280,
-      height: slide.height || 720,
+      // Use larger default dimensions for better display
+      width: slide.width || 1920,
+      height: slide.height || 1080,
     } as SlideVideo;
   }
   
@@ -236,6 +237,7 @@ export default function AppLightbox({
         playsInline: true,
         preload: 'auto',
         muted: false,
+        crossOrigin: undefined,
       }}
       carousel={{
         finite: false,
