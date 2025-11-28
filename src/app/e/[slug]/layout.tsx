@@ -63,10 +63,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     console.log('Generating metadata for slug:', slug);
     
     // Get event data - try by slug first, then by id
-    let event = null;
+    let event: any = null;
     let eventError = null;
     
-    // Try slug first - query basic fields first, cover_photo_url may not exist yet
+    // Try slug first
     const { data: eventBySlug, error: slugError } = await supabase
       .from('events')
       .select('id, name, header_image')
@@ -74,20 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       .single();
     
     if (eventBySlug) {
-      event = eventBySlug;
-      // Try to get cover_photo_url separately (column may not exist)
-      try {
-        const { data: coverData } = await supabase
-          .from('events')
-          .select('cover_photo_url')
-          .eq('id', eventBySlug.id)
-          .single();
-        if (coverData?.cover_photo_url) {
-          event.cover_photo_url = coverData.cover_photo_url;
-        }
-      } catch (e) {
-        // cover_photo_url column may not exist yet, ignore
-      }
+      event = { ...eventBySlug };
     } else {
       // Try by id as fallback
       const { data: eventById, error: idError } = await supabase
@@ -96,24 +83,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         .eq('id', slug)
         .single();
       
-      event = eventById;
-      eventError = idError;
-      
-      // Try to get cover_photo_url separately
       if (eventById) {
-        try {
-          const { data: coverData } = await supabase
-            .from('events')
-            .select('cover_photo_url')
-            .eq('id', eventById.id)
-            .single();
-          if (coverData?.cover_photo_url) {
-            event.cover_photo_url = coverData.cover_photo_url;
-          }
-        } catch (e) {
-          // cover_photo_url column may not exist yet, ignore
-        }
+        event = { ...eventById };
       }
+      eventError = idError;
     }
 
     console.log('Event query result:', { event, eventError });
@@ -126,40 +99,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // PRIORITY 1: Use cover_photo_url if set by event creator
-    // This is the best option as it's specifically chosen for social sharing
+    // Find a photo for OG image - prefer landscape photos
     let previewImage = 'https://snapworxx.com/og-default.jpg';
     
-    if (event.cover_photo_url) {
-      const customDomainUrl = transformToCustomDomain(event.cover_photo_url);
-      previewImage = transformToOgImage(customDomainUrl);
-      console.log('Using cover_photo_url for OG image');
-    } else {
-      // PRIORITY 2: Try to find a LANDSCAPE photo (crops better with cover mode)
-      const { data: landscapePhotos } = await supabase
-        .from('photos')
-        .select('url, thumbnail_url, width, height')
-        .eq('event_id', event.id)
-        .not('width', 'is', null)
-        .not('height', 'is', null)
-        .order('created_at', { ascending: true })
-        .limit(20);
-      
+    // Try to find a LANDSCAPE photo (crops better with cover mode)
+    const { data: photos } = await supabase
+      .from('photos')
+      .select('url, thumbnail_url, width, height')
+      .eq('event_id', event.id)
+      .order('created_at', { ascending: true })
+      .limit(20);
+    
+    if (photos && photos.length > 0) {
       // Filter for landscape orientation (width > height) and large enough
-      const suitablePhotos = landscapePhotos?.filter(p => 
+      const landscapePhotos = photos.filter(p => 
         p.width && p.height && p.width > p.height && p.width >= 800
-      ) || [];
+      );
 
-      // Fallback: get any photos if no landscape ones found
-      const { data: allPhotos } = await supabase
-        .from('photos')
-        .select('url, thumbnail_url, width, height')
-        .eq('event_id', event.id)
-        .order('created_at', { ascending: true })
-        .limit(5);
-
-      // Prefer landscape photos, then fall back to any photo
-      let selectedPhoto = suitablePhotos[0] || allPhotos?.[0];
+      // Prefer landscape photos, then fall back to first photo
+      const selectedPhoto = landscapePhotos[0] || photos[0];
 
       if (selectedPhoto) {
         const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
@@ -167,10 +125,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           const customDomainUrl = transformToCustomDomain(rawUrl);
           previewImage = transformToOgImage(customDomainUrl);
         }
-      } else if (event.header_image) {
-        const customDomainUrl = transformToCustomDomain(event.header_image);
-        previewImage = transformToOgImage(customDomainUrl);
       }
+    } else if (event.header_image) {
+      const customDomainUrl = transformToCustomDomain(event.header_image);
+      previewImage = transformToOgImage(customDomainUrl);
     }
 
     const title = `${event.name} | Snapworxx`;
