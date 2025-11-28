@@ -88,15 +88,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     // Use 3rd photo as OG image, fallback to 2nd, then 1st, then default
     let previewImage = 'https://snapworxx.com/og-default.jpg';
+    let rawPhotoUrl = '';
 
     if (photos && photos.length > 0) {
       // Prefer 3rd photo, fallback to 2nd, then 1st
       const selectedPhoto = photos[2] || photos[1] || photos[0];
-      const rawUrl = selectedPhoto?.url || selectedPhoto?.thumbnail_url || previewImage;
+      rawPhotoUrl = selectedPhoto?.url || selectedPhoto?.thumbnail_url || '';
       // Transform to custom domain for proper sharing
-      previewImage = transformToCustomDomain(rawUrl);
+      if (rawPhotoUrl) {
+        rawPhotoUrl = transformToCustomDomain(rawPhotoUrl);
+        // Use resize API for proper 1200x630 dimensions
+        previewImage = `https://snapworxx.com/api/og-image?url=${encodeURIComponent(rawPhotoUrl)}`;
+      }
     } else if (event.header_image) {
-      previewImage = transformToCustomDomain(event.header_image);
+      rawPhotoUrl = transformToCustomDomain(event.header_image);
+      previewImage = `https://snapworxx.com/api/og-image?url=${encodeURIComponent(rawPhotoUrl)}`;
     }
 
     const title = `${event.name} | Snapworxx`;
@@ -114,7 +120,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           {
             url: previewImage,
             width: 1200,
-            height: 1200,
+            height: 630,
             alt: event.name,
           },
         ],
