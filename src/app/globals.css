@@ -89,12 +89,18 @@ body {
   max-height: 90vh !important;
   object-fit: contain !important;
   background: #000 !important;
+  position: relative !important;
+  z-index: 9999 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .fancybox__slide video {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  position: relative !important;
+  z-index: 9999 !important;
 }
 
 /* Ensure Fancybox video container is properly sized */
@@ -104,9 +110,38 @@ body {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+  position: relative !important;
+  z-index: 9998 !important;
+  background: #000 !important;
 }
 
 .fancybox__html5video video {
   max-width: 100% !important;
   max-height: 100% !important;
+  position: relative !important;
+  z-index: 9999 !important;
+}
+
+/* Remove any overlays that might cover the video */
+.fancybox__content::before,
+.fancybox__content::after,
+.fancybox__slide::before,
+.fancybox__slide::after {
+  display: none !important;
+}
+
+/* Ensure carousel and container don't interfere */
+.fancybox__carousel,
+.fancybox__viewport {
+  background: transparent !important;
+}
+
+/* Make sure the content area is visible */
+.fancybox__content {
+  background: #000 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }

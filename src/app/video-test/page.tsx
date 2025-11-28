@@ -80,7 +80,44 @@ export default function VideoTestPage() {
               <li>If test #1 doesn't work, check the video file path and browser console for errors</li>
               <li>Open browser DevTools (F12) and check for any JavaScript errors</li>
               <li>In DevTools, inspect the video element when lightbox is open to check its CSS properties</li>
+              <li>Check if video element has width/height set (should show dimensions in inspector)</li>
+              <li>Look for any elements with higher z-index covering the video</li>
+              <li>Check opacity and visibility of video element and all parent containers</li>
             </ol>
+          </div>
+
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded">
+            <p className="text-sm font-semibold text-red-800 mb-2">
+              🔍 Quick Debug: When lightbox opens, check:
+            </p>
+            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+              <li>Does the video element exist in the DOM?</li>
+              <li>What are the computed width and height of the video?</li>
+              <li>Is opacity: 1 and visibility: visible?</li>
+              <li>Any overlays with higher z-index?</li>
+            </ul>
+            <button
+              onClick={() => {
+                console.log('=== VIDEO ELEMENT DEBUG ===');
+                const videos = document.querySelectorAll('video');
+                videos.forEach((v, i) => {
+                  const computed = window.getComputedStyle(v);
+                  console.log(`Video ${i}:`, {
+                    src: v.src,
+                    display: computed.display,
+                    visibility: computed.visibility,
+                    opacity: computed.opacity,
+                    width: computed.width,
+                    height: computed.height,
+                    zIndex: computed.zIndex,
+                    position: computed.position,
+                  });
+                });
+              }}
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+            >
+              Debug All Videos in Console
+            </button>
           </div>
         </div>
       </div>
