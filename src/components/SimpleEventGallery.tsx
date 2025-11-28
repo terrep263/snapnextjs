@@ -625,23 +625,23 @@ export default function SimpleEventGallery({
             const galleryItems = allItems.filter(item => item.type !== 'header' && item.type !== 'profile');
             
             // Convert items to react-photo-album format
-            const photos = galleryItems.map((item, index) => ({
+            const photos = galleryItems.map((item) => ({
               src: item.url,
               width: 1200,
               height: item.isVideo ? 675 : 800, // 16:9 for video, varied for images
               alt: item.title || 'Gallery item',
-              // Store original data for render function
-              originalItem: item,
-              originalIndex: index,
+              key: item.id,
             }));
 
-            // Custom render function for each photo
-            const renderPhoto = ({ photo, imageProps, wrapperStyle }: any) => {
-              const item = photo.originalItem as GalleryItem;
-              const index = photo.originalIndex as number;
+            // Custom render function for each photo - use index from render props
+            const renderPhoto = ({ photo, index, imageProps, wrapperStyle }: any) => {
+              // Get the original item from galleryItems using the index
+              const item = galleryItems[index];
+              if (!item) return null;
               
               return (
                 <div
+                  key={item.id}
                   style={{ ...wrapperStyle, position: 'relative' }}
                   className={`group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ${
                     selectMode && selectedItems.has(item.id)
