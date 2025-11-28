@@ -255,14 +255,6 @@ export default function AppLightbox({
       }}
       styles={{
         container: { backgroundColor: 'rgba(0, 0, 0, 0.95)' },
-        video: { 
-          width: '100%',
-          height: '100%',
-          maxWidth: '100vw',
-          maxHeight: '80vh',
-          objectFit: 'contain',
-          background: 'transparent',
-        },
         slide: {
           display: 'flex',
           alignItems: 'center',
@@ -272,6 +264,40 @@ export default function AppLightbox({
       render={{
         buttonPrev: slides.length <= 1 ? () => null : undefined,
         buttonNext: slides.length <= 1 ? () => null : undefined,
+        // Custom video render to bypass the Video plugin issues
+        slide: ({ slide }) => {
+          if (slide.type === 'video' && 'sources' in slide) {
+            const videoSrc = slide.sources?.[0]?.src || '';
+            return (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                padding: '16px'
+              }}>
+                <video
+                  src={videoSrc}
+                  controls
+                  autoPlay
+                  playsInline
+                  preload="auto"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '80vh',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                  }}
+                />
+              </div>
+            );
+          }
+          // Return undefined to use default rendering for images
+          return undefined;
+        },
       }}
     />
   );
