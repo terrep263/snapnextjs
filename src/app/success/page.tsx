@@ -67,6 +67,16 @@ function SuccessContent() {
       // Store event details in localStorage for easy access
       localStorage.setItem('currentEvent', JSON.stringify(event));
       
+      // Store ownership for this event
+      if (event.owner_email) {
+        localStorage.setItem('userEmail', event.owner_email);
+      }
+      const ownedEvents = JSON.parse(localStorage.getItem('ownedEvents') || '[]');
+      if (!ownedEvents.includes(event.id)) {
+        ownedEvents.push(event.id);
+        localStorage.setItem('ownedEvents', JSON.stringify(ownedEvents));
+      }
+      
     } catch (error) {
       console.error('Error verifying payment:', error);
       // For development, still show success but with mock data

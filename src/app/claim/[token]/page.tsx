@@ -100,8 +100,20 @@ export default function ClaimEventPage() {
         return;
       }
 
-      // Success - redirect to event dashboard
+      // Success - store ownership in localStorage
       console.log('✅ Free event created:', result);
+      
+      // Store user email for ownership verification
+      localStorage.setItem('userEmail', formData.emailAddress);
+      
+      // Store owned event IDs
+      const ownedEvents = JSON.parse(localStorage.getItem('ownedEvents') || '[]');
+      if (!ownedEvents.includes(result.eventId)) {
+        ownedEvents.push(result.eventId);
+        localStorage.setItem('ownedEvents', JSON.stringify(ownedEvents));
+      }
+      
+      // Redirect to event dashboard
       router.push(`/dashboard/${result.eventId}?claimed=true`);
     } catch (err) {
       console.error('Error creating event:', err);

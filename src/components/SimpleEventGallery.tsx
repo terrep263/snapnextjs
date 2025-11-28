@@ -29,6 +29,7 @@ interface SimpleEventGalleryProps {
   eventId?: string; // For dashboard navigation
   isSharedView?: boolean; // If true, hide upload button (viewing shared gallery)
   eventCode?: string; // Event code for share captions
+  viewMode?: 'public' | 'owner' | 'admin'; // Controls what features are available
 }
 
 export default function SimpleEventGallery({
@@ -42,8 +43,14 @@ export default function SimpleEventGallery({
   eventSlug,
   eventId,
   isSharedView = false,
-  eventCode = ''
+  eventCode = '',
+  viewMode = 'public' // default to public (most restricted)
 }: SimpleEventGalleryProps) {
+  // Determine permissions based on viewMode
+  const canUpload = viewMode === 'owner' || viewMode === 'admin';
+  const canDelete = viewMode === 'owner' || viewMode === 'admin';
+  const canManage = viewMode === 'admin';
+  
   console.log('🎨 SimpleEventGallery mounted with:', { 
     eventName, 
     headerImageExists: !!headerImage,
@@ -576,7 +583,7 @@ export default function SimpleEventGallery({
             <Menu className="w-6 h-6 text-gray-700" />
           </button>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">{eventName}</h1>
-          {!isSharedView && (
+          {canUpload && !isSharedView && (
             <a
               href={`${window.location.pathname}/upload`}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-sm"
@@ -854,17 +861,19 @@ export default function SimpleEventGallery({
                       <Download className="w-4 h-4" />
                       <span className="sm:inline">Download</span>
                     </button>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        await handleDeletePhoto(item.id);
-                      }}
-                      disabled={deleting === item.id}
-                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span className="sm:inline">Delete</span>
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await handleDeletePhoto(item.id);
+                        }}
+                        disabled={deleting === item.id}
+                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="sm:inline">Delete</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

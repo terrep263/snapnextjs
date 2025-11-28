@@ -24,6 +24,50 @@ export default function EventPage() {
   const [passwordError, setPasswordError] = useState('');
   const [headerImage, setHeaderImage] = useState<string>('');
   const [profileImage, setProfileImage] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'public' | 'owner' | 'admin'>('public');
+
+  // Check user permissions
+  useEffect(() => {
+    checkUserPermissions();
+  }, [eventData]);
+
+  const checkUserPermissions = () => {
+    if (!eventData) return;
+    
+    // Check if admin
+    const adminSession = localStorage.getItem('adminSession');
+    if (adminSession) {
+      try {
+        const session = JSON.parse(adminSession);
+        if (session.isAuthenticated) {
+          setViewMode('admin');
+          return;
+        }
+      } catch (e) {}
+    }
+    
+    // Check if event owner (by email match)
+    const userEmail = localStorage.getItem('userEmail');
+    if (userEmail && eventData.owner_email && userEmail.toLowerCase() === eventData.owner_email.toLowerCase()) {
+      setViewMode('owner');
+      return;
+    }
+    
+    // Check if this user created/claimed this specific event
+    const ownedEvents = localStorage.getItem('ownedEvents');
+    if (ownedEvents) {
+      try {
+        const events = JSON.parse(ownedEvents);
+        if (events.includes(eventData.id)) {
+          setViewMode('owner');
+          return;
+        }
+      } catch (e) {}
+    }
+    
+    // Default to public
+    setViewMode('public');
+  };
 
   // Load real event from database
   useEffect(() => {
@@ -309,6 +353,8 @@ export default function EventPage() {
         }
         isFree={eventData.is_free}
         isFreebie={eventData.is_freebie}
+        viewMode={viewMode}
+        eventId={eventData.id}
         photos={photos.map(photo => ({
           id: photo.id,
           url: photo.url || photo.file_path || photo.storage_path || '',
