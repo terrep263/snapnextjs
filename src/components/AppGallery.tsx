@@ -47,10 +47,14 @@ export default function AppGallery({
       const isVideo = item.type === 'video' || isVideoUrl(item.src);
       
       if (isVideo) {
+        // Prevent Fancybox from trying to load video URL as image thumbnail
+        // Use poster if available, otherwise use a data URL placeholder
+        const videoThumb = item.poster || item.thumb || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23000" width="100" height="100"/%3E%3Ctext fill="%23fff" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-size="40"%3E▶%3C/text%3E%3C/svg%3E';
+
         return {
           src: item.src,
           type: 'html5video' as const,
-          thumb: item.thumb || item.poster,
+          thumb: videoThumb,
           caption: item.title || '',
           poster: item.poster,
           html5video: {
