@@ -52,8 +52,8 @@ export default function SimpleEventGallery({
   const canDelete = viewMode === 'owner' || viewMode === 'admin';
   const canManage = viewMode === 'admin';
   
-  console.log('🎨 SimpleEventGallery mounted with:', { 
-    eventName, 
+  console.log('🎨 SimpleEventGallery mounted with:', {
+    eventName,
     headerImageExists: !!headerImage,
     headerImagePreview: headerImage ? headerImage.substring(0, 50) : 'null',
     profileImageExists: !!profileImage,
@@ -63,12 +63,12 @@ export default function SimpleEventGallery({
     isFree,
     isFreebie
   });
-  
+
   // Determine if bulk download is allowed
   // Premium events and freebie events get bulk download
   // Basic/free promo events only get individual downloads
   const allowBulkDownload = packageType === 'premium' || isFreebie || packageType === 'freebie';
-  
+
   const [navOpen, setNavOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -79,26 +79,37 @@ export default function SimpleEventGallery({
   const [deleting, setDeleting] = useState<string | null>(null);
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper function to detect if URL is a video
+  const isVideoUrl = (url: string): boolean => {
+    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.wmv', '.flv'];
+    const lowercaseUrl = url.toLowerCase();
+    return videoExtensions.some(ext => lowercaseUrl.includes(ext));
+  };
+
   // Build gallery items including header and profile images
   const allItems: GalleryItem[] = [];
   if (headerImage) {
-    console.log('📸 Adding header image to gallery');
+    const isHeaderVideo = isVideoUrl(headerImage);
+    console.log('📸 Adding header to gallery', isHeaderVideo ? '(VIDEO)' : '(image)');
     allItems.push({
       id: 'header',
       url: headerImage,
       title: 'Event Header',
-      type: 'header'
+      type: 'header',
+      isVideo: isHeaderVideo
     });
   } else {
     console.log('⚠️ No header image to add');
   }
   if (profileImage) {
-    console.log('👤 Adding profile image to gallery');
+    const isProfileVideo = isVideoUrl(profileImage);
+    console.log('👤 Adding profile to gallery', isProfileVideo ? '(VIDEO)' : '(image)');
     allItems.push({
       id: 'profile',
       url: profileImage,
       title: 'Event Profile',
-      type: 'profile'
+      type: 'profile',
+      isVideo: isProfileVideo
     });
   } else {
     console.log('⚠️ No profile image to add');

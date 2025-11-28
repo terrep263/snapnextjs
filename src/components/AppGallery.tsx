@@ -84,6 +84,8 @@ export default function AppGallery({
       
       Fancybox.show(galleryItems, {
         startIndex: index,
+        // Disable thumbnail generation to prevent video URL decoding errors
+        Thumbs: false,
         on: {
           close: () => {
             isOpenRef.current = false;
