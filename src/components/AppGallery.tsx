@@ -1,23 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import LightGallery from 'lightgallery/react';
-import type { LightGallery as LightGalleryType } from 'lightgallery/lightgallery';
-
-// Import plugins
-import lgVideo from 'lightgallery/plugins/video';
-import lgThumbnail from 'lightgallery/plugins/thumbnail';
-import lgZoom from 'lightgallery/plugins/zoom';
-import lgShare from 'lightgallery/plugins/share';
-import lgFullscreen from 'lightgallery/plugins/fullscreen';
-
-// Import styles
-import 'lightgallery/css/lightgallery.css';
-import 'lightgallery/css/lg-video.css';
-import 'lightgallery/css/lg-thumbnail.css';
-import 'lightgallery/css/lg-zoom.css';
-import 'lightgallery/css/lg-share.css';
-import 'lightgallery/css/lg-fullscreen.css';
+import { Fancybox } from '@fancyapps/ui';
+import '@fancyapps/ui/dist/fancybox/fancybox.css';
 
 export interface GalleryItem {
   id: string;
@@ -53,82 +38,66 @@ export default function AppGallery({
   onIndexChange,
   eventName = '',
 }: AppGalleryProps) {
-  const lightGalleryRef = useRef<LightGalleryType | null>(null);
+  const fancyboxInstance = useRef<any>(null);
+  const isOpenRef = useRef(false);
 
-  // Open gallery when `open` becomes true
-  useEffect(() => {
-    if (open && lightGalleryRef.current) {
-      lightGalleryRef.current.openGallery(index);
-    }
-  }, [open, index]);
-
-  const onInit = useCallback((detail: { instance: LightGalleryType }) => {
-    lightGalleryRef.current = detail.instance;
-    // If already open, open the gallery
-    if (open) {
-      detail.instance.openGallery(index);
-    }
-  }, [open, index]);
-
-  const onAfterClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
-
-  const onSlideChange = useCallback((detail: { index: number }) => {
-    onIndexChange?.(detail.index);
-  }, [onIndexChange]);
-
-  // Transform items to LightGallery format
-  const galleryItems = items.map((item) => {
-    const isVideo = item.type === 'video' || isVideoUrl(item.src);
-    
-    if (isVideo) {
-      return {
-        video: JSON.stringify({
-          source: [{ src: item.src, type: 'video/mp4' }],
-          attributes: { 
-            preload: 'auto', 
+  // Transform items to Fancybox format
+  const getGalleryItems = useCallback(() => {
+    return items.map((item) => {
+      const isVideo = item.type === 'video' || isVideoUrl(item.src);
+      
+      if (isVideo) {
+        return {
+          src: item.src,
+          type: 'html5video' as const,
+          thumb: item.thumb || item.poster,
+          caption: item.title || '',
+          html5video: {
             controls: true,
             playsinline: true,
           },
-        }),
-        thumb: item.thumb || item.poster || item.src,
-        poster: item.poster || item.thumb,
-        subHtml: item.title ? `<h4>${item.title}</h4>` : '',
+        };
+      }
+      
+      return {
+        src: item.src,
+        type: 'image' as const,
+        thumb: item.thumb || item.src,
+        caption: item.title || '',
       };
-    }
-    
-    return {
-      src: item.src,
-      thumb: item.thumb || item.src,
-      subHtml: item.title ? `<h4>${item.title}</h4>` : '',
-    };
-  });
+    });
+  }, [items]);
 
-  return (
-    <LightGallery
-      onInit={onInit}
-      onAfterClose={onAfterClose}
-      onAfterSlide={onSlideChange}
-      speed={300}
-      plugins={[lgVideo, lgThumbnail, lgZoom, lgShare, lgFullscreen]}
-      dynamic={true}
-      dynamicEl={galleryItems as any}
-      download={true}
-      counter={true}
-      closable={true}
-      swipeToClose={true}
-      closeOnTap={true}
-      videojs={false}
-      videoMaxSize="1920-1080"
-      loadYouTubePoster={false}
-      mobileSettings={{
-        controls: true,
-        showCloseIcon: true,
-        download: true,
-      }}
-    >
-      {/* Hidden trigger - we control opening programmatically */}
-    </LightGallery>
-  );
+  // Open Fancybox when `open` becomes true
+  useEffect(() => {
+    if (open && !isOpenRef.current && items.length > 0) {
+      isOpenRef.current = true;
+      
+      const galleryItems = getGalleryItems();
+      
+      Fancybox.show(galleryItems, {
+        startIndex: index,
+        on: {
+          close: () => {
+            isOpenRef.current = false;
+            onClose();
+          },
+        },
+      } as any);
+    } else if (!open && isOpenRef.current) {
+      // Close if open becomes false
+      Fancybox.close();
+      isOpenRef.current = false;
+    }
+  }, [open, index, items, getGalleryItems, onClose, onIndexChange]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      Fancybox.close();
+    };
+  }, []);
+
+  // This component doesn't render anything visible - Fancybox handles the UI
+  return null;
 }
