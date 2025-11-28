@@ -42,20 +42,43 @@ interface AppLightboxProps {
   eventCode?: string;
 }
 
+// Detect video MIME type from URL
+function getVideoMimeType(url: string): string {
+  const ext = url.split('.').pop()?.toLowerCase().split('?')[0] || '';
+  const mimeTypes: Record<string, string> = {
+    'mp4': 'video/mp4',
+    'm4v': 'video/mp4',
+    'webm': 'video/webm',
+    'ogv': 'video/ogg',
+    'ogg': 'video/ogg',
+    'mov': 'video/quicktime',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+  };
+  return mimeTypes[ext] || 'video/mp4';
+}
+
 // Transform our slide format to yet-another-react-lightbox format
 function transformSlide(slide: LightboxSlide): SlideImage | SlideVideo {
   if (slide.type === 'video') {
+    const mimeType = getVideoMimeType(slide.src);
+    
+    // Provide multiple source formats for better compatibility
+    const sources = [
+      { src: slide.src, type: mimeType },
+    ];
+    
+    // If not mp4, also add mp4 as fallback (browser will try in order)
+    if (mimeType !== 'video/mp4') {
+      sources.push({ src: slide.src, type: 'video/mp4' });
+    }
+    
     return {
       type: 'video',
-      sources: [
-        {
-          src: slide.src,
-          type: 'video/mp4',
-        },
-      ],
-      poster: slide.poster,
-      width: slide.width || 1920,
-      height: slide.height || 1080,
+      sources,
+      poster: slide.poster || undefined,
+      width: slide.width || 1280,
+      height: slide.height || 720,
     } as SlideVideo;
   }
   
