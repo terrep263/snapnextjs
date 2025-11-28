@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import AppGallery, { GalleryItem } from '@/components/AppGallery';
+import { Lightbox } from '@/components/Gallery';
+import type { GalleryItem } from '@/components/Gallery';
 
 export default function VideoTestPage() {
   const [open, setOpen] = useState(false);
@@ -10,9 +11,10 @@ export default function VideoTestPage() {
   const testItems: GalleryItem[] = [
     {
       id: '1',
-      src: '/12526894_720_1280_30fps.mp4',
+      url: '/12526894_720_1280_30fps.mp4',
       type: 'video',
       title: 'Test Video',
+      isVideo: true,
     },
   ];
 
@@ -37,11 +39,11 @@ export default function VideoTestPage() {
           </video>
         </div>
 
-        {/* Fancybox Test */}
+        {/* PhotoSwipe Lightbox Test */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">2. Fancybox Lightbox Video</h2>
+          <h2 className="text-xl font-semibold mb-4">2. PhotoSwipe Lightbox Video</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Click the button below to open the video in Fancybox lightbox.
+            Click the button below to open the video in PhotoSwipe lightbox.
           </p>
           <button
             onClick={() => setOpen(true)}
@@ -76,7 +78,7 @@ export default function VideoTestPage() {
             </p>
             <ol className="list-decimal list-inside text-sm text-blue-700 mt-2 space-y-1">
               <li>First, verify the direct video (test #1) plays correctly</li>
-              <li>If test #1 works but test #2 doesn't, it's a Fancybox CSS issue</li>
+              <li>If test #1 works but test #2 doesn't, it's a lightbox CSS issue</li>
               <li>If test #1 doesn't work, check the video file path and browser console for errors</li>
               <li>Open browser DevTools (F12) and check for any JavaScript errors</li>
               <li>In DevTools, inspect the video element when lightbox is open to check its CSS properties</li>
@@ -150,12 +152,12 @@ export default function VideoTestPage() {
                   });
                 });
 
-                // Check Fancybox containers
-                const fancyboxContainers = document.querySelectorAll('[class*="fancybox"]');
-                console.log('\nFancybox containers found:', fancyboxContainers.length);
-                fancyboxContainers.forEach((el, i) => {
+                // Check PhotoSwipe containers
+                const photoswipeContainers = document.querySelectorAll('[class*="pswp"]');
+                console.log('\nPhotoSwipe containers found:', photoswipeContainers.length);
+                photoswipeContainers.forEach((el, i) => {
                   const computed = window.getComputedStyle(el);
-                  console.log(`Fancybox container ${i}:`, {
+                  console.log(`PhotoSwipe container ${i}:`, {
                     className: el.className,
                     display: computed.display,
                     width: computed.width,
@@ -172,7 +174,7 @@ export default function VideoTestPage() {
         </div>
       </div>
 
-      <AppGallery
+      <Lightbox
         items={testItems}
         open={open}
         index={index}
