@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import Masonry from 'react-masonry-css';
 import { Download, ExternalLink, X, CheckSquare, Square, Download as DownloadIcon, Eye, Trash2, Share2, Play } from 'lucide-react';
+import AppLightbox, { LightboxSlide } from './AppLightbox';
 
 interface Photo {
   id: string;
@@ -24,7 +25,7 @@ interface MasonryGalleryProps {
 }
 
 export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDelete, layout = 'masonry' }: MasonryGalleryProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [imageLoadStates, setImageLoadStates] = useState<Record<string, boolean>>({});
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -46,11 +47,12 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDe
 
   const openLightbox = (photo: Photo) => {
     if (selectionMode) return;
-    setSelectedPhoto(photo);
+    const index = photos.findIndex(p => p.id === photo.id);
+    setSelectedIndex(index);
   };
 
   const closeLightbox = () => {
-    setSelectedPhoto(null);
+    setSelectedIndex(-1);
   };
 
   const toggleSelection = (photoId: string) => {
@@ -133,42 +135,7 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDe
     }
   };
 
-  // Keyboard navigation for lightbox
-  useEffect(() => {
-    if (!selectedPhoto) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id);
-      
-      switch (e.key) {
-        case 'Escape':
-          closeLightbox();
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (currentIndex > 0) {
-            setSelectedPhoto(photos[currentIndex - 1]);
-          }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          if (currentIndex < photos.length - 1) {
-            setSelectedPhoto(photos[currentIndex + 1]);
-          }
-          break;
-        case 'd':
-        case 'D':
-          if (onDownload) {
-            e.preventDefault();
-            onDownload(selectedPhoto);
-          }
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhoto, photos, onDownload]);
+  // AppLightbox handles keyboard navigation internally
 
   // Helper function to render individual photo items
   const renderPhotoItem = (photo: Photo) => {
@@ -444,128 +411,26 @@ export default function MasonryGallery({ photos, onDownload, onDownloadAll, onDe
         </div>
       )}
 
-      {/* Enhanced Lightbox Modal */}
-      {selectedPhoto && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
-          onClick={closeLightbox}
-        >
-          <div className="relative max-h-full max-w-full p-4" onClick={e => e.stopPropagation()}>
-            {/* Navigation & Controls Bar */}
-            <div className="absolute -top-16 left-0 right-0 flex items-center justify-between text-white">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-medium">
-                  {selectedPhoto.filename || 'Photo'}
-                </h3>
-                <span className="text-sm text-gray-300">
-                  {photos.findIndex(p => p.id === selectedPhoto.id) + 1} of {photos.length}
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* Navigation buttons */}
-                <button
-                  onClick={() => {
-                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id);
-                    const prevPhoto = photos[currentIndex - 1];
-                    if (prevPhoto) setSelectedPhoto(prevPhoto);
-                  }}
-                  disabled={photos.findIndex(p => p.id === selectedPhoto.id) === 0}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Previous photo"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    const currentIndex = photos.findIndex(p => p.id === selectedPhoto.id);
-                    const nextPhoto = photos[currentIndex + 1];
-                    if (nextPhoto) setSelectedPhoto(nextPhoto);
-                  }}
-                  disabled={photos.findIndex(p => p.id === selectedPhoto.id) === photos.length - 1}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Next photo"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                
-                <div className="w-px h-6 bg-white/20 mx-2" />
-                
-                {/* Action buttons */}
-                <button
-                  onClick={() => sharePhoto(selectedPhoto)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/20"
-                  title="Share photo"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-                
-                <button
-                  onClick={() => window.open(selectedPhoto.url, '_blank')}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/20"
-                  title="Open original"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </button>
-                
-                {onDownload && (
-                  <button
-                    onClick={() => onDownload(selectedPhoto)}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 backdrop-blur-sm transition-colors hover:bg-blue-700"
-                    title="Download photo"
-                  >
-                    <Download className="h-4 w-4" />
-                  </button>
-                )}
-                
-                <button
-                  onClick={closeLightbox}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/20 ml-2"
-                  title="Close"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            
-            {/* High-quality image or video */}
-            <div className="relative max-h-[90vh] max-w-[90vw]">
-              {selectedPhoto.type?.startsWith('video/') ? (
-                <video
-                  src={selectedPhoto.url}
-                  controls
-                  autoPlay
-                  className="max-h-[90vh] max-w-[90vw] w-auto h-auto object-contain rounded-lg shadow-2xl"
-                  onLoadedMetadata={() => console.log('✅ Lightbox video loaded:', selectedPhoto.filename)}
-                  onError={() => console.error('❌ Lightbox video error:', selectedPhoto.filename)}
-                />
-              ) : (
-                <img
-                  src={selectedPhoto.url}
-                  alt={selectedPhoto.alt || selectedPhoto.filename || `Photo ${selectedPhoto.id}`}
-                  className="max-h-[90vh] max-w-[90vw] w-auto h-auto object-contain rounded-lg shadow-2xl"
-                  onLoad={() => console.log('✅ Lightbox image loaded:', selectedPhoto.filename)}
-                  onError={() => console.error('❌ Lightbox image error:', selectedPhoto.filename)}
-                />
-              )}
-            </div>
-            
-            {/* Photo metadata */}
-            <div className="absolute -bottom-16 left-0 right-0 text-center">
-              {selectedPhoto.created_at && (
-                <p className="text-sm text-gray-400">
-                  {new Date(selectedPhoto.created_at).toLocaleString()}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Lightbox using yet-another-react-lightbox */}
+      <AppLightbox
+        slides={photos.map((photo): LightboxSlide => ({
+          id: photo.id,
+          src: photo.url,
+          alt: photo.alt || photo.filename || 'Photo',
+          title: photo.filename,
+          type: photo.type?.startsWith('video/') ? 'video' : 'image',
+        }))}
+        open={selectedIndex >= 0}
+        index={selectedIndex}
+        onClose={closeLightbox}
+        onIndexChange={setSelectedIndex}
+        showThumbnails={true}
+        showDownload={!!onDownload}
+        showShare={true}
+        showZoom={true}
+        showFullscreen={true}
+        showSlideshow={true}
+      />
     </>
   );
 }

@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Lightbox from 'yet-another-react-lightbox';
-import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
-import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
-import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
-import Zoom from 'yet-another-react-lightbox/plugins/zoom';
-import 'yet-another-react-lightbox/styles.css';
-import 'yet-another-react-lightbox/plugins/thumbnails.css';
+import AppLightbox, { LightboxSlide } from './AppLightbox';
 import { ChevronLeft, ChevronRight, Play, Trash2, Download, CheckSquare, Square } from 'lucide-react';
 import VideoThumbnail from './VideoThumbnail';
 
@@ -71,17 +65,19 @@ export default function ProfessionalGallery({
   };
 
   // Convert photos to lightbox format
-  const slides = photos.map(photo => ({
+  const slides: LightboxSlide[] = photos.map(photo => ({
+    id: photo.id,
     src: photo.url,
-    alt: photo.title || 'Photo'
+    alt: photo.title || 'Photo',
+    title: photo.title,
+    type: photo.isVideo ? 'video' : 'image',
+    poster: photo.thumbnail,
   }));
 
   const handleThumbnailClick = useCallback((index: number) => {
     setSelectedIndex(index);
-    // Only open lightbox for photos, not videos (videos play inline)
-    if (!photos[index]?.isVideo) {
-      setShowLightbox(true);
-    }
+    // Open lightbox for both photos and videos (AppLightbox handles videos)
+    setShowLightbox(true);
     onPhotoSelect?.(photos[index], index);
   }, [photos, onPhotoSelect]);
 
@@ -440,30 +436,19 @@ export default function ProfessionalGallery({
       </div>
 
       {/* FULLSCREEN LIGHTBOX */}
-      <AnimatePresence>
-        {showLightbox && (
-          <Lightbox
-            slides={slides}
-            open={showLightbox}
-            index={selectedIndex}
-            close={() => setShowLightbox(false)}
-            on={{
-              view: ({ index }) => setSelectedIndex(index),
-            }}
-            plugins={[Fullscreen, Slideshow, Zoom]}
-            carousel={{
-              finite: false,
-              preload: 3,
-            }}
-            animation={{ fade: 300, swipe: 300 }}
-            styles={{
-              container: {
-                backgroundColor: 'rgba(0, 0, 0, 0.95)',
-              },
-            }}
-          />
-        )}
-      </AnimatePresence>
+      <AppLightbox
+        slides={slides}
+        open={showLightbox}
+        index={selectedIndex}
+        onClose={() => setShowLightbox(false)}
+        onIndexChange={setSelectedIndex}
+        showThumbnails={true}
+        showDownload={true}
+        showShare={true}
+        showZoom={true}
+        showFullscreen={true}
+        showSlideshow={true}
+      />
     </div>
   );
 }

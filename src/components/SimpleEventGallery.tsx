@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
 import UniversalShare from './UniversalShare';
+import AppLightbox, { LightboxSlide } from './AppLightbox';
 
 interface GalleryItem {
   id: string;
@@ -540,133 +541,31 @@ export default function SimpleEventGallery({
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
-        {/* LIGHTBOX / SLIDESHOW VIEW */}
-        <AnimatePresence mode="wait">
-          {selectedIndex >= 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/95 flex flex-col"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => {
-                  setSelectedIndex(-1);
-                  setSlideshowActive(false);
-                }}
-                className="absolute top-4 right-4 z-10 p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-6 h-6 text-white" />
-              </button>
-
-              {/* Main Content */}
-              <div className="flex-1 flex items-center justify-center relative overflow-hidden">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedIndex}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full h-full flex items-center justify-center p-4"
-                  >
-                    {allItems[selectedIndex]?.isVideo ? (
-                      <video
-                        src={allItems[selectedIndex].url}
-                        controls
-                        autoPlay
-                        preload="metadata"
-                        playsInline
-                        className="max-w-full max-h-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      <img
-                        src={allItems[selectedIndex].url}
-                        alt={allItems[selectedIndex].title || 'Gallery item'}
-                        className="max-w-full max-h-full object-contain rounded-lg"
-                      />
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Navigation Buttons */}
-                {allItems.length > 1 && (
-                  <>
-                    <button
-                      onClick={goToPrevious}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-20"
-                    >
-                      <ChevronLeft className="w-6 h-6 text-white" />
-                    </button>
-                    <button
-                      onClick={goToNext}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-20"
-                    >
-                      <ChevronRight className="w-6 h-6 text-white" />
-                    </button>
-                  </>
-                )}
-
-                {/* Item Info */}
-                {(allItems[selectedIndex]?.title || allItems[selectedIndex]?.description) && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-                    {allItems[selectedIndex]?.title && (
-                      <h3 className="text-xl font-semibold text-white mb-2">
-                        {allItems[selectedIndex].title}
-                      </h3>
-                    )}
-                    {allItems[selectedIndex]?.description && (
-                      <p className="text-gray-300 text-sm">
-                        {allItems[selectedIndex].description}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Controls */}
-              <div className="bg-black/50 border-t border-white/10 px-4 md:px-6 py-4 flex items-center justify-between">
-                <span className="text-white text-sm">
-                  {selectedIndex + 1} / {allItems.length}
-                </span>
-                <div className="flex items-center gap-3">
-                  {/* Share button for current item */}
-                  <UniversalShare
-                    imageUrl={allItems[selectedIndex]?.url || ''}
-                    eventName={eventName}
-                    eventCode={eventCode}
-                    isVideo={allItems[selectedIndex]?.isVideo}
-                  />
-                  {selectMode && (
-                    <button
-                      onClick={() => toggleItemSelection(allItems[selectedIndex].id)}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                      {selectedItems.has(allItems[selectedIndex].id) ? (
-                        <CheckSquare className="w-5 h-5 text-white" />
-                      ) : (
-                        <Square className="w-5 h-5 text-white" />
-                      )}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      setSlideshowActive(!slideshowActive);
-                    }}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    {slideshowActive ? (
-                      <Pause className="w-5 h-5 text-white" />
-                    ) : (
-                      <Play className="w-5 h-5 text-white" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* LIGHTBOX using yet-another-react-lightbox */}
+        <AppLightbox
+          slides={allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item): LightboxSlide => ({
+            id: item.id,
+            src: item.url,
+            alt: item.title || 'Gallery item',
+            title: item.title,
+            type: item.isVideo ? 'video' : 'image',
+          }))}
+          open={selectedIndex >= 0}
+          index={selectedIndex}
+          onClose={() => {
+            setSelectedIndex(-1);
+            setSlideshowActive(false);
+          }}
+          onIndexChange={setSelectedIndex}
+          eventName={eventName}
+          eventCode={eventCode}
+          showThumbnails={true}
+          showDownload={true}
+          showShare={true}
+          showZoom={true}
+          showFullscreen={true}
+          showSlideshow={true}
+        />
 
         {/* Layout Toggle and Gallery Header */}
         <div className="p-4 md:p-6 pb-2">
