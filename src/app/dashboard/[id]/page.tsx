@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Camera, QrCode, Loader2 } from 'lucide-react';
+import { Camera, QrCode, Loader2, Share2 } from 'lucide-react';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import { getEventUrl } from '@/lib/utils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
+  const [showCoverPhotoPicker, setShowCoverPhotoPicker] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingEventName, setEditingEventName] = useState(false);
@@ -93,6 +95,9 @@ export default function Dashboard() {
         }
         if (event.profile_image) {
           setProfileImage(event.profile_image);
+        }
+        if (event.cover_photo_url) {
+          setCoverPhotoUrl(event.cover_photo_url);
         }
       }
     } catch (error) {
@@ -290,6 +295,42 @@ export default function Dashboard() {
     
     // Also remove from localStorage
     localStorage.removeItem(`${type}Image_${eventId}`);
+  };
+
+  // Cover Photo handlers
+  const selectCoverPhoto = async (photoUrl: string) => {
+    setCoverPhotoUrl(photoUrl);
+    setShowCoverPhotoPicker(false);
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ cover_photo_url: photoUrl })
+        .eq('id', eventId);
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Database update failed:', error);
+      }
+    } catch (error) {
+      console.error('Error updating cover photo:', error);
+    }
+  };
+
+  const removeCoverPhoto = async () => {
+    setCoverPhotoUrl(null);
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ cover_photo_url: null })
+        .eq('id', eventId);
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Database update failed:', error);
+      }
+    } catch (error) {
+      console.error('Error removing cover photo:', error);
+    }
   };
 
   // Load saved images from localStorage
@@ -735,6 +776,72 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* Cover Photo for Social Sharing */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <Share2 className="w-5 h-5 text-purple-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Cover Photo for Social Sharing</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Choose a <strong>landscape photo</strong> to display when sharing your gallery on Facebook, Twitter, and other social platforms. 
+                  Landscape photos (horizontal) look best in link previews.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Cover Photo Preview */}
+                  {coverPhotoUrl ? (
+                    <div className="relative">
+                      <div className="relative aspect-[1.91/1] w-full max-w-md overflow-hidden rounded-lg border-2 border-purple-200 shadow-md">
+                        <img 
+                          src={transformToCustomDomain(coverPhotoUrl)} 
+                          alt="Cover photo preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs font-medium">
+                          ✓ Set as cover
+                        </div>
+                      </div>
+                      <p className="text-xs text-green-600 mt-2">This photo will appear in social media link previews</p>
+                    </div>
+                  ) : (
+                    <div className="aspect-[1.91/1] w-full max-w-md bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-dashed border-purple-300 rounded-lg flex items-center justify-center">
+                      <div className="text-center text-purple-600 p-4">
+                        <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-sm font-medium">No cover photo selected</p>
+                        <p className="text-xs text-purple-500">System will auto-select a landscape photo</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Cover Photo Controls */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowCoverPhotoPicker(true)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                      disabled={photos.length === 0}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {coverPhotoUrl ? 'Change Cover Photo' : 'Select Cover Photo'}
+                    </button>
+                    {coverPhotoUrl && (
+                      <button
+                        onClick={removeCoverPhoto}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {photos.length === 0 && (
+                    <p className="text-xs text-amber-600">Upload photos first to select a cover photo</p>
+                  )}
+                </div>
+              </div>
+
               {/* Preview Section */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Gallery Preview</h3>
@@ -790,6 +897,101 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Cover Photo Picker Modal */}
+      {showCoverPhotoPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Select Cover Photo</h3>
+                <p className="text-sm text-gray-500 mt-1">Choose a landscape photo for best results on social media</p>
+              </div>
+              <button
+                onClick={() => setShowCoverPhotoPicker(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Photo Grid */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {photos.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((photo) => {
+                    const isLandscape = photo.width && photo.height && photo.width > photo.height;
+                    const isSelected = coverPhotoUrl === photo.url;
+                    return (
+                      <div
+                        key={photo.id}
+                        onClick={() => selectCoverPhoto(photo.url)}
+                        className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                          isSelected 
+                            ? 'border-purple-500 ring-2 ring-purple-500 ring-offset-2' 
+                            : isLandscape 
+                              ? 'border-green-300 hover:border-green-500' 
+                              : 'border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="aspect-square">
+                          <img
+                            src={transformToCustomDomain(photo.thumbnail_url || photo.url)}
+                            alt={photo.filename || 'Photo'}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        
+                        {/* Landscape badge */}
+                        {isLandscape && (
+                          <div className="absolute top-2 left-2 bg-green-500 text-white px-2 py-0.5 rounded text-xs font-medium">
+                            Landscape ✓
+                          </div>
+                        )}
+                        
+                        {/* Selected indicator */}
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center">
+                            <div className="bg-purple-500 text-white p-2 rounded-full">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-gray-500">No photos uploaded yet</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                <span className="inline-block w-3 h-3 bg-green-500 rounded mr-1"></span>
+                Photos marked "Landscape" work best for social previews
+              </p>
+              <button
+                onClick={() => setShowCoverPhotoPicker(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

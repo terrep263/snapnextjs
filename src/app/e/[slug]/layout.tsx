@@ -69,7 +69,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Try slug first (note: events table has no description column)
     const { data: eventBySlug, error: slugError } = await supabase
       .from('events')
-      .select('id, name, header_image')
+      .select('id, name, header_image, cover_photo_url')
       .eq('slug', slug)
       .single();
     
@@ -79,7 +79,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // Try by id as fallback
       const { data: eventById, error: idError } = await supabase
         .from('events')
-        .select('id, name, header_image')
+        .select('id, name, header_image, cover_photo_url')
         .eq('id', slug)
         .single();
       
@@ -97,44 +97,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // Try to find a LANDSCAPE photo for Facebook OG image (crops better with cover mode)
-    // Landscape photos (width > height) look best when cropped to 1200x630
-    const { data: landscapePhotos } = await supabase
-      .from('photos')
-      .select('url, thumbnail_url, width, height')
-      .eq('event_id', event.id)
-      .not('width', 'is', null)
-      .not('height', 'is', null)
-      .order('created_at', { ascending: true })
-      .limit(20);
-    
-    // Filter for landscape orientation (width > height) and large enough
-    const suitablePhotos = landscapePhotos?.filter(p => 
-      p.width && p.height && p.width > p.height && p.width >= 800
-    ) || [];
-
-    // Fallback: get any photos if no landscape ones found
-    const { data: allPhotos } = await supabase
-      .from('photos')
-      .select('url, thumbnail_url, width, height')
-      .eq('event_id', event.id)
-      .order('created_at', { ascending: true })
-      .limit(5);
-
-    // Prefer landscape photos, then fall back to any photo
+    // PRIORITY 1: Use cover_photo_url if set by event creator
+    // This is the best option as it's specifically chosen for social sharing
     let previewImage = 'https://snapworxx.com/og-default.jpg';
-    let selectedPhoto = suitablePhotos[0] || allPhotos?.[0];
+    
+    if (event.cover_photo_url) {
+      const customDomainUrl = transformToCustomDomain(event.cover_photo_url);
+      previewImage = transformToOgImage(customDomainUrl);
+      console.log('Using cover_photo_url for OG image');
+    } else {
+      // PRIORITY 2: Try to find a LANDSCAPE photo (crops better with cover mode)
+      const { data: landscapePhotos } = await supabase
+        .from('photos')
+        .select('url, thumbnail_url, width, height')
+        .eq('event_id', event.id)
+        .not('width', 'is', null)
+        .not('height', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      
+      // Filter for landscape orientation (width > height) and large enough
+      const suitablePhotos = landscapePhotos?.filter(p => 
+        p.width && p.height && p.width > p.height && p.width >= 800
+      ) || [];
 
-    if (selectedPhoto) {
-      const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
-      if (rawUrl) {
-        // First transform to custom domain, then apply OG image resize
-        const customDomainUrl = transformToCustomDomain(rawUrl);
+      // Fallback: get any photos if no landscape ones found
+      const { data: allPhotos } = await supabase
+        .from('photos')
+        .select('url, thumbnail_url, width, height')
+        .eq('event_id', event.id)
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      // Prefer landscape photos, then fall back to any photo
+      let selectedPhoto = suitablePhotos[0] || allPhotos?.[0];
+
+      if (selectedPhoto) {
+        const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
+        if (rawUrl) {
+          const customDomainUrl = transformToCustomDomain(rawUrl);
+          previewImage = transformToOgImage(customDomainUrl);
+        }
+      } else if (event.header_image) {
+        const customDomainUrl = transformToCustomDomain(event.header_image);
         previewImage = transformToOgImage(customDomainUrl);
       }
-    } else if (event.header_image) {
-      const customDomainUrl = transformToCustomDomain(event.header_image);
-      previewImage = transformToOgImage(customDomainUrl);
     }
 
     const title = `${event.name} | Snapworxx`;
