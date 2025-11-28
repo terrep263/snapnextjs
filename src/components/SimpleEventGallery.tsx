@@ -2,13 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2, Rows3 } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight, Download, CheckSquare, Square, Play, Pause, ZoomIn, Share2, ListChecks, Grid3x3, LayoutGrid, Trash2 } from 'lucide-react';
 import UniversalShare from './UniversalShare';
 import AppLightbox, { LightboxSlide } from './AppLightbox';
-import { ColumnsPhotoAlbum, MasonryPhotoAlbum, RowsPhotoAlbum } from 'react-photo-album';
-import 'react-photo-album/columns.css';
-import 'react-photo-album/masonry.css';
-import 'react-photo-album/rows.css';
 
 interface GalleryItem {
   id: string;
@@ -79,7 +75,7 @@ export default function SimpleEventGallery({
   const [slideshowActive, setSlideshowActive] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
-  const [layout, setLayout] = useState<'masonry' | 'rows' | 'columns'>('masonry');
+  const [layout, setLayout] = useState<'masonry' | 'grid'>('masonry');
   const [deleting, setDeleting] = useState<string | null>(null);
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -594,24 +590,13 @@ export default function SimpleEventGallery({
                 <LayoutGrid className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setLayout('rows')}
+                onClick={() => setLayout('grid')}
                 className={`p-2 rounded-lg transition-colors ${
-                  layout === 'rows'
+                  layout === 'grid'
                     ? 'bg-purple-600 text-white'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                 }`}
-                title="Rows Layout"
-              >
-                <Rows3 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setLayout('columns')}
-                className={`p-2 rounded-lg transition-colors ${
-                  layout === 'columns'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
-                title="Columns Layout"
+                title="Grid Layout"
               >
                 <Grid3x3 className="w-5 h-5" />
               </button>
@@ -619,192 +604,163 @@ export default function SimpleEventGallery({
           </div>
         </div>
 
-        {/* GALLERY - react-photo-album */}
+        {/* GALLERY - Dynamic Layout */}
         <div className="p-4 md:p-6 pt-0">
-          {(() => {
-            const galleryItems = allItems.filter(item => item.type !== 'header' && item.type !== 'profile');
-            
-            // Convert items to react-photo-album format
-            const photos = galleryItems.map((item) => ({
-              src: item.url,
-              width: 1200,
-              height: item.isVideo ? 675 : 800, // 16:9 for video, varied for images
-              alt: item.title || 'Gallery item',
-              key: item.id,
-            }));
-
-            // Custom render function for each photo - use index from render props
-            const renderPhoto = ({ photo, index, imageProps, wrapperStyle }: any) => {
-              // Get the original item from galleryItems using the index
-              const item = galleryItems[index];
-              if (!item) return null;
-              
+          <div className={
+            layout === 'masonry'
+              ? 'columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4'
+              : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+          }>
+            {allItems.filter(item => item.type !== 'header' && item.type !== 'profile').map((item, index) => {
+              // Adjust index for filtered items
+              const actualIndex = allItems.findIndex(i => i.id === item.id);
               return (
-                <div
-                  key={item.id}
-                  style={{ ...wrapperStyle, position: 'relative' }}
-                  className={`group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 ${
-                    selectMode && selectedItems.has(item.id)
-                      ? 'ring-2 ring-green-500 shadow-green-500/50'
-                      : ''
-                  }`}
-                  onClick={() => {
-                    if (selectMode) {
-                      toggleItemSelection(item.id);
-                    } else {
-                      setSelectedIndex(index);
-                      setSlideshowActive(false);
-                    }
-                  }}
-                >
-                  {item.isVideo ? (
-                    <video
-                      src={item.url}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      preload="metadata"
-                      muted
-                      playsInline
-                      onLoadedMetadata={(e) => {
-                        const video = e.target as HTMLVideoElement;
-                        video.currentTime = Math.min(1, video.duration / 4);
-                      }}
-                    />
-                  ) : (
-                    <img
-                      {...imageProps}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                    />
-                  )}
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className={`${layout === 'masonry' ? 'break-inside-avoid' : ''} group relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer touch-manipulation ${
+                selectMode && selectedItems.has(item.id)
+                  ? 'ring-2 ring-green-500 shadow-green-500/50'
+                  : ''
+              }`}
+              onClick={() => {
+                if (selectMode) {
+                  toggleItemSelection(item.id);
+                } else {
+                  setSelectedIndex(index);
+                  setSlideshowActive(false);
+                }
+              }}
+            >
+              {/* Image */}
+              <div className={`relative w-full bg-gray-200 overflow-hidden ${layout === 'grid' ? 'aspect-square' : ''}`}>
+                {item.isVideo ? (
+                  <video
+                    src={item.url}
+                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
+                    preload="metadata"
+                    muted
+                    playsInline
+                    onLoadedMetadata={(e) => {
+                      // Set to 1 second to show a meaningful frame as thumbnail
+                      const video = e.target as HTMLVideoElement;
+                      video.currentTime = Math.min(1, video.duration / 4);
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={item.url}
+                    alt={item.title || 'Gallery item'}
+                    className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
+                  />
+                )}
 
-                  {/* Overlay on Hover */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
-                    <div className="flex items-center gap-3 pointer-events-auto">
-                      {item.isVideo && (
-                        <div className="text-white">
-                          <Play className="w-8 h-8 fill-current" />
-                        </div>
-                      )}
+                {/* Overlay on Hover - with Share and Download buttons */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
+                  {/* Top row: View/Play */}
+                  <div className="flex items-center gap-3 pointer-events-auto">
+                    {item.isVideo && (
                       <div className="text-white">
-                        <ZoomIn className="w-8 h-8" />
+                        <Play className="w-8 h-8 fill-current" />
                       </div>
+                    )}
+                    <div className="text-white">
+                      <ZoomIn className="w-8 h-8" />
                     </div>
-                    
-                    <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <UniversalShare
-                          imageUrl={item.url}
-                          eventName={eventName}
-                          eventCode={eventCode}
-                          isVideo={item.isVideo}
-                        />
-                      </div>
+                  </div>
+                  
+                  {/* Bottom row: Share, Download, and Delete buttons - Mobile optimized */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <UniversalShare
+                        imageUrl={item.url}
+                        eventName={eventName}
+                        eventCode={eventCode}
+                        isVideo={item.isVideo}
+                      />
+                    </div>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          const response = await fetch(item.url);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = item.title || `photo-${item.id}`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          window.URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                          alert('Download failed. Please try again.');
+                        }
+                      }}
+                      className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span className="sm:inline">Download</span>
+                    </button>
+                    {canDelete && (
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
-                          try {
-                            const response = await fetch(item.url);
-                            const blob = await response.blob();
-                            const url = window.URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = item.title || `photo-${item.id}`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                            window.URL.revokeObjectURL(url);
-                          } catch (error) {
-                            console.error('Download failed:', error);
-                            alert('Download failed. Please try again.');
-                          }
+                          await handleDeletePhoto(item.id);
                         }}
-                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
+                        disabled={deleting === item.id}
+                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
-                        <Download className="w-4 h-4" />
-                        <span className="sm:inline">Download</span>
+                        <Trash2 className="w-4 h-4" />
+                        <span className="sm:inline">Delete</span>
                       </button>
-                      {canDelete && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await handleDeletePhoto(item.id);
-                          }}
-                          disabled={deleting === item.id}
-                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="sm:inline">Delete</span>
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
+                </div>
 
-                  {/* Selection Checkbox */}
-                  {selectMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleItemSelection(item.id);
-                      }}
-                      className="absolute top-3 left-3 z-10 p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      {selectedItems.has(item.id) ? (
-                        <CheckSquare className="w-5 h-5 text-purple-600" />
-                      ) : (
-                        <Square className="w-5 h-5 text-gray-600" />
-                      )}
-                    </button>
-                  )}
+                {/* Selection Checkbox (in select mode) */}
+                {selectMode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleItemSelection(item.id);
+                    }}
+                    className="absolute top-3 left-3 z-10 p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    {selectedItems.has(item.id) ? (
+                      <CheckSquare className="w-5 h-5 text-purple-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-gray-600" />
+                    )}
+                  </button>
+                )}
 
-                  {/* Video Badge */}
-                  {item.isVideo && (
-                    <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                      🎬
-                    </div>
+                {/* Type Badge */}
+                {item.type && (
+                  <div className="absolute top-3 right-3 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                    {item.type === 'header' ? '📸' : item.type === 'profile' ? '👤' : item.isVideo ? '🎬' : '📷'}
+                  </div>
+                )}
+              </div>
+
+              {/* Info */}
+              {item.title && (
+                <div className="p-3 bg-white">
+                  <p className="font-medium text-gray-900 text-sm truncate">{item.title}</p>
+                  {item.uploadedAt && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(item.uploadedAt).toLocaleDateString()}
+                    </p>
                   )}
                 </div>
+              )}
+            </motion.div>
               );
-            };
-
-            // Render the appropriate layout
-            if (layout === 'masonry') {
-              return (
-                <MasonryPhotoAlbum
-                  photos={photos}
-                  columns={(containerWidth) => {
-                    if (containerWidth < 480) return 1;
-                    if (containerWidth < 768) return 2;
-                    if (containerWidth < 1200) return 3;
-                    return 4;
-                  }}
-                  spacing={16}
-                  render={{ photo: renderPhoto }}
-                />
-              );
-            } else if (layout === 'rows') {
-              return (
-                <RowsPhotoAlbum
-                  photos={photos}
-                  targetRowHeight={250}
-                  spacing={16}
-                  render={{ photo: renderPhoto }}
-                />
-              );
-            } else {
-              return (
-                <ColumnsPhotoAlbum
-                  photos={photos}
-                  columns={(containerWidth) => {
-                    if (containerWidth < 480) return 2;
-                    if (containerWidth < 768) return 3;
-                    if (containerWidth < 1200) return 4;
-                    return 5;
-                  }}
-                  spacing={16}
-                  render={{ photo: renderPhoto }}
-                />
-              );
-            }
-          })()}
+            })}
+          </div>
         </div>
 
         {/* Empty State */}
