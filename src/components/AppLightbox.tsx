@@ -137,6 +137,11 @@ export default function AppLightbox({
 
   // Transform slides for lightbox
   const transformedSlides = slides.map(slide => transformSlide(slide));
+  
+  // Debug: Log transformed slides
+  console.log('🎬 AppLightbox - Input slides:', slides);
+  console.log('🎬 AppLightbox - Transformed slides:', transformedSlides);
+  console.log('🎬 AppLightbox - Video slides:', transformedSlides.filter(s => (s as any).type === 'video'));
 
   // Handle download with custom filename
   const handleDownload = async ({ slide, saveAs }: { slide: Slide; saveAs: (source: string, name: string) => void }) => {
