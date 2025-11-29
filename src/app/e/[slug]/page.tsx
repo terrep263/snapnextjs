@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Lock } from 'lucide-react';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
-import SimpleEventGallery from '@/components/SimpleEventGallery';
+import UniversalMobileGallery from '@/components/UniversalMobileGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
 import Head from 'next/head';
@@ -364,8 +364,8 @@ export default function EventPage() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </Head>
 
-      {/* SimpleEventGallery handles its own header/profile/navigation */}
-      <SimpleEventGallery
+      {/* UniversalMobileGallery handles its own header/profile/navigation */}
+      <UniversalMobileGallery
         eventName={eventData.name || 'Event Gallery'}
         headerImage={headerImage}
         profileImage={profileImage}

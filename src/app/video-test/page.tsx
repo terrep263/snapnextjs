@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Lightbox } from '@/components/Gallery';
+import { YarlLightbox } from '@/components/Gallery';
 import type { GalleryItem } from '@/components/Gallery';
 
 export default function VideoTestPage() {
@@ -39,11 +39,11 @@ export default function VideoTestPage() {
           </video>
         </div>
 
-        {/* PhotoSwipe Lightbox Test */}
+        {/* YARL Lightbox Test */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">2. PhotoSwipe Lightbox Video</h2>
+          <h2 className="text-xl font-semibold mb-4">2. YARL Lightbox Video</h2>
           <p className="text-sm text-gray-600 mb-4">
-            Click the button below to open the video in PhotoSwipe lightbox.
+            Click the button below to open the video in YARL lightbox.
           </p>
           <button
             onClick={() => setOpen(true)}
@@ -151,20 +151,6 @@ export default function VideoTestPage() {
                     error: v.error,
                   });
                 });
-
-                // Check PhotoSwipe containers
-                const photoswipeContainers = document.querySelectorAll('[class*="pswp"]');
-                console.log('\nPhotoSwipe containers found:', photoswipeContainers.length);
-                photoswipeContainers.forEach((el, i) => {
-                  const computed = window.getComputedStyle(el);
-                  console.log(`PhotoSwipe container ${i}:`, {
-                    className: el.className,
-                    display: computed.display,
-                    width: computed.width,
-                    height: computed.height,
-                    opacity: computed.opacity,
-                  });
-                });
               }}
               className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
             >
@@ -174,7 +160,7 @@ export default function VideoTestPage() {
         </div>
       </div>
 
-      <Lightbox
+      <YarlLightbox
         items={testItems}
         open={open}
         index={index}
