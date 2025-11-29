@@ -461,7 +461,7 @@ export default function UniversalMobileGallery({
   eventId,
   eventName,
   canBulkDownload = true,
-  maxBulkDownload = null,
+  maxBulkDownload = 9999,
   onDownload,
   onShare,
   onDelete,
