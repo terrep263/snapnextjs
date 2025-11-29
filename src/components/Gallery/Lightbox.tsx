@@ -104,20 +104,23 @@ const Lightbox = forwardRef<any, LightboxProps>(({
           return 'toggle-controls';
         },
       }}
-      onBeforeOpen={() => {
+      onBeforeOpen={(pswp) => {
         isOpenRef.current = true;
         // Prevent body scroll on mobile when lightbox opens
         if (typeof document !== 'undefined') {
           document.body.style.overflow = 'hidden';
         }
       }}
-      onClose={() => {
-        isOpenRef.current = false;
-        // Restore body scroll
-        if (typeof document !== 'undefined') {
-          document.body.style.overflow = '';
-        }
-        onClose();
+      onOpen={(pswp) => {
+        // Listen for close event on PhotoSwipe instance
+        pswp.on('close', () => {
+          isOpenRef.current = false;
+          // Restore body scroll
+          if (typeof document !== 'undefined') {
+            document.body.style.overflow = '';
+          }
+          onClose();
+        });
       }}
     >
       {items.map((item, idx) => {
