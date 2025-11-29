@@ -3,11 +3,34 @@
 import { useState } from 'react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
+// Import all YARL plugins
+import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
+import Zoom from 'yet-another-react-lightbox/plugins/zoom';
+import Captions from 'yet-another-react-lightbox/plugins/captions';
+import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
+import Counter from 'yet-another-react-lightbox/plugins/counter';
+import Download from 'yet-another-react-lightbox/plugins/download';
+import Share from 'yet-another-react-lightbox/plugins/share';
+import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
+import Inline from 'yet-another-react-lightbox/plugins/inline';
+// Import plugin CSS styles
+import 'yet-another-react-lightbox/plugins/thumbnails.css';
+import 'yet-another-react-lightbox/plugins/captions.css';
+import 'yet-another-react-lightbox/plugins/counter.css';
 import type { GalleryItem, LightboxProps } from './types';
 
 /**
- * YARL Lightbox Component
- * Uses yet-another-react-lightbox for image viewing
+ * YARL Lightbox Component with Full Plugin Suite
+ * Uses yet-another-react-lightbox with all available plugins:
+ * - Thumbnails: Bottom thumbnail strip for quick navigation
+ * - Zoom: Mouse wheel zoom on images
+ * - Captions: Display image titles/descriptions
+ * - Fullscreen: Toggle fullscreen viewing
+ * - Counter: Image counter (X of Y)
+ * - Download: Download individual images
+ * - Share: Share via social media and copy link
+ * - Slideshow: Auto-advance through images
+ * - Inline: Display images inline without modal
  * Videos are rendered in a custom HTML5 player
  */
 
@@ -38,19 +61,18 @@ export default function YarlLightbox({
     return null;
   }
 
+  // Determine if current item is a video
+  const isCurrentItemVideo = open && index >= 0 && isVideoItem(items[index]);
+
+  // Show video modal if opening a video
+  if (open && isCurrentItemVideo) {
+    setVideoIndex(index);
+    setShowVideoModal(true);
+  }
+
   // Separate videos and images
   const videoItems = items.filter(isVideoItem);
   const imageItems = items.filter(item => !isVideoItem(item));
-
-  // Handle item click - if it's a video, show custom modal
-  const handleItemClick = (itemIndex: number) => {
-    if (isVideoItem(items[itemIndex])) {
-      setVideoIndex(itemIndex);
-      setShowVideoModal(true);
-    } else {
-      onIndexChange?.(itemIndex);
-    }
-  };
 
   // Map items to YARL format (images only)
   const yarlSlides = imageItems.map(item => ({
@@ -71,6 +93,7 @@ export default function YarlLightbox({
               onClick={() => {
                 setShowVideoModal(false);
                 setVideoIndex(-1);
+                onClose();
               }}
               className="absolute -top-12 right-0 text-white hover:text-gray-300 z-10"
             >
@@ -142,6 +165,17 @@ export default function YarlLightbox({
           close={onClose}
           slides={yarlSlides}
           index={index}
+          plugins={[
+            Thumbnails,
+            Zoom,
+            Captions,
+            Fullscreen,
+            Counter,
+            Download,
+            Share,
+            Slideshow,
+            Inline,
+          ]}
           on={{
             view: ({ index: currentIndex }) => {
               onIndexChange?.(currentIndex);
@@ -152,6 +186,27 @@ export default function YarlLightbox({
               backgroundColor: 'rgba(0, 0, 0, 0.95)',
             },
           }}
+          thumbnails={{
+            position: 'bottom',
+            width: 120,
+            height: 100,
+            border: 1,
+            borderColor: '#666',
+            borderRadius: 4,
+            padding: 4,
+            gap: 16,
+          }}
+          zoom={{
+            maxZoomPixelRatio: 10,
+            wheelZoomDistanceFactor: 100,
+            doubleTapDelay: 300,
+            doubleClickDelay: 300,
+            doubleClickMaxStops: 2,
+            scrollToZoom: true,
+          }}
+          counter={{}}
+          captions={{}}
+          slideshow={{}}
         />
       )}
     </>
