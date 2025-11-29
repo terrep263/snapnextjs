@@ -57,13 +57,9 @@ export default function YarlLightbox({
   const [videoIndex, setVideoIndex] = useState(-1);
   const [showVideoModal, setShowVideoModal] = useState(false);
 
-  if (!items || items.length === 0) {
-    return null;
-  }
-
   // Use effect to handle video modal when opening a video
   useEffect(() => {
-    if (open && index >= 0 && items && items[index] && isVideoItem(items[index])) {
+    if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
     } else if (!open) {
@@ -71,6 +67,11 @@ export default function YarlLightbox({
       setVideoIndex(-1);
     }
   }, [open, index]);
+
+  // Early return AFTER all hooks
+  if (!items || items.length === 0) {
+    return null;
+  }
 
   // Separate videos and images
   const videoItems = items.filter(isVideoItem);
