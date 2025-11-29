@@ -63,14 +63,14 @@ export default function YarlLightbox({
 
   // Use effect to handle video modal when opening a video
   useEffect(() => {
-    if (open && index >= 0 && isVideoItem(items[index])) {
+    if (open && index >= 0 && items && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
     } else if (!open) {
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
-  }, [open, index, items]);
+  }, [open, index]);
 
   // Separate videos and images
   const videoItems = items.filter(isVideoItem);
