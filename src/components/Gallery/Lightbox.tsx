@@ -38,13 +38,12 @@ const Lightbox = forwardRef<any, LightboxProps>(({
   onIndexChange,
   eventName = ''
 }, ref) => {
-  const galleryRef = useRef<any>(null);
   const isOpenRef = useRef(false);
 
   // Expose imperative methods to parent
   useImperativeHandle(ref, () => ({
     open: (idx: number) => {
-      if (galleryRef.current && !isOpenRef.current) {
+      if (!isOpenRef.current) {
         isOpenRef.current = true;
         // PhotoSwipe will open via the click handlers on Item components
       }
@@ -71,7 +70,6 @@ const Lightbox = forwardRef<any, LightboxProps>(({
 
   return (
     <Gallery
-      ref={galleryRef}
       options={{
         // Display
         counter: true,
@@ -128,7 +126,7 @@ const Lightbox = forwardRef<any, LightboxProps>(({
         const caption = item.title || item.filename || '';
 
         if (isVideo) {
-          // Video item with HTML5 video element
+          // Video item with HTML5 video element with HEVC/H.265 fallback
           return (
             <Item
               key={item.id}
@@ -141,11 +139,21 @@ const Lightbox = forwardRef<any, LightboxProps>(({
                     preload="metadata"
                     ${item.poster ? `poster="${item.poster}"` : ''}
                     style="width:100%;height:auto;max-height:90vh;object-fit:contain;"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                   >
+                    <source src="${item.url}" type="video/mp4; codecs=hvc1" />
+                    <source src="${item.url}" type="video/mp4; codecs=hev1" />
                     <source src="${item.url}" type="video/mp4" />
                     <source src="${item.url}" type="video/webm" />
-                    Your browser doesn't support HTML5 video.
                   </video>
+                  <div style="display:none;flex-direction:column;align-items:center;justify-content:center;color:white;padding:2rem;text-align:center;max-width:500px;">
+                    <svg style="width:64px;height:64px;margin-bottom:1rem;opacity:0.7;" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <h3 style="margin:0 0 0.5rem 0;font-size:1.25rem;font-weight:600;">Video Format Not Supported</h3>
+                    <p style="margin:0 0 1.5rem 0;opacity:0.9;font-size:0.95rem;">This video uses HEVC/H.265 encoding which is not supported in your browser. Try Safari or download the video to view it.</p>
+                    <a href="${item.url}" download style="display:inline-block;padding:0.75rem 1.5rem;background:#2563eb;color:white;text-decoration:none;border-radius:0.5rem;font-weight:500;">Download Video</a>
+                  </div>
                 </div>
               `}
               width={dimensions.width}
