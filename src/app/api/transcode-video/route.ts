@@ -1,177 +1,123 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFile, unlink, mkdir, readFile } from 'fs/promises';
-import { existsSync } from 'fs';
+﻿import { NextResponse } from 'next/server';
+import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
+import os from 'os';
+import { spawn } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
+import { v4 as uuidv4 } from 'uuid';
+import { getServiceRoleClient, getPhotoPublicUrl } from '@/lib/supabase';
 
-const execAsync = promisify(exec);
+type Payload = {
+  sourceUrl: string;
+  eventId?: string;
+  formats?: string[]; // e.g. ['mp4','webm']
+};
 
-/**
- * Video Transcoding API Endpoint
- * Converts incompatible videos (especially from Android) to web-compatible MP4
- *
- * Requires FFmpeg to be installed on the server
- */
-
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const videoFile = formData.get('video') as File;
-
-    if (!videoFile) {
-      return NextResponse.json(
-        { error: 'No video file provided' },
-        { status: 400 }
-      );
-    }
-
-    // Check FFmpeg availability
-    const ffmpegAvailable = await checkFFmpeg();
-    if (!ffmpegAvailable) {
-      return NextResponse.json(
-        {
-          error: 'Video transcoding not available',
-          message: 'FFmpeg is not installed on the server. Videos must be in web-compatible formats (MP4 with H.264 codec).',
-          suggestion: 'Please convert your video to MP4 format before uploading, or contact support.',
-        },
-        { status: 503 }
-      );
-    }
-
-    // Generate unique filename
-    const fileId = crypto.randomBytes(16).toString('hex');
-    const inputExt = path.extname(videoFile.name);
-    const inputPath = path.join('/tmp', `input_${fileId}${inputExt}`);
-    const outputPath = path.join('/tmp', `output_${fileId}.mp4`);
-
-    // Ensure /tmp directory exists
-    if (!existsSync('/tmp')) {
-      await mkdir('/tmp', { recursive: true });
-    }
-
-    // Save uploaded file to temp location
-    const arrayBuffer = await videoFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    await writeFile(inputPath, buffer);
-
-    console.log('🎬 Transcoding video:', {
-      originalName: videoFile.name,
-      size: videoFile.size,
-      type: videoFile.type,
-      inputPath,
-      outputPath,
-    });
-
-    // Transcode video using FFmpeg
-    // Settings optimized for web playback compatibility
-    const ffmpegCommand = [
-      'ffmpeg',
-      '-i', inputPath,
-      '-c:v', 'libx264',           // H.264 codec (universally supported)
-      '-preset', 'medium',          // Encoding speed/quality balance
-      '-crf', '23',                 // Constant quality (lower = better, 18-28 is good)
-      '-profile:v', 'high',         // H.264 profile
-      '-level', '4.0',              // H.264 level
-      '-pix_fmt', 'yuv420p',        // Pixel format (required for web)
-      '-movflags', '+faststart',    // Enable streaming (moov atom at start)
-      '-c:a', 'aac',                // AAC audio codec
-      '-b:a', '128k',               // Audio bitrate
-      '-ar', '48000',               // Audio sample rate
-      '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2', // Ensure even dimensions
-      '-y',                         // Overwrite output file
-      outputPath,
-    ].join(' ');
-
-    console.log('📹 Running FFmpeg command:', ffmpegCommand);
-
-    const startTime = Date.now();
-    const { stdout, stderr } = await execAsync(ffmpegCommand, {
-      maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large videos
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`✅ Transcoding completed in ${(duration / 1000).toFixed(1)}s`);
-
-    // Read transcoded file
-    const transcodedBuffer = await readFile(outputPath);
-    const transcodedBlob = new Blob([transcodedBuffer], { type: 'video/mp4' });
-
-    // Clean up temp files
-    await Promise.all([
-      unlink(inputPath).catch(console.error),
-      unlink(outputPath).catch(console.error),
-    ]);
-
-    // Return transcoded video
-    return new NextResponse(transcodedBlob, {
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Disposition': `attachment; filename="transcoded_${videoFile.name.replace(/\.[^.]+$/, '.mp4')}"`,
-        'X-Transcoding-Duration': duration.toString(),
-      },
-    });
-
-  } catch (error) {
-    console.error('❌ Transcoding error:', error);
-
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-    // Check for common FFmpeg errors
-    if (errorMessage.includes('Conversion failed')) {
-      return NextResponse.json(
-        {
-          error: 'Video conversion failed',
-          message: 'The video format could not be converted. The file may be corrupted or use an unsupported codec.',
-        },
-        { status: 422 }
-      );
-    }
-
-    if (errorMessage.includes('No such file')) {
-      return NextResponse.json(
-        {
-          error: 'File processing error',
-          message: 'Failed to process the uploaded file.',
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: 'Transcoding failed',
-        message: errorMessage,
-      },
-      { status: 500 }
-    );
-  }
+async function downloadToFile(url: string, dest: string) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to download source: ${res.status}`);
+  const arrayBuffer = await res.arrayBuffer();
+  await fs.promises.writeFile(dest, Buffer.from(arrayBuffer));
 }
 
-/**
- * Check if FFmpeg is installed and available
- */
-async function checkFFmpeg(): Promise<boolean> {
+function runFfmpeg(args: string[], cwd?: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(ffmpegPath as string, args, { stdio: 'inherit', cwd });
+    proc.on('error', (err) => reject(err));
+    proc.on('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg exited with code ${code}`));
+    });
+  });
+}
+
+function ffmpegAvailable(): boolean {
   try {
-    await execAsync('ffmpeg -version');
-    return true;
-  } catch {
-    console.warn('⚠️ FFmpeg not found on server');
+    const result = spawn(ffmpegPath as string, ['-version'], { stdio: 'ignore' });
+    return result.exitCode === 0 || result.pid !== undefined;
+  } catch (e) {
     return false;
   }
 }
 
-/**
- * GET endpoint to check if transcoding is available
- */
-export async function GET() {
-  const available = await checkFFmpeg();
+export async function POST(req: Request) {
+  try {
+    const payload = (await req.json()) as Payload;
+    const { sourceUrl, eventId = 'transcoded', formats = ['mp4', 'webm'] } = payload;
 
-  return NextResponse.json({
-    available,
-    message: available
-      ? 'Video transcoding is available'
-      : 'FFmpeg not installed - transcoding unavailable',
-  });
+    if (!sourceUrl) return NextResponse.json({ error: 'sourceUrl required' }, { status: 400 });
+
+    // Only allow Supabase storage / custom domain for security in this POC
+    const allowedHost = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const customDomain = 'https://sharedfrom.snapworxx.com';
+    if (!(sourceUrl.startsWith(allowedHost) || sourceUrl.startsWith(customDomain))) {
+      return NextResponse.json({ error: 'sourceUrl must be from configured Supabase storage' }, { status: 400 });
+    }
+
+    if (!ffmpegAvailable()) {
+      return NextResponse.json({ error: 'ffmpeg-unavailable' }, { status: 503 });
+    }
+
+    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'transcode-'));
+    const inputExt = path.extname(new URL(sourceUrl).pathname) || '.in';
+    const inputPath = path.join(tmpDir, `input${inputExt}`);
+
+    await downloadToFile(sourceUrl, inputPath);
+
+    const results: Record<string, string> = {};
+    const supabase = getServiceRoleClient();
+
+    for (const fmt of formats) {
+      const outName = `${uuidv4()}.${fmt}`;
+      const outPath = path.join(tmpDir, outName);
+
+      if (fmt === 'mp4') {
+        // H.264 + AAC
+        const args = ['-y', '-i', inputPath, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', outPath];
+        await runFfmpeg(args);
+      } else if (fmt === 'webm') {
+        // VP9 + Opus
+        const args = ['-y', '-i', inputPath, '-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus', outPath];
+        await runFfmpeg(args);
+      } else {
+        // Try a generic copy (container change) as fallback
+        const args = ['-y', '-i', inputPath, '-c', 'copy', outPath];
+        await runFfmpeg(args);
+      }
+
+      // Upload to Supabase storage
+      const destPath = `${eventId}/${Date.now()}-${outName}`;
+      const stream = fs.createReadStream(outPath);
+      const contentType = fmt === 'webm' ? 'video/webm' : 'video/mp4';
+
+      const { data, error } = await supabase.storage
+        .from('photos')
+        .upload(destPath, stream, { contentType, upsert: false });
+
+      if (error) {
+        throw error;
+      }
+
+      results[fmt] = getPhotoPublicUrl(destPath);
+    }
+
+    // Cleanup tmp
+    try {
+      await fs.promises.rm(tmpDir, { recursive: true, force: true });
+    } catch (e) {
+      // ignore
+    }
+
+    return NextResponse.json({ ok: true, results });
+  } catch (err: any) {
+    console.error('Transcode error:', err);
+    return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
+  }
 }
+
+export async function GET(req?: Request) {
+  const available = ffmpegAvailable();
+  return NextResponse.json({ available });
+}
+
+export const runtime = 'nodejs';
