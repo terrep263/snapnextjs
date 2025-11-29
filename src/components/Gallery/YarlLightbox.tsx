@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 // Import all YARL plugins
@@ -61,14 +61,16 @@ export default function YarlLightbox({
     return null;
   }
 
-  // Determine if current item is a video
-  const isCurrentItemVideo = open && index >= 0 && isVideoItem(items[index]);
-
-  // Show video modal if opening a video
-  if (open && isCurrentItemVideo) {
-    setVideoIndex(index);
-    setShowVideoModal(true);
-  }
+  // Use effect to handle video modal when opening a video
+  useEffect(() => {
+    if (open && index >= 0 && isVideoItem(items[index])) {
+      setVideoIndex(index);
+      setShowVideoModal(true);
+    } else if (!open) {
+      setShowVideoModal(false);
+      setVideoIndex(-1);
+    }
+  }, [open, index, items]);
 
   // Separate videos and images
   const videoItems = items.filter(isVideoItem);
