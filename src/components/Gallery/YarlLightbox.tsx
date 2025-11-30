@@ -111,15 +111,39 @@ export default function YarlLightbox({
                 key={items[videoIndex].url}
                 controls
                 autoPlay
-                className="w-full h-auto max-h-[70vh] object-contain"
+                className="w-full h-auto max-h-[70vh] object-contain bg-black"
                 playsInline
+                controlsList="nodownload"
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  const video = e.target as HTMLVideoElement;
+                  console.error('❌ Video error:', {
+                    error: video.error?.message,
+                    errorCode: video.error?.code,
+                    src: items[videoIndex].url,
+                    type: items[videoIndex].mimeType
+                  });
+                }}
+                onLoadStart={() => {
+                  console.log('🔄 Video loading:', items[videoIndex].url);
+                }}
+                onCanPlay={() => {
+                  console.log('✅ Video can play:', items[videoIndex].url);
+                }}
                 style={{
                   WebkitBackfaceVisibility: 'hidden',
                   backfaceVisibility: 'hidden'
                 }}
               >
-                <source src={getPlaybackUrl(items[videoIndex])} type={items[videoIndex].mimeType || 'video/mp4'} />
-                Your browser does not support the video tag.
+                {/* Primary source - MP4 H.264 (most compatible) */}
+                <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4; codecs='avc1.42E01E'" />
+                {/* Fallback - MP4 generic */}
+                <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4" />
+                {/* WebM fallback */}
+                <source src={getPlaybackUrl(items[videoIndex])} type="video/webm" />
+                <p className="text-white text-center p-4">
+                  ⚠️ Your browser cannot play this video. Try downloading it instead.
+                </p>
               </video>
             </div>
 
