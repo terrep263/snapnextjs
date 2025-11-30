@@ -56,12 +56,28 @@ export default function YarlLightbox({
 }: LightboxProps) {
   const [videoIndex, setVideoIndex] = useState(-1);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoCodecInfo, setVideoCodecInfo] = useState<Record<string, any>>({});
 
   // Use effect to handle video modal when opening a video
   useEffect(() => {
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
+      
+      // Check video codec compatibility
+      const videoUrl = items[index].url;
+      if (videoUrl && !videoCodecInfo[videoUrl]) {
+        fetch(`/api/get-video-info?url=${encodeURIComponent(videoUrl)}`)
+          .then(res => res.json())
+          .then(data => {
+            setVideoCodecInfo(prev => ({
+              ...prev,
+              [videoUrl]: data
+            }));
+            console.log('🎬 Video codec info:', data);
+          })
+          .catch(err => console.error('Error checking video codec:', err));
+      }
     } else if (!open) {
       setShowVideoModal(false);
       setVideoIndex(-1);
@@ -107,6 +123,17 @@ export default function YarlLightbox({
 
             {/* Video Container */}
             <div className="bg-black rounded-lg overflow-hidden">
+              {/* Codec Warning Banner */}
+              {videoCodecInfo[items[videoIndex]?.url] && !videoCodecInfo[items[videoIndex]?.url].isCompatible && (
+                <div className="bg-yellow-900/80 text-yellow-100 p-3 text-sm">
+                  <strong>⚠️ Codec Warning:</strong> {videoCodecInfo[items[videoIndex]?.url].message}
+                  <br />
+                  <span className="text-xs">
+                    Detected: {videoCodecInfo[items[videoIndex]?.url].codec} | File size: {videoCodecInfo[items[videoIndex]?.url].contentLengthMB} MB
+                  </span>
+                </div>
+              )}
+              
               <video
                 key={items[videoIndex].url}
                 ref={(videoEl) => {
