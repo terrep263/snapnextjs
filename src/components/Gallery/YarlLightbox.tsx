@@ -112,6 +112,11 @@ export default function YarlLightbox({
                 controls
                 autoPlay
                 className="w-full h-auto max-h-[70vh] object-contain"
+                playsInline
+                style={{
+                  WebkitBackfaceVisibility: 'hidden',
+                  backfaceVisibility: 'hidden'
+                }}
               >
                 <source src={getPlaybackUrl(items[videoIndex])} type={items[videoIndex].mimeType || 'video/mp4'} />
                 Your browser does not support the video tag.

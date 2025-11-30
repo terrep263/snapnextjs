@@ -236,6 +236,14 @@ export default function UniversalMobileGallery({
                 src={headerImage}
                 alt="Event Header"
                 className="w-full h-full object-cover"
+                loading="eager"
+                decoding="async"
+                draggable={false}
+                style={{
+                  imageRendering: 'auto',
+                  WebkitFontSmoothing: 'antialiased',
+                  WebkitBackfaceVisibility: 'hidden'
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/30"></div>
             </div>
@@ -248,6 +256,14 @@ export default function UniversalMobileGallery({
                 src={profileImage}
                 alt="Event Profile"
                 className="w-40 h-40 rounded-full border-4 border-white shadow-lg object-cover"
+                loading="eager"
+                decoding="async"
+                draggable={false}
+                style={{
+                  imageRendering: 'auto',
+                  WebkitFontSmoothing: 'antialiased',
+                  WebkitBackfaceVisibility: 'hidden'
+                }}
               />
             )}
             <h1 className="mt-6 text-4xl md:text-5xl font-bold text-gray-900 text-center">

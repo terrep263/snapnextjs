@@ -89,6 +89,11 @@ export default function GalleryGrid({
               preload="metadata"
               muted
               playsInline
+              draggable={false}
+              style={{
+                imageRendering: 'auto',
+                WebkitBackfaceVisibility: 'hidden'
+              }}
               onLoadedMetadata={(e) => {
                 const video = e.target as HTMLVideoElement;
                 video.currentTime = Math.min(1, video.duration / 4);
@@ -99,6 +104,14 @@ export default function GalleryGrid({
               src={item.url}
               alt={item.alt || item.title || item.filename || 'Gallery item'}
               className={`w-full ${layout === 'grid' ? 'h-full object-cover' : 'h-auto object-cover'} group-hover:scale-110 transition-transform duration-300`}
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              style={{
+                imageRendering: 'auto',
+                WebkitFontSmoothing: 'antialiased',
+                WebkitBackfaceVisibility: 'hidden'
+              }}
             />
           )}
 
