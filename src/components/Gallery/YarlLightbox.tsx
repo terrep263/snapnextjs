@@ -67,16 +67,20 @@ export default function YarlLightbox({
       // Check video codec compatibility
       const videoUrl = items[index].url;
       if (videoUrl && !videoCodecInfo[videoUrl]) {
+        console.log(`🔍 Checking video codec for: ${videoUrl}`);
         fetch(`/api/get-video-info?url=${encodeURIComponent(videoUrl)}`)
-          .then(res => res.json())
+          .then(res => {
+            console.log(`📡 Codec API response status: ${res.status}`);
+            return res.json();
+          })
           .then(data => {
+            console.log('🎬 Video codec info received:', data);
             setVideoCodecInfo(prev => ({
               ...prev,
               [videoUrl]: data
             }));
-            console.log('🎬 Video codec info:', data);
           })
-          .catch(err => console.error('Error checking video codec:', err));
+          .catch(err => console.error('❌ Error checking video codec:', err.message));
       }
     } else if (!open) {
       setShowVideoModal(false);
@@ -168,17 +172,9 @@ export default function YarlLightbox({
                   const errorCode = video.error?.code || 0;
                   const errorName = errorMessages[errorCode] || 'UNKNOWN_ERROR';
                   
-                  console.error('❌ VIDEO PLAYBACK ERROR:', {
-                    errorName,
-                    errorCode,
-                    url: items[videoIndex].url,
-                    mimeType: items[videoIndex].mimeType,
-                    filename: items[videoIndex].filename,
-                    message: video.error?.message,
-                    readyState: video.readyState,
-                    networkState: video.networkState,
-                    currentSrc: video.currentSrc
-                  });
+                  const errorMsg = `❌ VIDEO ERROR: ${errorName} (Code: ${errorCode}) | File: ${items[videoIndex].filename} | URL: ${items[videoIndex].url} | ReadyState: ${video.readyState} | NetworkState: ${video.networkState}`;
+                  console.error(errorMsg);
+                  console.error('Full error object:', video.error);
                   
                   // Check if it's H.265
                   if (items[videoIndex].filename?.includes('.hevc') || items[videoIndex].filename?.includes('.h265')) {
