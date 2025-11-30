@@ -109,6 +109,20 @@ export default function YarlLightbox({
             <div className="bg-black rounded-lg overflow-hidden">
               <video
                 key={items[videoIndex].url}
+                ref={(videoEl) => {
+                  if (videoEl) {
+                    // Log video element state when video loads
+                    videoEl.addEventListener('loadedmetadata', () => {
+                      console.log('📹 Video metadata loaded:', {
+                        duration: videoEl.duration,
+                        videoWidth: videoEl.videoWidth,
+                        videoHeight: videoEl.videoHeight,
+                        readyState: videoEl.readyState,
+                        networkState: videoEl.networkState
+                      });
+                    });
+                  }
+                }}
                 controls
                 autoPlay
                 className="w-full h-auto max-h-[70vh] object-contain bg-black"
@@ -118,6 +132,7 @@ export default function YarlLightbox({
                 onError={(e) => {
                   const video = e.target as HTMLVideoElement;
                   const errorMessages: Record<number, string> = {
+                    0: 'UNKNOWN_ERROR or no error occurred yet',
                     1: 'MEDIA_ERR_ABORTED',
                     2: 'MEDIA_ERR_NETWORK',
                     3: 'MEDIA_ERR_DECODE - Browser cannot decode this video codec/format',
@@ -132,7 +147,10 @@ export default function YarlLightbox({
                     url: items[videoIndex].url,
                     mimeType: items[videoIndex].mimeType,
                     filename: items[videoIndex].filename,
-                    message: video.error?.message
+                    message: video.error?.message,
+                    readyState: video.readyState,
+                    networkState: video.networkState,
+                    currentSrc: video.currentSrc
                   });
                   
                   // Check if it's H.265
@@ -141,10 +159,19 @@ export default function YarlLightbox({
                   }
                 }}
                 onLoadStart={() => {
-                  console.log('🔄 Video loading:', items[videoIndex].url);
+                  console.log('🔄 Video loading started:', {
+                    url: items[videoIndex].url,
+                    filename: items[videoIndex].filename
+                  });
+                }}
+                onLoadedMetadata={() => {
+                  console.log('📹 Video metadata loaded and ready');
                 }}
                 onCanPlay={() => {
                   console.log('✅ Video can play:', items[videoIndex].url);
+                }}
+                onProgress={() => {
+                  console.log('⏳ Video buffering progress');
                 }}
                 style={{
                   WebkitBackfaceVisibility: 'hidden',
