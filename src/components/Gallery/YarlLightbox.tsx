@@ -117,12 +117,28 @@ export default function YarlLightbox({
                 crossOrigin="anonymous"
                 onError={(e) => {
                   const video = e.target as HTMLVideoElement;
-                  console.error('❌ Video error:', {
-                    error: video.error?.message,
-                    errorCode: video.error?.code,
-                    src: items[videoIndex].url,
-                    type: items[videoIndex].mimeType
+                  const errorMessages: Record<number, string> = {
+                    1: 'MEDIA_ERR_ABORTED',
+                    2: 'MEDIA_ERR_NETWORK',
+                    3: 'MEDIA_ERR_DECODE - Browser cannot decode this video codec/format',
+                    4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Video format not supported by browser'
+                  };
+                  const errorCode = video.error?.code || 0;
+                  const errorName = errorMessages[errorCode] || 'UNKNOWN_ERROR';
+                  
+                  console.error('❌ VIDEO PLAYBACK ERROR:', {
+                    errorName,
+                    errorCode,
+                    url: items[videoIndex].url,
+                    mimeType: items[videoIndex].mimeType,
+                    filename: items[videoIndex].filename,
+                    message: video.error?.message
                   });
+                  
+                  // Check if it's H.265
+                  if (items[videoIndex].filename?.includes('.hevc') || items[videoIndex].filename?.includes('.h265')) {
+                    console.warn('⚠️ This appears to be H.265/HEVC video - not supported in browsers. Need to transcode to H.264');
+                  }
                 }}
                 onLoadStart={() => {
                   console.log('🔄 Video loading:', items[videoIndex].url);
