@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Lock } from 'lucide-react';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
@@ -12,6 +12,7 @@ import Head from 'next/head';
 
 export default function EventPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   
   // Core state
@@ -317,6 +318,11 @@ export default function EventPage() {
     return null;
   }
 
+  const handleUpload = () => {
+    if (!slug) return;
+    router.push(`/e/${slug}/upload`);
+  };
+
   // Generate SEO config for this event
   const seoConfig = getEventSeoConfig({
     eventId: slug,
@@ -380,6 +386,7 @@ export default function EventPage() {
         isFreebie={eventData.is_freebie}
         viewMode={viewMode}
         eventId={eventData.id}
+        canUpload
         photos={photos.map(photo => {
           const photoUrl = photo.url || photo.file_path || photo.storage_path || '';
           const isVideoItem = photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/') || isVideoUrl(photoUrl);
@@ -396,6 +403,7 @@ export default function EventPage() {
             type: isVideoItem ? 'video' : 'photo'
           };
         })}
+        onUpload={handleUpload}
       />
     </ErrorBoundary>
   );
