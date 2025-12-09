@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
-// Import all YARL plugins
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
 import Zoom from 'yet-another-react-lightbox/plugins/zoom';
 import Captions from 'yet-another-react-lightbox/plugins/captions';
@@ -13,26 +12,10 @@ import Download from 'yet-another-react-lightbox/plugins/download';
 import Share from 'yet-another-react-lightbox/plugins/share';
 import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
 import Inline from 'yet-another-react-lightbox/plugins/inline';
-// Import plugin CSS styles
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/captions.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
 import type { GalleryItem, LightboxProps } from './types';
-
-/**
- * YARL Lightbox Component with Full Plugin Suite
- * Uses yet-another-react-lightbox with all available plugins:
- * - Thumbnails: Bottom thumbnail strip for quick navigation
- * - Zoom: Mouse wheel zoom on images
- * - Captions: Display image titles/descriptions
- * - Fullscreen: Toggle fullscreen viewing
- * - Counter: Image counter (X of Y)
- * - Download: Download individual images
- * - Share: Share via social media and copy link
- * - Slideshow: Auto-advance through images
- * - Inline: Display images inline without modal
- * Videos are rendered in a custom HTML5 player
- */
 
 function isVideoItem(item: GalleryItem): boolean {
   return !!(item.isVideo || item.type === 'video' || item.mimeType?.startsWith('video/'));
@@ -42,63 +25,51 @@ function getPlaybackUrl(item: GalleryItem): string {
   return item.url || '';
 }
 
-function getThumbnailUrl(item: GalleryItem): string {
-  return item.thumb || item.poster || item.url || '';
-}
-
-export default function YarlLightbox({
-  items,
-  open,
-  index,
-  onClose,
-  onIndexChange,
-  eventName,
-}: LightboxProps) {
+export default function YarlLightbox({ items, open, index, onClose, onIndexChange }: LightboxProps) {
   const [videoIndex, setVideoIndex] = useState(-1);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoCodecInfo, setVideoCodecInfo] = useState<Record<string, any>>({});
 
-  // Use effect to handle video modal when opening a video
+  const imageItems = items.filter(item => !isVideoItem(item));
+  const imageIndexMap: Record<number, number> = {};
+  const imageReverseMap: Record<number, number> = {};
+  let imageCounter = 0;
+  items.forEach((item, itemIndex) => {
+    if (!isVideoItem(item)) {
+      imageIndexMap[itemIndex] = imageCounter;
+      imageReverseMap[imageCounter] = itemIndex;
+      imageCounter += 1;
+    }
+  });
+  const yarlIndex = imageIndexMap[index] ?? 0;
+
   useEffect(() => {
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
 
-      // Check video codec compatibility
       const videoUrl = items[index].url;
       if (videoUrl && !videoCodecInfo[videoUrl]) {
-        console.log(`🔍 Checking video codec for: ${videoUrl}`);
         fetch(`/api/get-video-info?url=${encodeURIComponent(videoUrl)}`)
-          .then(res => {
-            console.log(`📡 Codec API response status: ${res.status}`);
-            return res.json();
-          })
+          .then(res => res.json())
           .then(data => {
-            console.log('🎬 Video codec info received:', data);
-            setVideoCodecInfo(prev => ({
-              ...prev,
-              [videoUrl]: data
-            }));
+            setVideoCodecInfo(prev => ({ ...prev, [videoUrl]: data }));
           })
-          .catch(err => console.error('❌ Error checking video codec:', err.message));
+          .catch(err => console.error('Video codec check failed:', err));
       }
     } else {
-      // Reset video modal when not viewing a video (either closed or viewing an image)
+      // Ensure video modal closes when switching to images or closing the lightbox
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
-  }, [open, index]);
+  }, [open, index, items]);
 
-  // Early return AFTER all hooks
   if (!items || items.length === 0) {
     return null;
   }
 
-  // Separate videos and images
   const videoItems = items.filter(isVideoItem);
-  const imageItems = items.filter(item => !isVideoItem(item));
 
-  // Map items to YARL format (images only)
   const yarlSlides = imageItems.map(item => ({
     src: item.url || '',
     alt: item.title || item.filename || '',
@@ -106,30 +77,11 @@ export default function YarlLightbox({
     height: item.height || 1080,
   }));
 
-  // Map the current index from the full items array to the imageItems array
-  const getImageIndex = (fullIndex: number): number => {
-    if (fullIndex < 0 || !items[fullIndex]) return -1;
-    if (isVideoItem(items[fullIndex])) return -1; // Current item is a video
-
-    // Count how many images come before this index
-    let imageIndex = 0;
-    for (let i = 0; i < fullIndex; i++) {
-      if (!isVideoItem(items[i])) {
-        imageIndex++;
-      }
-    }
-    return imageIndex;
-  };
-
-  const currentImageIndex = getImageIndex(index);
-
   return (
     <>
-      {/* Video Modal */}
       {showVideoModal && videoIndex >= 0 && isVideoItem(items[videoIndex]) && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
           <div className="relative w-full max-w-4xl">
-            {/* Close Button */}
             <button
               onClick={() => {
                 setShowVideoModal(false);
@@ -143,9 +95,7 @@ export default function YarlLightbox({
               </svg>
             </button>
 
-            {/* Video Container */}
             <div className="bg-black rounded-lg overflow-hidden">
-              {/* Codec Warning Banner */}
               {videoCodecInfo[items[videoIndex]?.url] && !videoCodecInfo[items[videoIndex]?.url].isCompatible && (
                 <div className="bg-yellow-900/80 text-yellow-100 p-3 text-sm">
                   <strong>⚠️ Codec Warning:</strong> {videoCodecInfo[items[videoIndex]?.url].message}
@@ -155,23 +105,9 @@ export default function YarlLightbox({
                   </span>
                 </div>
               )}
-              
+
               <video
                 key={items[videoIndex].url}
-                ref={(videoEl) => {
-                  if (videoEl) {
-                    // Log video element state when video loads
-                    videoEl.addEventListener('loadedmetadata', () => {
-                      console.log('📹 Video metadata loaded:', {
-                        duration: videoEl.duration,
-                        videoWidth: videoEl.videoWidth,
-                        videoHeight: videoEl.videoHeight,
-                        readyState: videoEl.readyState,
-                        networkState: videoEl.networkState
-                      });
-                    });
-                  }
-                }}
                 controls
                 autoPlay
                 className="w-full h-auto max-h-[70vh] object-contain bg-black"
@@ -180,65 +116,23 @@ export default function YarlLightbox({
                 crossOrigin="anonymous"
                 onError={(e) => {
                   const video = e.target as HTMLVideoElement;
-                  const errorMessages: Record<number, string> = {
-                    0: 'UNKNOWN_ERROR or no error occurred yet',
-                    1: 'MEDIA_ERR_ABORTED',
-                    2: 'MEDIA_ERR_NETWORK',
-                    3: 'MEDIA_ERR_DECODE - Browser cannot decode this video codec/format',
-                    4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - Video format not supported by browser'
-                  };
                   const errorCode = video.error?.code || 0;
-                  const errorName = errorMessages[errorCode] || 'UNKNOWN_ERROR';
-                  
-                  const errorMsg = `❌ VIDEO ERROR: ${errorName} (Code: ${errorCode}) | File: ${items[videoIndex].filename} | URL: ${items[videoIndex].url} | ReadyState: ${video.readyState} | NetworkState: ${video.networkState}`;
-                  console.error(errorMsg);
-                  console.error('Full error object:', video.error);
-                  
-                  // Check if it's H.265
-                  if (items[videoIndex].filename?.includes('.hevc') || items[videoIndex].filename?.includes('.h265')) {
-                    console.warn('⚠️ This appears to be H.265/HEVC video - not supported in browsers. Need to transcode to H.264');
-                  }
-                }}
-                onLoadStart={() => {
-                  console.log('🔄 Video loading started:', {
-                    url: items[videoIndex].url,
-                    filename: items[videoIndex].filename
-                  });
-                }}
-                onLoadedMetadata={() => {
-                  console.log('📹 Video metadata loaded and ready');
-                }}
-                onCanPlay={() => {
-                  console.log('✅ Video can play:', items[videoIndex].url);
-                }}
-                onProgress={() => {
-                  console.log('⏳ Video buffering progress');
-                }}
-                style={{
-                  WebkitBackfaceVisibility: 'hidden',
-                  backfaceVisibility: 'hidden'
+                  console.error('Video error', errorCode, video.error);
                 }}
               >
-                {/* Primary source - MP4 H.264 (most compatible) */}
                 <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4; codecs='avc1.42E01E'" />
-                {/* Fallback - MP4 generic */}
                 <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4" />
-                {/* WebM fallback */}
                 <source src={getPlaybackUrl(items[videoIndex])} type="video/webm" />
-                <p className="text-white text-center p-4">
-                  ⚠️ Your browser cannot play this video. Try downloading it instead.
-                </p>
+                <p className="text-white text-center p-4">⚠️ Your browser cannot play this video. Try downloading it instead.</p>
               </video>
             </div>
 
-            {/* Video Title */}
             {items[videoIndex].title && (
               <div className="mt-4 text-white text-center">
                 <h3 className="text-lg font-semibold">{items[videoIndex].title}</h3>
               </div>
             )}
 
-            {/* Navigation */}
             {videoItems.length > 1 && (
               <div className="flex justify-between items-center mt-6">
                 <button
@@ -274,46 +168,20 @@ export default function YarlLightbox({
         </div>
       )}
 
-      {/* Image Lightbox (only for images) */}
-      {imageItems.length > 0 && currentImageIndex >= 0 && (
+      {imageItems.length > 0 && (
         <Lightbox
           open={open && !showVideoModal}
           close={onClose}
           slides={yarlSlides}
-          index={currentImageIndex}
-          plugins={[
-            Thumbnails,
-            Zoom,
-            Captions,
-            Fullscreen,
-            Counter,
-            Download,
-            Share,
-            Slideshow,
-            Inline,
-          ]}
+          index={Math.min(Math.max(yarlIndex, 0), imageItems.length - 1)}
+          plugins={[Thumbnails, Zoom, Captions, Fullscreen, Counter, Download, Share, Slideshow, Inline]}
           on={{
-            view: ({ index: imageIdx }) => {
-              // Map imageIdx back to the full items array index
-              let fullIndex = 0;
-              let imgCount = 0;
-              for (let i = 0; i < items.length; i++) {
-                if (!isVideoItem(items[i])) {
-                  if (imgCount === imageIdx) {
-                    fullIndex = i;
-                    break;
-                  }
-                  imgCount++;
-                }
-              }
-              onIndexChange?.(fullIndex);
+            view: ({ index: currentIndex }) => {
+              const mappedBack = imageReverseMap[currentIndex];
+              onIndexChange?.(mappedBack !== undefined ? mappedBack : currentIndex);
             },
           }}
-          styles={{
-            container: {
-              backgroundColor: 'rgba(0, 0, 0, 0.95)',
-            },
-          }}
+          styles={{ container: { backgroundColor: 'rgba(0, 0, 0, 0.95)' } }}
           thumbnails={{
             position: 'bottom',
             width: 120,
