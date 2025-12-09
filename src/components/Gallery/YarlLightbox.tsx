@@ -44,7 +44,16 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
   const yarlIndex = imageIndexMap[index] ?? 0;
 
   useEffect(() => {
+    console.log('🎥 YarlLightbox useEffect triggered:', {
+      open,
+      index,
+      itemsLength: items?.length,
+      hasItem: items && items[index] !== undefined,
+      isVideo: items && items[index] ? isVideoItem(items[index]) : null
+    });
+
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
+      console.log('📹 Opening video modal for index:', index);
       setVideoIndex(index);
       setShowVideoModal(true);
 
@@ -59,6 +68,7 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
       }
     } else {
       // Ensure video modal closes when switching to images or closing the lightbox
+      console.log('🖼️ Setting showVideoModal to false, should open YARL lightbox');
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
@@ -76,6 +86,15 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
     width: item.width || 1920,
     height: item.height || 1080,
   }));
+
+  console.log('🎨 YarlLightbox render:', {
+    showVideoModal,
+    videoIndex,
+    imageItemsLength: imageItems.length,
+    open,
+    yarlIndex,
+    willOpenYarl: open && !showVideoModal && imageItems.length > 0
+  });
 
   return (
     <>

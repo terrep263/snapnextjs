@@ -73,9 +73,11 @@ export default function GalleryGrid({
             : ''
         }`}
         onClick={() => {
+          console.log('🖱️ GalleryGrid onClick triggered:', { index, itemId: item.id, selectMode });
           if (selectMode && onToggleSelection) {
             onToggleSelection(item.id);
           } else {
+            console.log('📸 Calling onItemClick with index:', index);
             onItemClick(index);
           }
         }}
