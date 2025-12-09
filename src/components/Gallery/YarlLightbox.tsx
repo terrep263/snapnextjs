@@ -108,6 +108,7 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
 
               <video
                 key={items[videoIndex].url}
+                muted
                 controls
                 autoPlay
                 className="w-full h-auto max-h-[70vh] object-contain bg-black"
@@ -116,9 +117,41 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
                 crossOrigin="anonymous"
                 onError={(e) => {
                   const video = e.target as HTMLVideoElement;
+                  const errorMessages: Record<number, string> = {
+                    0: 'UNKNOWN_ERROR or not set',
+                    1: 'MEDIA_ERR_ABORTED',
+                    2: 'MEDIA_ERR_NETWORK',
+                    3: 'MEDIA_ERR_DECODE - cannot decode codec/format',
+                    4: 'MEDIA_ERR_SRC_NOT_SUPPORTED - unsupported format/source'
+                  };
                   const errorCode = video.error?.code || 0;
-                  console.error('Video error', errorCode, video.error);
+                  const errorName = errorMessages[errorCode] || 'UNKNOWN_ERROR';
+                  console.error(
+                    `❌ VIDEO ERROR: ${errorName} (Code ${errorCode}) | readyState=${video.readyState} networkState=${video.networkState} | src=${video.currentSrc}`,
+                    video.error
+                  );
+                  if (video.error?.message) {
+                    console.error('Video error message:', video.error.message);
+                  }
                 }}
+                onLoadedMetadata={(e) => {
+                  const v = e.target as HTMLVideoElement;
+                  console.log('📹 Metadata:', {
+                    duration: v.duration,
+                    videoWidth: v.videoWidth,
+                    videoHeight: v.videoHeight,
+                    readyState: v.readyState,
+                    networkState: v.networkState,
+                    src: v.currentSrc
+                  });
+                }}
+                onCanPlay={(e) => {
+                  const v = e.target as HTMLVideoElement;
+                  console.log('✅ Can play video', { readyState: v.readyState, networkState: v.networkState, src: v.currentSrc });
+                }}
+                onStalled={() => console.warn('⏳ Video stalled')}
+                onWaiting={() => console.warn('⏳ Video waiting for data')}
+                onLoadStart={() => console.log('🔄 Video load started', items[videoIndex].url)}
               >
                 <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4; codecs='avc1.42E01E'" />
                 <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4" />
