@@ -63,7 +63,7 @@ export default function YarlLightbox({
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
-      
+
       // Check video codec compatibility
       const videoUrl = items[index].url;
       if (videoUrl && !videoCodecInfo[videoUrl]) {
@@ -82,7 +82,8 @@ export default function YarlLightbox({
           })
           .catch(err => console.error('❌ Error checking video codec:', err.message));
       }
-    } else if (!open) {
+    } else {
+      // Reset video modal when not viewing a video (either closed or viewing an image)
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
