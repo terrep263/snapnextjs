@@ -105,6 +105,23 @@ export default function YarlLightbox({
     height: item.height || 1080,
   }));
 
+  // Map the current index from the full items array to the imageItems array
+  const getImageIndex = (fullIndex: number): number => {
+    if (fullIndex < 0 || !items[fullIndex]) return -1;
+    if (isVideoItem(items[fullIndex])) return -1; // Current item is a video
+
+    // Count how many images come before this index
+    let imageIndex = 0;
+    for (let i = 0; i < fullIndex; i++) {
+      if (!isVideoItem(items[i])) {
+        imageIndex++;
+      }
+    }
+    return imageIndex;
+  };
+
+  const currentImageIndex = getImageIndex(index);
+
   return (
     <>
       {/* Video Modal */}
@@ -257,12 +274,12 @@ export default function YarlLightbox({
       )}
 
       {/* Image Lightbox (only for images) */}
-      {imageItems.length > 0 && (
+      {imageItems.length > 0 && currentImageIndex >= 0 && (
         <Lightbox
           open={open && !showVideoModal}
           close={onClose}
           slides={yarlSlides}
-          index={index}
+          index={currentImageIndex}
           plugins={[
             Thumbnails,
             Zoom,
@@ -275,8 +292,20 @@ export default function YarlLightbox({
             Inline,
           ]}
           on={{
-            view: ({ index: currentIndex }) => {
-              onIndexChange?.(currentIndex);
+            view: ({ index: imageIdx }) => {
+              // Map imageIdx back to the full items array index
+              let fullIndex = 0;
+              let imgCount = 0;
+              for (let i = 0; i < items.length; i++) {
+                if (!isVideoItem(items[i])) {
+                  if (imgCount === imageIdx) {
+                    fullIndex = i;
+                    break;
+                  }
+                  imgCount++;
+                }
+              }
+              onIndexChange?.(fullIndex);
             },
           }}
           styles={{
