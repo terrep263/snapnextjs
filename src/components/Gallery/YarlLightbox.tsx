@@ -63,7 +63,7 @@ export default function YarlLightbox({
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
       setVideoIndex(index);
       setShowVideoModal(true);
-      
+
       // Check video codec compatibility
       const videoUrl = items[index].url;
       if (videoUrl && !videoCodecInfo[videoUrl]) {
@@ -82,7 +82,8 @@ export default function YarlLightbox({
           })
           .catch(err => console.error('❌ Error checking video codec:', err.message));
       }
-    } else if (!open) {
+    } else {
+      // Reset video modal when not viewing a video (either closed or viewing an image)
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
@@ -104,6 +105,23 @@ export default function YarlLightbox({
     width: item.width || 1920,
     height: item.height || 1080,
   }));
+
+  // Map the current index from the full items array to the imageItems array
+  const getImageIndex = (fullIndex: number): number => {
+    if (fullIndex < 0 || !items[fullIndex]) return -1;
+    if (isVideoItem(items[fullIndex])) return -1; // Current item is a video
+
+    // Count how many images come before this index
+    let imageIndex = 0;
+    for (let i = 0; i < fullIndex; i++) {
+      if (!isVideoItem(items[i])) {
+        imageIndex++;
+      }
+    }
+    return imageIndex;
+  };
+
+  const currentImageIndex = getImageIndex(index);
 
   return (
     <>
@@ -257,12 +275,12 @@ export default function YarlLightbox({
       )}
 
       {/* Image Lightbox (only for images) */}
-      {imageItems.length > 0 && (
+      {imageItems.length > 0 && currentImageIndex >= 0 && (
         <Lightbox
           open={open && !showVideoModal}
           close={onClose}
           slides={yarlSlides}
-          index={index}
+          index={currentImageIndex}
           plugins={[
             Thumbnails,
             Zoom,
@@ -275,8 +293,20 @@ export default function YarlLightbox({
             Inline,
           ]}
           on={{
-            view: ({ index: currentIndex }) => {
-              onIndexChange?.(currentIndex);
+            view: ({ index: imageIdx }) => {
+              // Map imageIdx back to the full items array index
+              let fullIndex = 0;
+              let imgCount = 0;
+              for (let i = 0; i < items.length; i++) {
+                if (!isVideoItem(items[i])) {
+                  if (imgCount === imageIdx) {
+                    fullIndex = i;
+                    break;
+                  }
+                  imgCount++;
+                }
+              }
+              onIndexChange?.(fullIndex);
             },
           }}
           styles={{
