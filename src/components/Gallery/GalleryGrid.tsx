@@ -73,11 +73,9 @@ export default function GalleryGrid({
             : ''
         }`}
         onClick={() => {
-          console.log('🖱️ GalleryGrid onClick triggered:', { index, itemId: item.id, selectMode });
           if (selectMode && onToggleSelection) {
             onToggleSelection(item.id);
           } else {
-            console.log('📸 Calling onItemClick with index:', index);
             onItemClick(index);
           }
         }}
@@ -128,18 +126,18 @@ export default function GalleryGrid({
 
           {/* Hover overlay with actions */}
           {!selectMode && (
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 touch-none pointer-events-none">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 md:transition-opacity md:duration-300 flex flex-col items-center justify-center gap-2 pointer-events-none">
               {/* View/Zoom icon */}
-              <div className="flex items-center gap-3 pointer-events-auto">
+              <div className="flex items-center gap-3">
                 <div className="text-white">
                   <ZoomIn className="w-8 h-8" />
                 </div>
               </div>
 
               {/* Action buttons row */}
-              <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0 pointer-events-auto">
+              <div className="flex flex-col sm:flex-row items-center gap-2 mt-2 w-full px-2 sm:w-auto sm:px-0">
                 {/* Share button */}
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()} className="pointer-events-auto">
                   <UniversalShare
                     imageUrl={item.url}
                     eventName={eventName}
@@ -155,7 +153,7 @@ export default function GalleryGrid({
                       e.stopPropagation();
                       onDownload(item);
                     }}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg"
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white/90 hover:bg-white text-gray-900 px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors shadow-lg pointer-events-auto"
                   >
                     <Download className="w-4 h-4" />
                     <span>Download</span>
@@ -170,7 +168,7 @@ export default function GalleryGrid({
                       onDelete(item, e);
                     }}
                     disabled={deleting === item.id}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2.5 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg pointer-events-auto"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Delete</span>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Share2, Loader2, Trash2, Download, Check } from 'lucide-react';
 import UniversalShare from './UniversalShare';
@@ -95,15 +95,6 @@ export default function UniversalMobileGallery({
   const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
-
-  // Debug: Log selectedIndex changes
-  useEffect(() => {
-    console.log('🔄 selectedIndex changed:', selectedIndex);
-    if (selectedIndex >= 0) {
-      console.log('🎬 Should open lightbox for index:', selectedIndex);
-      console.log('📦 displayItems length:', displayItems.length);
-    }
-  }, [selectedIndex]);
 
   // Helper function to detect if URL is a video
   const isVideoUrl = (url: string): boolean => {
@@ -430,12 +421,7 @@ export default function UniversalMobileGallery({
           eventName={eventName}
           eventCode={eventCode}
           canDelete={canDelete}
-          onItemClick={(index) => {
-            console.log('🎯 UniversalMobileGallery onItemClick:', { index, displayItemsLength: displayItems.length });
-            console.log('📊 Item at index:', displayItems[index]);
-            setSelectedIndex(index);
-            console.log('✅ selectedIndex set to:', index);
-          }}
+          onItemClick={(index) => setSelectedIndex(index)}
           onToggleSelection={toggleItemSelection}
           onDownload={handleDownload}
           onDelete={handleDelete}
@@ -455,28 +441,14 @@ export default function UniversalMobileGallery({
         )}
 
         {/* Lightbox */}
-        {(() => {
-          const lightboxOpen = selectedIndex >= 0;
-          console.log('🔦 Rendering YarlLightbox:', {
-            open: lightboxOpen,
-            index: selectedIndex,
-            itemsLength: displayItems.length,
-            selectedItem: displayItems[selectedIndex]
-          });
-          return (
-            <YarlLightbox
-              items={displayItems}
-              open={lightboxOpen}
-              index={selectedIndex}
-              onClose={() => {
-                console.log('❌ Lightbox onClose called');
-                setSelectedIndex(-1);
-              }}
-              onIndexChange={setSelectedIndex}
-              eventName={eventName}
-            />
-          );
-        })()}
+        <YarlLightbox
+          items={displayItems}
+          open={selectedIndex >= 0}
+          index={selectedIndex}
+          onClose={() => setSelectedIndex(-1)}
+          onIndexChange={setSelectedIndex}
+          eventName={eventName}
+        />
       </div>
     </div>
   );
