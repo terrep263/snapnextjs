@@ -58,6 +58,22 @@ export default function YarlLightbox({
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoCodecInfo, setVideoCodecInfo] = useState<Record<string, any>>({});
 
+  // Map full item list indexes to image-only indexes so videos don't break YARL indexing
+  const imageItems = items.filter(item => !isVideoItem(item));
+  const imageIndexMap: Record<number, number> = {};
+  const imageReverseMap: Record<number, number> = {};
+  let imageCounter = 0;
+  items.forEach((item, itemIndex) => {
+    if (!isVideoItem(item)) {
+      imageIndexMap[itemIndex] = imageCounter;
+      imageReverseMap[imageCounter] = itemIndex;
+      imageCounter += 1;
+    }
+  });
+
+  // Compute the index to use for YARL (images only) to avoid out-of-range errors
+  const yarlIndex = imageIndexMap[index] ?? 0;
+
   // Use effect to handle video modal when opening a video
   useEffect(() => {
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
@@ -95,7 +111,6 @@ export default function YarlLightbox({
 
   // Separate videos and images
   const videoItems = items.filter(isVideoItem);
-  const imageItems = items.filter(item => !isVideoItem(item));
 
   // Map items to YARL format (images only)
   const yarlSlides = imageItems.map(item => ({
@@ -262,7 +277,7 @@ export default function YarlLightbox({
           open={open && !showVideoModal}
           close={onClose}
           slides={yarlSlides}
-          index={index}
+          index={Math.min(Math.max(yarlIndex, 0), imageItems.length - 1)}
           plugins={[
             Thumbnails,
             Zoom,
@@ -276,7 +291,8 @@ export default function YarlLightbox({
           ]}
           on={{
             view: ({ index: currentIndex }) => {
-              onIndexChange?.(currentIndex);
+              const mappedBack = imageReverseMap[currentIndex];
+              onIndexChange?.(mappedBack !== undefined ? mappedBack : currentIndex);
             },
           }}
           styles={{
