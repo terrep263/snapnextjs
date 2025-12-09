@@ -275,6 +275,39 @@ export default function UniversalMobileGallery({
         </div>
       )}
 
+      {/* PACKAGE TYPE BANNER */}
+      {showHeader && (
+        <div className="sticky top-0 z-20 w-full">
+          {packageType === 'freebie' && (
+            <div className="bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 px-4 text-center shadow-md">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl">🎁</span>
+                <span className="font-bold text-lg">FREEBIE GALLERY</span>
+                <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Promotional Event</span>
+              </div>
+            </div>
+          )}
+          {packageType === 'premium' && (
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 text-center shadow-md">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl">⭐</span>
+                <span className="font-bold text-lg">PREMIUM GALLERY</span>
+                <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Full Features</span>
+              </div>
+            </div>
+          )}
+          {packageType === 'basic' && (
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-4 text-center shadow-md">
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl">📸</span>
+                <span className="font-bold text-lg">BASIC GALLERY</span>
+                <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Free Event</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SLIDE-OUT NAVIGATION */}
       {showNavigation && (
         <AnimatePresence>
