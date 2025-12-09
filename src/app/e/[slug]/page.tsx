@@ -9,6 +9,8 @@ import UniversalMobileGallery from '@/components/UniversalMobileGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
 import Head from 'next/head';
+import JSZip from 'jszip';
+import { toast } from 'sonner';
 
 export default function EventPage() {
   const params = useParams();
@@ -323,6 +325,130 @@ export default function EventPage() {
     router.push(`/e/${slug}/upload`);
   };
 
+  // Delete photo with optimistic UI
+  const handleDelete = async (itemId: string) => {
+    if (!eventData) return;
+
+    // Find the photo to delete
+    const photoToDelete = photos.find(p => p.id === itemId);
+    if (!photoToDelete) return;
+
+    // Confirm deletion
+    if (!confirm(`Delete ${photoToDelete.filename || photoToDelete.title || 'this item'}?`)) {
+      return;
+    }
+
+    // Optimistically remove from UI
+    const previousPhotos = [...photos];
+    setPhotos(prev => prev.filter(p => p.id !== itemId));
+
+    try {
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('photos')
+        .delete()
+        .eq('id', itemId)
+        .eq('event_id', eventData.id); // Security: only delete from own event
+
+      if (dbError) throw dbError;
+
+      // Delete from storage (extract filename from URL)
+      const urlPath = photoToDelete.url || photoToDelete.file_path || photoToDelete.storage_path || '';
+      const pathMatch = urlPath.match(/event-media\/(.+)/);
+
+      if (pathMatch && pathMatch[1]) {
+        const storagePath = pathMatch[1];
+        const { error: storageError } = await supabase.storage
+          .from('event-media')
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.warn('Storage deletion warning:', storageError);
+          // Don't throw - DB delete succeeded, storage might already be gone
+        }
+      }
+
+      toast.success('Photo deleted successfully');
+    } catch (err) {
+      // Revert on error
+      console.error('Delete failed:', err);
+      setPhotos(previousPhotos);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete photo';
+      toast.error(errorMessage);
+    }
+  };
+
+  // Download all photos as ZIP (Premium/Freebie only)
+  const handleDownloadAll = async () => {
+    if (!eventData || photos.length === 0) return;
+
+    toast.info('Preparing download...');
+
+    try {
+      const zip = new JSZip();
+      const eventFolder = zip.folder(eventData.name || 'event-photos');
+
+      if (!eventFolder) {
+        throw new Error('Failed to create ZIP folder');
+      }
+
+      // Download and add each photo to ZIP
+      let successCount = 0;
+      const totalPhotos = photos.length;
+
+      for (let i = 0; i < totalPhotos; i++) {
+        const photo = photos[i];
+        const photoUrl = photo.url || photo.file_path || photo.storage_path || '';
+
+        try {
+          const response = await fetch(photoUrl);
+          if (!response.ok) throw new Error(`Failed to fetch photo ${i + 1}`);
+
+          const blob = await response.blob();
+          const filename = photo.filename || photo.title || `photo-${photo.id}${photo.is_video ? '.mp4' : '.jpg'}`;
+
+          eventFolder.file(filename, blob);
+          successCount++;
+
+          // Update progress
+          if ((successCount % 5 === 0) || successCount === totalPhotos) {
+            toast.loading(`Processing ${successCount} of ${totalPhotos}...`, { id: 'zip-progress' });
+          }
+        } catch (err) {
+          console.error(`Failed to add photo ${i + 1} to ZIP:`, err);
+          // Continue with other photos
+        }
+      }
+
+      if (successCount === 0) {
+        throw new Error('No photos could be downloaded');
+      }
+
+      // Generate and download ZIP
+      toast.loading('Creating ZIP file...', { id: 'zip-progress' });
+      const content = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+
+      // Trigger download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(content);
+      link.download = `${eventData.name || 'event-photos'}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+
+      toast.success(`Downloaded ${successCount} of ${totalPhotos} photos`, { id: 'zip-progress' });
+    } catch (err) {
+      console.error('Bulk download failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Download failed';
+      toast.error(errorMessage, { id: 'zip-progress' });
+    }
+  };
+
   // Generate SEO config for this event
   const seoConfig = getEventSeoConfig({
     eventId: slug,
@@ -386,7 +512,7 @@ export default function EventPage() {
         isFreebie={eventData.is_freebie}
         viewMode={viewMode}
         eventId={eventData.id}
-        canUpload
+        canUpload={true}  // Everyone can upload - that's the core feature!
         photos={photos.map(photo => {
           const photoUrl = photo.url || photo.file_path || photo.storage_path || '';
           const isVideoItem = photo.is_video || photo.type?.startsWith('video/') || photo.mime_type?.startsWith('video/') || isVideoUrl(photoUrl);
@@ -397,6 +523,7 @@ export default function EventPage() {
             id: photo.id,
             url: photoUrl,
             title: photo.title || photo.filename,
+            filename: photo.filename,
             description: photo.description,
             uploadedAt: photo.created_at,
             isVideo: isVideoItem,
@@ -404,6 +531,13 @@ export default function EventPage() {
           };
         })}
         onUpload={handleUpload}
+        onDelete={viewMode === 'owner' || viewMode === 'admin' ? handleDelete : undefined}
+        onDownloadAll={
+          (viewMode === 'admin' ||
+           (viewMode === 'owner' && (eventData.stripe_session_id || eventData.payment_type === 'stripe')))
+            ? handleDownloadAll
+            : undefined
+        }
       />
     </ErrorBoundary>
   );
