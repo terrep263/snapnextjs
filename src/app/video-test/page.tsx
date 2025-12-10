@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { YarlLightbox } from '@/components/Gallery';
+import { PhotoSwipeLightbox } from '@/components/Gallery';
 import type { GalleryItem } from '@/components/Gallery';
 
 export default function VideoTestPage() {
@@ -160,7 +160,7 @@ export default function VideoTestPage() {
         </div>
       </div>
 
-      <YarlLightbox
+      <PhotoSwipeLightbox
         items={testItems}
         open={open}
         index={index}

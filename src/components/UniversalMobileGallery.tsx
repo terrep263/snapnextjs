@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Share2, Loader2, Trash2, Download, Check } from 'lucide-react';
 import UniversalShare from './UniversalShare';
-import YarlLightbox from './Gallery/YarlLightbox';
+import PhotoSwipeLightbox from './Gallery/PhotoSwipeLightbox';
 import GalleryGrid from './Gallery/GalleryGrid';
 import GalleryControls from './Gallery/GalleryControls';
 import type { GalleryItem, LayoutType, ViewMode, PackageType } from './Gallery';
@@ -84,7 +84,7 @@ export default function UniversalMobileGallery({
 }: UniversalMobileGalleryProps) {
   // Derive permissions from viewMode if not explicitly overridden
   const canDelete = explicitCanDelete !== undefined ? explicitCanDelete : (viewMode === 'owner' || viewMode === 'admin');
-  const canBulkDownload = explicitCanBulkDownload !== undefined ? explicitCanBulkDownload : (packageType === 'premium' || isFreebie || packageType === 'freebie');
+  const canBulkDownload = explicitCanBulkDownload !== undefined ? explicitCanBulkDownload : (packageType === 'premium');
   const canUpload = explicitCanUpload !== undefined ? explicitCanUpload : (viewMode === 'owner' || viewMode === 'admin');
 
   // Gallery state
@@ -441,7 +441,7 @@ export default function UniversalMobileGallery({
         )}
 
         {/* Lightbox */}
-        <YarlLightbox
+        <PhotoSwipeLightbox
           items={displayItems}
           open={selectedIndex >= 0}
           index={selectedIndex}

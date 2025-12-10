@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Lock } from 'lucide-react';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
-import UniversalMobileGallery from '@/components/UniversalMobileGallery';
+import MobileFirstGallery from '@/components/MobileFirstGallery';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { getEventSeoConfig, getShareUrls, getCanonical } from '@/config/seo';
 import Head from 'next/head';
@@ -496,8 +496,8 @@ export default function EventPage() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </Head>
 
-      {/* UniversalMobileGallery handles its own header/profile/navigation */}
-      <UniversalMobileGallery
+      {/* MobileFirstGallery handles its own header/profile/navigation */}
+      <MobileFirstGallery
         eventName={eventData.name || 'Event Gallery'}
         headerImage={headerImage}
         profileImage={profileImage}
@@ -527,7 +527,10 @@ export default function EventPage() {
             description: photo.description,
             uploadedAt: photo.created_at,
             isVideo: isVideoItem,
-            type: isVideoItem ? 'video' : 'photo'
+            type: isVideoItem ? 'video' : 'photo',
+            mimeType: photo.mime_type || photo.type, // Include mimeType for proper detection
+            width: photo.width || 1920,
+            height: photo.height || 1080,
           };
         })}
         onUpload={handleUpload}

@@ -1,12 +1,12 @@
 /**
- * Gallery Module - Modular gallery components with YARL (Yet Another React Lightbox)
+ * Gallery Module - Modular gallery components with PhotoSwipe v5
  *
  * Usage:
- * import { YarlLightbox, GalleryGrid } from '@/components/Gallery';
+ * import { PhotoSwipeLightbox, GalleryGrid } from '@/components/Gallery';
  * import type { GalleryItem, LayoutType } from '@/components/Gallery';
  */
 
-export { default as YarlLightbox } from './YarlLightbox';
+export { default as PhotoSwipeLightbox } from './PhotoSwipeLightbox';
 export { default as GalleryGrid } from './GalleryGrid';
 export { default as GalleryControls } from './GalleryControls';
 

@@ -1,36 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Lightbox from 'yet-another-react-lightbox';
-import 'yet-another-react-lightbox/styles.css';
-import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails';
-import Zoom from 'yet-another-react-lightbox/plugins/zoom';
-import Captions from 'yet-another-react-lightbox/plugins/captions';
-import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen';
-import Counter from 'yet-another-react-lightbox/plugins/counter';
-import Download from 'yet-another-react-lightbox/plugins/download';
-import Share from 'yet-another-react-lightbox/plugins/share';
-import Slideshow from 'yet-another-react-lightbox/plugins/slideshow';
-import Inline from 'yet-another-react-lightbox/plugins/inline';
-import 'yet-another-react-lightbox/plugins/thumbnails.css';
-import 'yet-another-react-lightbox/plugins/captions.css';
-import 'yet-another-react-lightbox/plugins/counter.css';
+import { useEffect, useRef, useState } from 'react';
+import PhotoSwipeLightbox from 'photoswipe/lightbox';
+import PhotoSwipe from 'photoswipe';
+import 'photoswipe/style.css';
 import type { GalleryItem, LightboxProps } from './types';
+
+/**
+ * PhotoSwipe v5 Lightbox Component
+ * Drop-in replacement for YarlLightbox with better performance and mobile support
+ */
 
 function isVideoItem(item: GalleryItem): boolean {
   return !!(item.isVideo || item.type === 'video' || item.mimeType?.startsWith('video/'));
 }
 
-function getPlaybackUrl(item: GalleryItem): string {
-  return item.url || '';
-}
-
-export default function YarlLightbox({ items, open, index, onClose, onIndexChange }: LightboxProps) {
+export default function PhotoSwipeLightbox({ items, open, index, onClose, onIndexChange }: LightboxProps) {
   const [videoIndex, setVideoIndex] = useState(-1);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoCodecInfo, setVideoCodecInfo] = useState<Record<string, any>>({});
+  const lightboxRef = useRef<PhotoSwipeLightbox | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const currentIndexRef = useRef(index);
 
+  // Separate images and videos
   const imageItems = items.filter(item => !isVideoItem(item));
+  const videoItems = items.filter(isVideoItem);
+
+  // Create index mapping
   const imageIndexMap: Record<number, number> = {};
   const imageReverseMap: Record<number, number> = {};
   let imageCounter = 0;
@@ -41,10 +38,13 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
       imageCounter += 1;
     }
   });
-  const yarlIndex = imageIndexMap[index] ?? 0;
 
+  const photoswipeIndex = imageIndexMap[index] ?? 0;
+
+  // Handle video modal
   useEffect(() => {
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
+      console.log('🎬 Opening video modal for index:', index);
       setVideoIndex(index);
       setShowVideoModal(true);
 
@@ -57,28 +57,107 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
           })
           .catch(err => console.error('Video codec check failed:', err));
       }
+    } else if (open && index >= 0) {
+      console.log('📸 Opening lightbox for image at index:', index);
+      setShowVideoModal(false);
+      setVideoIndex(-1);
     } else {
-      // Ensure video modal closes when switching to images or closing the lightbox
       setShowVideoModal(false);
       setVideoIndex(-1);
     }
   }, [open, index, items]);
 
+  // Initialize PhotoSwipe when needed
+  useEffect(() => {
+    if (!galleryRef.current || imageItems.length === 0) return;
+
+    // Prepare slides for PhotoSwipe
+    const dataSource = imageItems.map(item => ({
+      src: item.url || '',
+      width: item.width || 1920,
+      height: item.height || 1080,
+      alt: item.title || item.filename || '',
+    }));
+
+    // Initialize PhotoSwipe
+    const lightbox = new PhotoSwipeLightbox({
+      dataSource,
+      pswpModule: PhotoSwipe,
+      // Options
+      bgOpacity: 0.95,
+      spacing: 0.1,
+      allowPanToNext: true,
+      zoom: true,
+      pinchToClose: true,
+      closeOnVerticalDrag: true,
+      // UI
+      showHideAnimationType: 'fade',
+      // Callbacks
+      index: photoswipeIndex,
+    });
+
+    // Handle slide change
+    lightbox.on('change', () => {
+      const pswp = lightbox.pswp;
+      if (pswp) {
+        const currentSlideIndex = pswp.currIndex;
+        const mappedBack = imageReverseMap[currentSlideIndex];
+        if (mappedBack !== undefined && onIndexChange) {
+          currentIndexRef.current = mappedBack;
+          onIndexChange(mappedBack);
+        }
+      }
+    });
+
+    // Handle close
+    lightbox.on('close', () => {
+      onClose();
+    });
+
+    lightbox.init();
+    lightboxRef.current = lightbox;
+
+    // Open if needed
+    if (open && !showVideoModal) {
+      lightbox.loadAndOpen(photoswipeIndex);
+    }
+
+    return () => {
+      if (lightboxRef.current) {
+        lightboxRef.current.destroy();
+        lightboxRef.current = null;
+      }
+    };
+  }, [imageItems.length]); // Only re-init if items change
+
+  // Control opening/closing
+  useEffect(() => {
+    if (!lightboxRef.current) return;
+
+    if (open && !showVideoModal && imageItems.length > 0) {
+      // Open or change slide
+      if (!lightboxRef.current.pswp) {
+        lightboxRef.current.loadAndOpen(photoswipeIndex);
+      } else if (lightboxRef.current.pswp.currIndex !== photoswipeIndex) {
+        lightboxRef.current.pswp.goTo(photoswipeIndex);
+      }
+    } else if (lightboxRef.current.pswp) {
+      // Close
+      lightboxRef.current.pswp.close();
+    }
+  }, [open, showVideoModal, photoswipeIndex]);
+
   if (!items || items.length === 0) {
+    console.warn('⚠️ PhotoSwipeLightbox: No items provided');
     return null;
   }
 
-  const videoItems = items.filter(isVideoItem);
-
-  const yarlSlides = imageItems.map(item => ({
-    src: item.url || '',
-    alt: item.title || item.filename || '',
-    width: item.width || 1920,
-    height: item.height || 1080,
-  }));
-
   return (
     <>
+      {/* Hidden gallery container for PhotoSwipe */}
+      <div ref={galleryRef} style={{ display: 'none' }} />
+
+      {/* Video Modal (same as YARL implementation) */}
       {showVideoModal && videoIndex >= 0 && isVideoItem(items[videoIndex]) && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
           <div className="relative w-full max-w-4xl">
@@ -89,6 +168,7 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
                 onClose();
               }}
               className="absolute -top-12 right-0 text-white hover:text-gray-300 z-10"
+              aria-label="Close video"
             >
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -130,32 +210,11 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
                     `❌ VIDEO ERROR: ${errorName} (Code ${errorCode}) | readyState=${video.readyState} networkState=${video.networkState} | src=${video.currentSrc}`,
                     video.error
                   );
-                  if (video.error?.message) {
-                    console.error('Video error message:', video.error.message);
-                  }
                 }}
-                onLoadedMetadata={(e) => {
-                  const v = e.target as HTMLVideoElement;
-                  console.log('📹 Metadata:', {
-                    duration: v.duration,
-                    videoWidth: v.videoWidth,
-                    videoHeight: v.videoHeight,
-                    readyState: v.readyState,
-                    networkState: v.networkState,
-                    src: v.currentSrc
-                  });
-                }}
-                onCanPlay={(e) => {
-                  const v = e.target as HTMLVideoElement;
-                  console.log('✅ Can play video', { readyState: v.readyState, networkState: v.networkState, src: v.currentSrc });
-                }}
-                onStalled={() => console.warn('⏳ Video stalled')}
-                onWaiting={() => console.warn('⏳ Video waiting for data')}
-                onLoadStart={() => console.log('🔄 Video load started', items[videoIndex].url)}
               >
-                <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4; codecs='avc1.42E01E'" />
-                <source src={getPlaybackUrl(items[videoIndex])} type="video/mp4" />
-                <source src={getPlaybackUrl(items[videoIndex])} type="video/webm" />
+                <source src={items[videoIndex].url} type="video/mp4; codecs='avc1.42E01E'" />
+                <source src={items[videoIndex].url} type="video/mp4" />
+                <source src={items[videoIndex].url} type="video/webm" />
                 <p className="text-white text-center p-4">⚠️ Your browser cannot play this video. Try downloading it instead.</p>
               </video>
             </div>
@@ -166,6 +225,7 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
               </div>
             )}
 
+            {/* Video Navigation */}
             {videoItems.length > 1 && (
               <div className="flex justify-between items-center mt-6">
                 <button
@@ -176,7 +236,8 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
                       setVideoIndex(prevVideoIndex);
                     }
                   }}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  disabled={videoItems.findIndex(v => v.id === items[videoIndex].id) === 0}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
@@ -191,7 +252,8 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
                       setVideoIndex(nextVideoIndex);
                     }
                   }}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  disabled={videoItems.findIndex(v => v.id === items[videoIndex].id) === videoItems.length - 1}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -199,44 +261,6 @@ export default function YarlLightbox({ items, open, index, onClose, onIndexChang
             )}
           </div>
         </div>
-      )}
-
-      {imageItems.length > 0 && (
-        <Lightbox
-          open={open && !showVideoModal}
-          close={onClose}
-          slides={yarlSlides}
-          index={Math.min(Math.max(yarlIndex, 0), imageItems.length - 1)}
-          plugins={[Thumbnails, Zoom, Captions, Fullscreen, Counter, Download, Share, Slideshow, Inline]}
-          on={{
-            view: ({ index: currentIndex }) => {
-              const mappedBack = imageReverseMap[currentIndex];
-              onIndexChange?.(mappedBack !== undefined ? mappedBack : currentIndex);
-            },
-          }}
-          styles={{ container: { backgroundColor: 'rgba(0, 0, 0, 0.95)' } }}
-          thumbnails={{
-            position: 'bottom',
-            width: 120,
-            height: 100,
-            border: 1,
-            borderColor: '#666',
-            borderRadius: 4,
-            padding: 4,
-            gap: 16,
-          }}
-          zoom={{
-            maxZoomPixelRatio: 10,
-            wheelZoomDistanceFactor: 100,
-            doubleTapDelay: 300,
-            doubleClickDelay: 300,
-            doubleClickMaxStops: 2,
-            scrollToZoom: true,
-          }}
-          counter={{}}
-          captions={{}}
-          slideshow={{}}
-        />
       )}
     </>
   );

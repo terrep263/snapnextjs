@@ -19,6 +19,7 @@
     "lucide-react": "^0.548.0",
     "next": "^16.0.7",
     "next-seo": "^7.0.1",
+    "photoswipe": "^5.4.4",
     "qrcode": "^1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -30,8 +31,7 @@
     "sharp": "^0.34.5",
     "sonner": "^2.0.7",
     "stripe": "^19.1.0",
-    "uuid": "^13.0.0",
-    "yet-another-react-lightbox": "^3.25.0"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
