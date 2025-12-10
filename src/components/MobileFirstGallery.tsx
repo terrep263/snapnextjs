@@ -224,9 +224,9 @@ export default function MobileFirstGallery({
 
     // Clamp thumbnail heights so items stay small regardless of layout
     const thumbHeight =
-      layout === 'grid' ? 160 :
-      layout === 'masonry' ? 140 :
-      160; // columns
+      layout === 'grid' ? 200 :
+      layout === 'masonry' ? 180 :
+      200; // columns
 
     const adjustedWrapperStyle = {
       ...wrapperStyle,
@@ -277,9 +277,9 @@ export default function MobileFirstGallery({
           />
         ) : (
           <img
+            alt={imageProps.alt}
             {...imageProps}
             sizes={`${thumbHeight}px`}
-            alt={imageProps.alt}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             draggable={false}
@@ -660,9 +660,9 @@ export default function MobileFirstGallery({
             spacing={4}
             padding={0}
             targetRowHeight={
-              layout === 'grid' ? 160 :
-              layout === 'masonry' ? 140 :
-              160  // columns
+              layout === 'grid' ? 200 :
+              layout === 'masonry' ? 180 :
+              200  // columns
             }
             render={{ photo: renderPhoto }}
             // Mobile-optimized: smaller columns on mobile
