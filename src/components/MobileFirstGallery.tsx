@@ -223,18 +223,31 @@ export default function MobileFirstGallery({
     const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
 
     // Clamp thumbnail heights so items stay small regardless of layout
-    const thumbHeight = layout === 'grid' ? 180 : layout === 'masonry' ? 140 : 160;
+    const thumbHeight =
+      layout === 'grid' ? 160 :
+      layout === 'masonry' ? 140 :
+      160; // columns
+
     const adjustedWrapperStyle = {
       ...wrapperStyle,
+      // Force a fixed-height thumb box and prevent oversize items
       height: thumbHeight,
       maxHeight: thumbHeight,
       minHeight: thumbHeight,
+      overflow: 'hidden',
+      width: '100%',
+      maxWidth: '100%',
     } as React.CSSProperties;
+
     const mediaStyle = {
       ...imageProps.style,
-      height: '100%',
+      // Force the media to stay inside the thumb box
       width: '100%',
+      height: '100%',
+      maxWidth: '100%',
+      maxHeight: '100%',
       objectFit: 'cover',
+      display: 'block',
     } as React.CSSProperties;
 
     return (
@@ -646,9 +659,9 @@ export default function MobileFirstGallery({
             spacing={4}
             padding={0}
             targetRowHeight={
-              layout === 'grid' ? 170 :
-              layout === 'masonry' ? 130 :
-              150  // columns
+              layout === 'grid' ? 160 :
+              layout === 'masonry' ? 140 :
+              160  // columns
             }
             render={{ photo: renderPhoto }}
             // Mobile-optimized: smaller columns on mobile
@@ -663,14 +676,16 @@ export default function MobileFirstGallery({
       </div>
 
       {/* PhotoSwipe Lightbox */}
-      <PhotoSwipeLightbox
-        items={displayItems}
-        open={selectedIndex >= 0}
-        index={selectedIndex}
-        onClose={() => setSelectedIndex(-1)}
-        onIndexChange={setSelectedIndex}
-        eventName={eventName}
-      />
+      {displayItems.length > 0 && (
+        <PhotoSwipeLightbox
+          items={displayItems}
+          open={selectedIndex >= 0}
+          index={selectedIndex}
+          onClose={() => setSelectedIndex(-1)}
+          onIndexChange={setSelectedIndex}
+          eventName={eventName}
+        />
+      )}
     </div>
   );
 }

@@ -148,7 +148,6 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
   }, [open, showVideoModal, photoswipeIndex]);
 
   if (!items || items.length === 0) {
-    console.warn('⚠️ PhotoSwipeLightbox: No items provided');
     return null;
   }
 
@@ -191,7 +190,12 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
                 muted
                 controls
                 autoPlay
-                className="w-full h-auto max-h-[70vh] object-contain bg-black"
+                className="w-full h-auto object-contain bg-black"
+                style={{
+                  maxHeight: '90vh',
+                  maxWidth: '100%',
+                  display: 'block',
+                }}
                 playsInline
                 controlsList="nodownload"
                 crossOrigin="anonymous"
