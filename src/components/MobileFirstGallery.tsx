@@ -628,7 +628,11 @@ export default function MobileFirstGallery({
             layout={layout}
             spacing={8}
             padding={0}
-            targetRowHeight={layout === 'rows' ? 250 : undefined}
+            targetRowHeight={
+              layout === 'rows' ? 200 :
+              layout === 'masonry' ? 150 :
+              180  // columns
+            }
             render={{ photo: renderPhoto }}
             // Mobile-optimized: smaller columns on mobile
             columns={(containerWidth) => {
