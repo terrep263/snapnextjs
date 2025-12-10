@@ -278,6 +278,7 @@ export default function MobileFirstGallery({
         ) : (
           <img
             {...imageProps}
+            sizes={`${thumbHeight}px`}
             alt={imageProps.alt}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
