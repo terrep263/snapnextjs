@@ -221,9 +221,24 @@ export default function MobileFirstGallery({
     const isSelected = selectedItems.has(item.id);
     const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
 
+    // Clamp thumbnail heights so items stay small regardless of layout
+    const thumbHeight = layout === 'rows' ? 180 : layout === 'masonry' ? 140 : 160;
+    const adjustedWrapperStyle = {
+      ...wrapperStyle,
+      height: thumbHeight,
+      maxHeight: thumbHeight,
+      minHeight: thumbHeight,
+    } as React.CSSProperties;
+    const mediaStyle = {
+      ...imageProps.style,
+      height: '100%',
+      width: '100%',
+      objectFit: 'cover',
+    } as React.CSSProperties;
+
     return (
       <div 
-        style={wrapperStyle} 
+        style={adjustedWrapperStyle} 
         className={`group relative overflow-hidden cursor-pointer ${
           selectMode && isSelected ? 'ring-4 ring-blue-500 ring-offset-2' : ''
         }`}
@@ -244,7 +259,7 @@ export default function MobileFirstGallery({
             preload="metadata"
             muted
             playsInline
-            style={imageProps.style}
+            style={mediaStyle}
           />
         ) : (
           <img
@@ -253,6 +268,7 @@ export default function MobileFirstGallery({
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             draggable={false}
+            style={mediaStyle}
           />
         )}
 
@@ -629,17 +645,17 @@ export default function MobileFirstGallery({
             spacing={4}
             padding={0}
             targetRowHeight={
-              layout === 'rows' ? 180 :
-              layout === 'masonry' ? 140 :
-              160  // columns
+              layout === 'rows' ? 170 :
+              layout === 'masonry' ? 130 :
+              150  // columns
             }
             render={{ photo: renderPhoto }}
             // Mobile-optimized: smaller columns on mobile
             columns={(containerWidth) => {
-              if (containerWidth < 480) return 3;   // tighter thumbs on phones
-              if (containerWidth < 768) return 4;   // tablets
-              if (containerWidth < 1024) return 6;  // laptops
-              return 8;                             // wide desktop
+              if (containerWidth < 480) return 2;   // phones
+              if (containerWidth < 768) return 3;   // small tablets
+              if (containerWidth < 1024) return 4;  // laptops
+              return 5;                             // desktops
             }}
           />
         )}
