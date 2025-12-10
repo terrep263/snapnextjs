@@ -626,20 +626,20 @@ export default function MobileFirstGallery({
           <PhotoAlbum
             photos={albumPhotos}
             layout={layout}
-            spacing={8}
+            spacing={4}
             padding={0}
             targetRowHeight={
-              layout === 'rows' ? 200 :
-              layout === 'masonry' ? 150 :
-              180  // columns
+              layout === 'rows' ? 180 :
+              layout === 'masonry' ? 140 :
+              160  // columns
             }
             render={{ photo: renderPhoto }}
             // Mobile-optimized: smaller columns on mobile
             columns={(containerWidth) => {
-              if (containerWidth < 480) return 2;  // 2 columns on phone
-              if (containerWidth < 768) return 3;   // 3 columns on tablet
-              if (containerWidth < 1024) return 4;  // 4 columns on laptop
-              return 5;                              // 5 columns on desktop
+              if (containerWidth < 480) return 3;   // tighter thumbs on phones
+              if (containerWidth < 768) return 4;   // tablets
+              if (containerWidth < 1024) return 6;  // laptops
+              return 8;                             // wide desktop
             }}
           />
         )}
