@@ -125,15 +125,17 @@ export default function MobileFirstGallery({
   const displayItems = allItems.filter(item => item.type !== 'header' && item.type !== 'profile');
 
   // Prepare photos for React Photo Album
-  const albumPhotos = displayItems.map(item => ({
-    src: item.url,
-    width: item.width || 1920,
-    height: item.height || 1080,
-    alt: item.title || item.filename || '',
-    key: item.id,
-    // Store original item for callbacks
-    originalItem: item,
-  }));
+  const albumPhotos = displayItems
+    .filter(photo => photo != null && photo.url != null)
+    .map(photo => ({
+      src: photo.url,
+      width: photo.width || 800,
+      height: photo.height || 600,
+      alt: photo.title || '',
+      key: photo.id,
+      // Store original item for callbacks
+      originalItem: photo,
+    }));
 
   // Toggle selection
   const toggleItemSelection = (id: string) => {
@@ -214,6 +216,7 @@ export default function MobileFirstGallery({
 
   // Custom photo renderer with mobile-optimized overlay
   const renderPhoto = useCallback(({ photo, imageProps, wrapperStyle }: any) => {
+    if (!photo?.originalItem) return null;
     const item = photo.originalItem;
     const isSelected = selectedItems.has(item.id);
     const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
