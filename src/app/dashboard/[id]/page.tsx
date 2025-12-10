@@ -7,7 +7,7 @@ import { Camera, QrCode, Loader2, Share2 } from 'lucide-react';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import { getEventUrl } from '@/lib/utils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
-import UniversalMobileGallery from '@/components/UniversalMobileGallery';
+import MobileFirstGallery from '@/components/MobileFirstGallery';
 
 export default function Dashboard() {
   const params = useParams();
@@ -887,14 +887,15 @@ export default function Dashboard() {
             </div>
 
             <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
-              <UniversalMobileGallery 
+              <MobileFirstGallery
                 photos={photos}
                 eventName={eventData?.name}
+                eventSlug={eventData?.slug}
+                eventId={eventId}
                 viewMode="owner"
-                canDelete={true}
-                canBulkDownload={true}
-                showHeader={false}
-                showNavigation={false}
+                packageType="premium"
+                canDelete
+                canBulkDownload
                 onDownload={handleDownloadPhoto}
                 onDownloadAll={handleDownloadAll}
                 onDelete={handleDeletePhoto}

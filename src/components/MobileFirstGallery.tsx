@@ -73,16 +73,17 @@ export default function MobileFirstGallery({
   const [navOpen, setNavOpen] = useState(false);
   
   // Layout state - load from localStorage or default to masonry
-  const [layout, setLayout] = useState<'masonry' | 'rows' | 'columns'>(() => {
+  // Layout options: grid (rows under the hood), masonry, columns
+  const [layout, setLayout] = useState<'grid' | 'masonry' | 'columns'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('gallery-layout');
-      return (saved === 'rows' || saved === 'columns') ? saved : 'masonry';
+      return (saved === 'grid' || saved === 'columns' || saved === 'masonry') ? (saved as 'grid' | 'masonry' | 'columns') : 'masonry';
     }
     return 'masonry';
   });
 
   // Save layout preference when it changes
-  const handleLayoutChange = (newLayout: 'masonry' | 'rows' | 'columns') => {
+  const handleLayoutChange = (newLayout: 'grid' | 'masonry' | 'columns') => {
     setLayout(newLayout);
     if (typeof window !== 'undefined') {
       localStorage.setItem('gallery-layout', newLayout);
@@ -222,7 +223,7 @@ export default function MobileFirstGallery({
     const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
 
     // Clamp thumbnail heights so items stay small regardless of layout
-    const thumbHeight = layout === 'rows' ? 180 : layout === 'masonry' ? 140 : 160;
+    const thumbHeight = layout === 'grid' ? 180 : layout === 'masonry' ? 140 : 160;
     const adjustedWrapperStyle = {
       ...wrapperStyle,
       height: thumbHeight,
@@ -459,11 +460,11 @@ export default function MobileFirstGallery({
                     
                     <button
                       onClick={() => {
-                        handleLayoutChange('rows');
+                        handleLayoutChange('grid');
                         setNavOpen(false);
                       }}
                       className={`w-full flex items-center gap-3 py-3 px-4 rounded-lg transition-colors ${
-                        layout === 'rows'
+                        layout === 'grid'
                           ? 'bg-purple-600 text-white'
                           : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
                       }`}
@@ -472,10 +473,10 @@ export default function MobileFirstGallery({
                         <path d="M3 3h18v5H3V3zm0 7h18v5H3v-5zm0 7h18v4H3v-4z"/>
                       </svg>
                       <div className="flex-1 text-left">
-                        <div className="font-medium">Rows</div>
-                        <div className="text-xs opacity-75">Uniform grid</div>
+                        <div className="font-medium">Grid</div>
+                        <div className="text-xs opacity-75">Uniform rows</div>
                       </div>
-                      {layout === 'rows' && (
+                      {layout === 'grid' && (
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                         </svg>
@@ -556,13 +557,13 @@ export default function MobileFirstGallery({
                 </svg>
               </button>
               <button
-                onClick={() => handleLayoutChange('rows')}
+                onClick={() => handleLayoutChange('grid')}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors touch-manipulation ${
-                  layout === 'rows'
+                  layout === 'grid'
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
-                title="Rows Layout (Uniform grid)"
+                title="Grid Layout (Uniform rows)"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M3 3h18v5H3V3zm0 7h18v5H3v-5zm0 7h18v4H3v-4z"/>
@@ -641,11 +642,11 @@ export default function MobileFirstGallery({
         ) : (
           <PhotoAlbum
             photos={albumPhotos}
-            layout={layout}
+            layout={layout === 'grid' ? 'rows' : layout}
             spacing={4}
             padding={0}
             targetRowHeight={
-              layout === 'rows' ? 170 :
+              layout === 'grid' ? 170 :
               layout === 'masonry' ? 130 :
               150  // columns
             }
