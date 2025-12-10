@@ -237,6 +237,10 @@ export default function MobileFirstGallery({
       overflow: 'hidden',
       width: '100%',
       maxWidth: '100%',
+      // Critical: override any PhotoAlbum styling that tries to set height
+      // Use !important only if necessary, but these inline styles should take precedence
+      flex: 'none',
+      flexBasis: 'auto',
     } as React.CSSProperties;
 
     const mediaStyle = {
@@ -253,7 +257,7 @@ export default function MobileFirstGallery({
     return (
       <div 
         style={adjustedWrapperStyle} 
-        className={`group relative overflow-hidden cursor-pointer ${
+        className={`group relative overflow-hidden cursor-pointer flex items-center justify-center ${
           selectMode && isSelected ? 'ring-4 ring-blue-500 ring-offset-2' : ''
         }`}
         onClick={() => {
