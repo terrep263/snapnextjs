@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import PhotoSwipeLightbox from 'photoswipe/lightbox';
+import PhotoSwipeLightboxCore from 'photoswipe/lightbox';
 import PhotoSwipe from 'photoswipe';
 import 'photoswipe/style.css';
 import type { GalleryItem, LightboxProps } from './types';
@@ -19,7 +19,7 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
   const [videoIndex, setVideoIndex] = useState(-1);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoCodecInfo, setVideoCodecInfo] = useState<Record<string, any>>({});
-  const lightboxRef = useRef<PhotoSwipeLightbox | null>(null);
+  const lightboxRef = useRef<PhotoSwipeLightboxCore | null>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
   const currentIndexRef = useRef(index);
 
@@ -80,7 +80,7 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
     }));
 
     // Initialize PhotoSwipe
-    const lightbox = new PhotoSwipeLightbox({
+    const lightbox = new PhotoSwipeLightboxCore({
       dataSource,
       pswpModule: PhotoSwipe,
       // Options

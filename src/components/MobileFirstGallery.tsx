@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { PhotoAlbum, RenderPhotoProps } from 'react-photo-album';
+import PhotoAlbum, { RenderPhotoProps } from 'react-photo-album';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Share2, Download, Trash2, Upload, CheckSquare, Square, ZoomIn, Play } from 'lucide-react';
 import PhotoSwipeLightbox from './Gallery/PhotoSwipeLightbox';
@@ -213,7 +213,7 @@ export default function MobileFirstGallery({
   };
 
   // Custom photo renderer with mobile-optimized overlay
-  const renderPhoto = useCallback(({ photo, imageProps, wrapperStyle }: RenderPhotoProps<typeof albumPhotos[0]>) => {
+  const renderPhoto = useCallback(({ photo, imageProps, wrapperStyle }: any) => {
     const item = photo.originalItem;
     const isSelected = selectedItems.has(item.id);
     const isVideo = item.isVideo || item.type === 'video' || isVideoUrl(item.url);
