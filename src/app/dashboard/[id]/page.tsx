@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Camera, QrCode, Loader2, Share2 } from 'lucide-react';
-import { supabase, transformToCustomDomain } from '@/lib/supabase';
+import { supabase, transformToCustomDomain, getPhotoPublicUrl } from '@/lib/supabase';
 import { getEventUrl } from '@/lib/utils';
 import QRCodeGenerator from '@/components/QRCodeGenerator';
 import MobileFirstGallery from '@/components/MobileFirstGallery';
@@ -23,6 +23,10 @@ export default function Dashboard() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingEventName, setEditingEventName] = useState(false);
   const [eventName, setEventName] = useState('');
+  const [bulkDownloadJobId, setBulkDownloadJobId] = useState<string | null>(null);
+  const [bulkDownloadStatus, setBulkDownloadStatus] = useState<'idle' | 'pending' | 'processing' | 'complete' | 'failed'>('idle');
+  const [bulkDownloadProgress, setBulkDownloadProgress] = useState(0);
+  const [bulkDownloadUrls, setBulkDownloadUrls] = useState<string[]>([]);
 
   const eventUrl = eventData ? getEventUrl(eventData.slug) : '';
 
@@ -148,12 +152,91 @@ export default function Dashboard() {
   };
 
   const handleDownloadAll = async () => {
-    // For now, download photos one by one
-    // In production, you might want to create a ZIP file server-side
-    for (const photo of photos) {
-      await handleDownloadPhoto(photo);
-      // Add delay to avoid overwhelming the browser
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!eventData?.id) {
+      alert('Event data not loaded');
+      return;
+    }
+
+    // Check if event is Premium
+    const isPremium = eventData.is_free !== true && eventData.is_freebie !== true;
+    if (!isPremium) {
+      alert('Bulk download is only available for Premium events');
+      return;
+    }
+
+    try {
+      setBulkDownloadStatus('pending');
+      setBulkDownloadProgress(0);
+      setBulkDownloadUrls([]);
+
+      // Get user email from localStorage
+      const userEmail = localStorage.getItem('userEmail');
+      if (!userEmail) {
+        alert('Please log in to download all photos');
+        return;
+      }
+
+      // Initiate bulk download job
+      const response = await fetch('/api/download/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId: eventData.id,
+          userEmail,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to start bulk download');
+      }
+
+      const jobId = result.data.jobId;
+      setBulkDownloadJobId(jobId);
+      setBulkDownloadStatus('processing');
+
+      // Poll for job status
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/download/bulk/status/${jobId}`);
+          const statusResult = await statusResponse.json();
+
+          if (statusResult.success && statusResult.data) {
+            const jobData = statusResult.data;
+            setBulkDownloadProgress(jobData.progress || 0);
+
+            if (jobData.status === 'complete') {
+              clearInterval(pollInterval);
+              setBulkDownloadStatus('complete');
+              setBulkDownloadUrls(jobData.downloadUrls || []);
+            } else if (jobData.status === 'failed') {
+              clearInterval(pollInterval);
+              setBulkDownloadStatus('failed');
+              alert(`Bulk download failed: ${jobData.error || 'Unknown error'}`);
+            } else {
+              setBulkDownloadStatus('processing');
+            }
+          }
+        } catch (error) {
+          console.error('Error polling job status:', error);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Cleanup interval after 10 minutes (safety timeout)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (bulkDownloadStatus === 'processing') {
+          setBulkDownloadStatus('failed');
+          alert('Bulk download timed out. Please try again.');
+        }
+      }, 10 * 60 * 1000);
+    } catch (error) {
+      console.error('Error initiating bulk download:', error);
+      setBulkDownloadStatus('failed');
+      alert(error instanceof Error ? error.message : 'Failed to start bulk download');
     }
   };
 
@@ -217,55 +300,133 @@ export default function Dashboard() {
   };
 
   const handleImageUpload = async (type: 'header' | 'profile') => {
+    const targetEventId = eventData?.id || eventId;
+    const targetEventSlug = typeof eventData?.slug === 'string' ? eventData.slug : null;
+    const storageScope = targetEventId || targetEventSlug;
+
+    if (!storageScope) {
+      console.warn('Cannot upload image: event data not loaded');
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const result = e.target?.result as string;
+        try {
+          // Upload to Supabase Storage
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${type}-${Date.now()}.${fileExt}`;
+          const filePath = `events/${storageScope}/${fileName}`;
           
-          // Update local state first
+          const { data, error: uploadError } = await supabase.storage
+            .from('photos')
+            .upload(filePath, file, { upsert: true });
+          
+          if (uploadError) {
+            console.error('Storage upload failed:', uploadError);
+            return;
+          }
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('photos')
+            .getPublicUrl(filePath);
+
+          const rawUrl = urlData?.publicUrl || getPhotoPublicUrl(filePath);
+          const publicUrl = transformToCustomDomain(rawUrl);
+          if (!publicUrl) {
+            console.error('Failed to resolve public URL');
+            return;
+          }
+
+          // Update local state + localStorage for legacy compatibility
           if (type === 'header') {
-            setHeaderImage(result);
+            setHeaderImage(publicUrl);
             setEditingHeader(false);
           } else {
-            setProfileImage(result);
+            setProfileImage(publicUrl);
             setEditingProfile(false);
           }
+
+          const localStorageKeys = new Set<string>();
+          localStorageKeys.add(`${type}Image_${storageScope}`);
+          if (targetEventId && storageScope !== targetEventId) {
+            localStorageKeys.add(`${type}Image_${targetEventId}`);
+          }
+          if (targetEventSlug) {
+            localStorageKeys.add(`${type}Image_${targetEventSlug}`);
+          }
+          localStorageKeys.forEach((key) => localStorage.setItem(key, publicUrl));
           
-          // Save to database
-          try {
-            const updateData = type === 'header' 
-              ? { header_image: result }
-              : { profile_image: result };
-              
-            const { error } = await supabase
+          // Save URL to database
+          const updateData = type === 'header' 
+            ? { header_image: publicUrl }
+            : { profile_image: publicUrl };
+
+          let updateSucceeded = false;
+          let lastError: any = null;
+
+          if (targetEventId) {
+            const { data: updatedById, error: dbError } = await supabase
               .from('events')
               .update(updateData)
-              .eq('id', eventId);
-              
-            if (error && error.code !== 'PGRST116') {
-              console.error('Database update failed:', error);
+              .eq('id', targetEventId)
+              .select('id');
+
+            if (dbError) {
+              lastError = dbError;
+              if (dbError.code !== 'PGRST116') {
+                console.error('Database update by ID failed:', dbError);
+              }
             }
-            
-            // Also save to localStorage as backup
-            localStorage.setItem(`${type}Image_${eventId}`, result);
-          } catch (error) {
-            console.error('Error updating image:', error);
-            // Save to localStorage as fallback
-            localStorage.setItem(`${type}Image_${eventId}`, result);
+
+            updateSucceeded = !!updatedById?.length;
           }
-        };
-        reader.readAsDataURL(file);
+
+          if (!updateSucceeded && targetEventSlug) {
+            const { data: updatedBySlug, error: slugError } = await supabase
+              .from('events')
+              .update(updateData)
+              .eq('slug', targetEventSlug)
+              .select('id');
+
+            if (slugError) {
+              lastError = slugError;
+              if (slugError.code !== 'PGRST116') {
+                console.error('Database update by slug failed:', slugError);
+              }
+            }
+
+            updateSucceeded = !!updatedBySlug?.length;
+          }
+
+          if (updateSucceeded) {
+            console.log(`✅ ${type} image saved successfully:`, publicUrl);
+          } else if (!lastError || lastError.code === 'PGRST116') {
+            console.warn(`No matching event row found when saving ${type} image.`);
+          }
+          
+        } catch (error) {
+          console.error('Error uploading image:', error);
+        }
       }
     };
     input.click();
   };
 
   const removeImage = async (type: 'header' | 'profile') => {
+    const targetEventId = eventData?.id || eventId;
+    const targetEventSlug = typeof eventData?.slug === 'string' ? eventData.slug : null;
+    const storageScope = targetEventId || targetEventSlug;
+
+    if (!storageScope) {
+      console.warn('Cannot remove image: event data not loaded');
+      return;
+    }
+
     // Update local state first
     if (type === 'header') {
       setHeaderImage(null);
@@ -280,21 +441,61 @@ export default function Dashboard() {
       const updateData = type === 'header' 
         ? { header_image: null }
         : { profile_image: null };
-        
-      const { error } = await supabase
-        .from('events')
-        .update(updateData)
-        .eq('id', eventId);
-        
-      if (error && error.code !== 'PGRST116') {
-        console.error('Database update failed:', error);
+
+      let updateSucceeded = false;
+      let lastError: any = null;
+
+      if (targetEventId) {
+        const { data: updatedById, error } = await supabase
+          .from('events')
+          .update(updateData)
+          .eq('id', targetEventId)
+          .select('id');
+
+        if (error) {
+          lastError = error;
+          if (error.code !== 'PGRST116') {
+            console.error('Database remove by ID failed:', error);
+          }
+        }
+
+        updateSucceeded = !!updatedById?.length;
+      }
+
+      if (!updateSucceeded && targetEventSlug) {
+        const { data: updatedBySlug, error: slugError } = await supabase
+          .from('events')
+          .update(updateData)
+          .eq('slug', targetEventSlug)
+          .select('id');
+
+        if (slugError) {
+          lastError = slugError;
+          if (slugError.code !== 'PGRST116') {
+            console.error('Database remove by slug failed:', slugError);
+          }
+        }
+
+        updateSucceeded = !!updatedBySlug?.length;
+      }
+
+      if (!updateSucceeded && (!lastError || lastError.code === 'PGRST116')) {
+        console.warn(`No matching event row found when removing ${type} image.`);
       }
     } catch (error) {
       console.error('Error removing image:', error);
     }
-    
+
     // Also remove from localStorage
-    localStorage.removeItem(`${type}Image_${eventId}`);
+    const localStorageKeys = new Set<string>();
+    localStorageKeys.add(`${type}Image_${storageScope}`);
+    if (targetEventId && storageScope !== targetEventId) {
+      localStorageKeys.add(`${type}Image_${targetEventId}`);
+    }
+    if (targetEventSlug) {
+      localStorageKeys.add(`${type}Image_${targetEventSlug}`);
+    }
+    localStorageKeys.forEach((key) => localStorage.removeItem(key));
   };
 
   // Cover Photo handlers
@@ -886,6 +1087,91 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* Bulk Download Section for Premium Events */}
+            {eventData && eventData.is_free !== true && eventData.is_freebie !== true && (
+              <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Download All Photos</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Download all photos and videos as ZIP files (max 2GB per file)
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDownloadAll}
+                    disabled={bulkDownloadStatus === 'pending' || bulkDownloadStatus === 'processing'}
+                    className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  >
+                    {bulkDownloadStatus === 'processing' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : bulkDownloadStatus === 'complete' ? (
+                      'Download Ready'
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download All
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Progress Indicator */}
+                {(bulkDownloadStatus === 'pending' || bulkDownloadStatus === 'processing') && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                      <span>Preparing download...</span>
+                      <span>{bulkDownloadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${bulkDownloadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Download Links */}
+                {bulkDownloadStatus === 'complete' && bulkDownloadUrls.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-gray-700">
+                      Download ready! Click the links below to download your ZIP files:
+                    </p>
+                    {bulkDownloadUrls.map((url, index) => (
+                      <a
+                        key={index}
+                        href={url}
+                        download
+                        className="block w-full bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg p-3 text-sm font-medium text-purple-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>
+                            <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download ZIP {bulkDownloadUrls.length > 1 ? `${index + 1} of ${bulkDownloadUrls.length}` : ''}
+                          </span>
+                          <span className="text-xs text-purple-500">Expires in 24 hours</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                {/* Error State */}
+                {bulkDownloadStatus === 'failed' && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    Bulk download failed. Please try again.
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
               <MobileFirstGallery
                 photos={photos}
@@ -895,9 +1181,8 @@ export default function Dashboard() {
                 viewMode="owner"
                 packageType="premium"
                 canDelete
-                canBulkDownload
+                canBulkDownload={false}
                 onDownload={handleDownloadPhoto}
-                onDownloadAll={handleDownloadAll}
                 onDelete={handleDeletePhoto}
               />
             </div>

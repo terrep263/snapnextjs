@@ -58,10 +58,16 @@ export const PAGINATION = {
   MAX_PAGE_SIZE: 100,
 } as const;
 
+// Gallery file size limits (exported directly for easy import)
+export const GALLERY_MAX_PHOTO_SIZE = 25 * 1024 * 1024; // 25 MB per photo
+export const GALLERY_MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500 MB per video
+
 export const UPLOAD_LIMITS = {
   MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
   MAX_PHOTOS_PER_EVENT: 1000,
   MAX_VIDEO_SIZE: 500 * 1024 * 1024, // 500MB
+  GALLERY_MAX_PHOTO_SIZE, // Re-export for backward compatibility
+  GALLERY_MAX_VIDEO_SIZE, // Re-export for backward compatibility
   ALLOWED_PHOTO_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   ALLOWED_VIDEO_TYPES: ['video/mp4', 'video/quicktime', 'video/x-msvideo'],
 } as const;

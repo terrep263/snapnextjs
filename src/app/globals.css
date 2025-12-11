@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
+/* Masonry Grid Styles */
+.masonry-grid {
+  display: flex;
+  width: auto;
+  margin-left: -12px;
+  margin-right: -12px;
+}
+
+.masonry-grid_column {
+  padding-left: 12px;
+  padding-right: 12px;
+  background-clip: padding-box;
+}
+
+@media (min-width: 640px) {
+  .masonry-grid {
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+  .masonry-grid_column {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

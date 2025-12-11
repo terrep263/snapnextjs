@@ -24,6 +24,8 @@ export interface GalleryItem {
   // Thumbnail/poster
   thumb?: string;
   poster?: string;
+  thumbnail_url?: string;
+  storage_url?: string;
 
   // MIME type (for video detection)
   mimeType?: string;
