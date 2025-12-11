@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { createBulkDownloadJob, processBulkDownloadJob } from '@/lib/bulk-download-job';
 import ErrorLogger from '@/lib/errorLogger';
+import { getPackageType } from '@/lib/gallery-utils';
 
 // Force Node.js runtime for archiver compatibility
 export const runtime = 'nodejs';
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Load event and verify it's Premium
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, is_free, is_freebie, owner_email, owner_id')
+      .select('id, name, slug, is_free, is_freebie, owner_email, owner_id, feed_enabled, password_hash, payment_type')
       .eq('id', eventId)
       .single();
 
@@ -52,8 +53,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify event is Premium (is_free = false and not is_freebie)
-    if (event.is_free === true || event.is_freebie === true) {
+    // Use centralized package detection
+    const packageType = getPackageType(event);
+
+    // Verify event is Premium (only Premium can bulk download)
+    if (packageType !== 'premium') {
       return NextResponse.json(
         { success: false, error: 'Bulk download is only available for Premium events' },
         { status: 403 }

@@ -158,15 +158,29 @@ export async function POST(request: NextRequest) {
     let filename: string;
 
     if (photo.is_video) {
-      // Video watermarking (if supported)
+      // Video watermarking - required for freebie/basic, optional for premium
+      console.log(`🎬 Processing video download - package: ${packageType}, needsWatermark: ${needsWatermark}`);
+      console.log(`📊 Video details: size=${buffer.length} bytes, filename=${photo.filename}`);
+      
       const watermarked = await applyWatermarkToVideo(buffer, packageType);
       if (watermarked) {
         watermarkedBuffer = watermarked;
         contentType = 'video/mp4';
+        console.log(`✅ Video watermarking successful - package: ${packageType}, output size: ${watermarked.length} bytes`);
       } else {
-        // Video watermarking not yet supported, return original with note
-        // For now, we'll return the original video
-        // In production, you might want to return an error or handle differently
+        // Video watermarking failed
+        console.error(`❌ Video watermarking failed for package: ${packageType}, needsWatermark: ${needsWatermark}`);
+        console.error(`📋 Event details: is_freebie=${event.is_freebie}, is_free=${event.is_free}, payment_type=${event.payment_type}`);
+        
+        // For freebie/basic, watermarking is required - throw error
+        if (needsWatermark) {
+          console.error(`🚨 CRITICAL: Watermarking required but failed for ${packageType} package`);
+          throw new Error('Video watermarking failed. This is required for your event type. Please contact support if this issue persists.');
+        }
+        
+        // For premium without watermark requirement, return original
+        // But log a warning
+        console.warn('⚠️ Returning unwatermarked video for premium package');
         const { data: signedUrlData } = await supabase.storage
           .from('photos')
           .createSignedUrl(filePath, 3600);
@@ -181,7 +195,6 @@ export async function POST(request: NextRequest) {
             packageType,
             isVideo: true,
             filename: photo.filename || 'video.mp4',
-            note: 'Video watermarking coming soon',
           },
         });
       }
@@ -200,11 +213,16 @@ export async function POST(request: NextRequest) {
     incrementRateLimit(downloadKey);
 
     // Return watermarked file directly
+    // Use proper filename encoding for Content-Disposition header
+    const encodedFilename = encodeURIComponent(filename);
+    
     return new NextResponse(new Uint8Array(watermarkedBuffer), {
       headers: {
         'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
+        'Content-Length': watermarkedBuffer.length.toString(),
         'Cache-Control': 'private, max-age=3600', // 1 hour cache
+        'X-Content-Type-Options': 'nosniff', // Prevent MIME type sniffing
       },
     });
   } catch (err: any) {

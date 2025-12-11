@@ -94,6 +94,10 @@ export function getViewMode(
 
 /**
  * Calculate gallery permissions based on package type and view mode
+ * Rules:
+ * - All can download (single items)
+ * - Premium can bulk download (ZIP file)
+ * - Freebie and Basic are the same, except Freebie has watermark_enabled
  */
 export function getGalleryPermissions(
   packageType: PackageType,
@@ -105,7 +109,7 @@ export function getGalleryPermissions(
     canUpload: true, // All users can upload (subject to moderation)
     canDelete: isOwnerOrAdmin, // Only owners/admins can delete
     canManage: isOwnerOrAdmin, // Only owners/admins can manage
-    canBulkDownload: true, // All users can bulk download (with watermark restrictions)
+    canBulkDownload: packageType === 'premium', // Only Premium can bulk download
   };
 }
 

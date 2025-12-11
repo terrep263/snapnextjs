@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
@@ -35,28 +35,69 @@ export function SocialShare({
     setMounted(true);
   }, []);
 
-  const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
-  const shareTitle = title || 'Check this out!';
-  const shareDescription = description || '';
-  const mediaUrl = imageUrl || '';
+  // Determine if we're sharing a media file or a gallery page
+  const { isMediaUrl, mediaUrl, pageUrl, shareLinks, urlToCopy } = useMemo(() => {
+    const galleryUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const providedUrl = url || galleryUrl;
+    
+    // Check if the provided URL is a direct media file (image/video)
+    const isMedia = providedUrl && (
+      providedUrl.match(/\.(jpg|jpeg|png|gif|webp|heic|mp4|mov|hevc)(\?|$)/i) ||
+      providedUrl.includes('/storage/v1/object/public/photos/')
+    );
+    
+    // If imageUrl is provided and different from url, it's the media preview
+    const media = imageUrl && imageUrl !== providedUrl ? imageUrl : (isMedia ? providedUrl : imageUrl || '');
+    const page = isMedia ? galleryUrl : providedUrl;
+    
+    const shareTitle = title || 'Check this out!';
+    const shareDescription = description || '';
 
-  // Encode URL components
-  const encodedUrl = encodeURIComponent(shareUrl);
-  const encodedTitle = encodeURIComponent(shareTitle);
-  const encodedDescription = encodeURIComponent(shareDescription);
-  const encodedMedia = encodeURIComponent(mediaUrl);
+    // Encode URL components
+    const encodedPageUrl = encodeURIComponent(page);
+    const encodedMediaUrl = encodeURIComponent(media || page);
+    const encodedTitle = encodeURIComponent(shareTitle);
+    const encodedDescription = encodeURIComponent(shareDescription);
 
-  // Social media share URLs
-  const shareLinks = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}${mediaUrl ? `&picture=${encodedMedia}` : ''}`,
-    twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}${mediaUrl ? `&media=${encodedMedia}` : ''}`,
-    whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}${mediaUrl ? `%20${encodedMedia}` : ''}`,
-    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-    pinterest: `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedDescription}${mediaUrl ? `&media=${encodedMedia}` : ''}`,
-    telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}${mediaUrl ? `%20${encodedMedia}` : ''}`,
-    reddit: `https://reddit.com/submit?url=${encodedUrl}&title=${encodedTitle}`,
-    email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%20${encodedUrl}${mediaUrl ? `%0A%0AView: ${encodedMedia}` : ''}`,
-  };
+    // Social media share URLs
+    // For individual media: use media URL directly for platforms that support it
+    // For gallery: use page URL with media as preview
+    const links = {
+      // Facebook: Use page URL for gallery, media URL for individual items (with media preview)
+      facebook: isMedia 
+        ? `https://www.facebook.com/sharer/sharer.php?u=${encodedMediaUrl}${shareTitle ? `&quote=${encodedTitle}` : ''}`
+        : `https://www.facebook.com/sharer/sharer.php?u=${encodedPageUrl}${media ? `&picture=${encodeURIComponent(media)}` : ''}${shareTitle ? `&quote=${encodedTitle}` : ''}`,
+      
+      // Twitter: Use media URL for individual items, page URL for gallery
+      twitter: `https://twitter.com/intent/tweet?url=${isMedia ? encodedMediaUrl : encodedPageUrl}&text=${encodedTitle}${media && !isMedia ? ` ${encodedMediaUrl}` : ''}`,
+      
+      // WhatsApp: Include both page and media info
+      whatsapp: `https://wa.me/?text=${encodedTitle}%20${isMedia ? encodedMediaUrl : encodedPageUrl}${media && !isMedia ? `%0A${encodedMediaUrl}` : ''}`,
+      
+      // LinkedIn: Use page URL (better for SEO), media as preview
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedPageUrl}`,
+      
+      // Pinterest: Use media URL directly (required for pinning)
+      pinterest: `https://pinterest.com/pin/create/button/?url=${encodedPageUrl}&description=${encodedDescription}${media ? `&media=${encodeURIComponent(media)}` : ''}`,
+      
+      // Telegram: Use media URL for individual items, page URL for gallery
+      telegram: `https://t.me/share/url?url=${isMedia ? encodedMediaUrl : encodedPageUrl}&text=${encodedTitle}${media && !isMedia ? `%20${encodedMediaUrl}` : ''}`,
+      
+      // Reddit: Use page URL for gallery, media URL for individual items
+      reddit: `https://reddit.com/submit?url=${isMedia ? encodedMediaUrl : encodedPageUrl}&title=${encodedTitle}`,
+      
+      // Email: Include both URLs
+      email: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%20${encodedPageUrl}${media ? `%0A%0AMedia: ${encodeURIComponent(media)}` : ''}`,
+    };
+
+    return {
+      isMediaUrl: isMedia,
+      mediaUrl: media,
+      pageUrl: page,
+      shareLinks: links,
+      urlToCopy: isMedia ? (media || providedUrl) : page,
+    };
+  }, [url, imageUrl, title, description]);
 
   // Handle share click
   const handleShareClick = useCallback((platform: string) => {
@@ -68,10 +109,10 @@ export function SocialShare({
     }
   }, [shareLinks]);
 
-  // Copy to clipboard
+  // Copy to clipboard - copy the appropriate URL (media for individual items, page for gallery)
   const handleCopyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(urlToCopy);
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
@@ -79,7 +120,7 @@ export function SocialShare({
       console.error('Copy failed:', err);
       toast.error('Failed to copy link');
     }
-  }, [shareUrl]);
+  }, [urlToCopy]);
 
   // Close modal on escape key
   useEffect(() => {
@@ -223,7 +264,7 @@ export function SocialShare({
                   <input
                     type="text"
                     readOnly
-                    value={shareUrl}
+                    value={urlToCopy}
                     className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm"
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />

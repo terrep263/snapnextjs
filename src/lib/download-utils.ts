@@ -26,10 +26,17 @@ export function detectPackageType(event: EventData): PackageType {
 
 /**
  * Determine if watermark should be applied
+ * Rules:
+ * - Freebie: Always watermark (watermark_enabled is always true for freebie)
+ * - Basic: No watermark (watermark_enabled is false)
+ * - Premium: Watermark only if watermark_enabled is explicitly true
  */
 export function shouldApplyWatermark(event: EventData, packageType: PackageType): boolean {
-  if (packageType === 'freebie' || packageType === 'basic') {
-    return true; // Always watermark for freebie and basic
+  if (packageType === 'freebie') {
+    return true; // Freebie always has watermark_enabled
+  }
+  if (packageType === 'basic') {
+    return false; // Basic never has watermark
   }
   if (packageType === 'premium') {
     return event.watermark_enabled === true; // Only if explicitly enabled
@@ -123,16 +130,46 @@ export async function applyWatermarkToImage(
   packageType: PackageType
 ): Promise<Buffer> {
   try {
+    console.log(`🖼️ Starting image watermarking - package: ${packageType}, input size: ${imageBuffer.length} bytes`);
+    
     const image = sharp(imageBuffer);
     const metadata = await image.metadata();
     const width = metadata.width || 1000;
     const height = metadata.height || 1000;
+    
+    console.log(`📐 Image dimensions: ${width}x${height}`);
 
     // Always use dlwatermark.png from public folder
-    const watermarkPath = path.join(process.cwd(), 'public', 'dlwatermark.png');
+    let watermarkPath = path.join(process.cwd(), 'public', 'dlwatermark.png');
+    
+    console.log(`🔍 Checking watermark at: ${watermarkPath}`);
+    console.log(`🔍 CWD: ${process.cwd()}`);
+    console.log(`🔍 Public dir exists: ${fs.existsSync(path.join(process.cwd(), 'public'))}`);
     
     if (!fs.existsSync(watermarkPath)) {
-      throw new Error(`Watermark file not found at ${watermarkPath}`);
+      // Try alternative paths
+      const altPaths = [
+        path.join(process.cwd(), 'public', 'dlwatermark.png'),
+        path.join(__dirname, '..', '..', 'public', 'dlwatermark.png'),
+        path.join(process.cwd(), 'dlwatermark.png'),
+      ];
+      
+      let found = false;
+      for (const altPath of altPaths) {
+        if (fs.existsSync(altPath)) {
+          console.log(`✅ Found watermark at alternative path: ${altPath}`);
+          watermarkPath = altPath;
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        console.error(`❌ Watermark file not found in any location`);
+        throw new Error(`Watermark file not found at ${watermarkPath}`);
+      }
+    } else {
+      console.log(`✅ Watermark file found at: ${watermarkPath}`);
     }
 
     // Load the watermark image
@@ -161,6 +198,8 @@ export async function applyWatermarkToImage(
 
     // Apply watermark overlay across lower half
     // Position it in the lower center, covering more of the lower portion
+    console.log(`🎨 Applying watermark overlay (${watermarkWidth}x${watermarkHeight}) at bottom center`);
+    
     const watermarked = await image
       .composite([
         {
@@ -173,7 +212,8 @@ export async function applyWatermarkToImage(
       .jpeg({ quality: 90 })
       .toBuffer();
 
-    console.log(`✅ Applied dlwatermark.png to image (${width}x${height}) - package: ${packageType}`);
+    console.log(`✅ Successfully applied dlwatermark.png to image (${width}x${height}) - package: ${packageType}`);
+    console.log(`📊 Output size: ${watermarked.length} bytes (input: ${imageBuffer.length} bytes)`);
 
     return watermarked;
   } catch (error) {
@@ -184,18 +224,36 @@ export async function applyWatermarkToImage(
 
 /**
  * Apply watermark to video using FFmpeg
- * Uses dlwatermark.png for freebie events, SVG for basic/premium
+ * Always uses dlwatermark.png from public folder for all package types
  */
 export async function applyWatermarkToVideo(
   videoBuffer: Buffer,
   packageType: PackageType
 ): Promise<Buffer | null> {
   try {
-    const ffmpegStatic = require('ffmpeg-static');
-    const ffmpegPath = typeof ffmpegStatic === 'string' ? ffmpegStatic : ffmpegStatic?.default || ffmpegStatic;
+    // Try to load ffmpeg-static
+    let ffmpegPath: string | null = null;
+    try {
+      const ffmpegStatic = require('ffmpeg-static');
+      ffmpegPath = typeof ffmpegStatic === 'string' 
+        ? ffmpegStatic 
+        : ffmpegStatic?.default || ffmpegStatic || null;
+    } catch (requireError) {
+      console.warn('ffmpeg-static module not found:', requireError);
+    }
     
     if (!ffmpegPath) {
-      console.warn('FFmpeg not available, video watermarking skipped');
+      console.error('❌ FFmpeg not available - cannot watermark video');
+      return null;
+    }
+
+    // Verify FFmpeg exists and is executable
+    try {
+      await fs.promises.access(ffmpegPath, fs.constants.F_OK);
+      console.log(`✅ FFmpeg found at: ${ffmpegPath}`);
+    } catch (accessError) {
+      console.error(`❌ FFmpeg binary not found at: ${ffmpegPath}`);
+      console.error(`❌ Access error:`, accessError);
       return null;
     }
 
@@ -208,59 +266,102 @@ export async function applyWatermarkToVideo(
     try {
       // Write video buffer to temp file
       await fs.promises.writeFile(inputPath, videoBuffer);
+      console.log(`📝 Wrote video to temp file: ${inputPath} (${videoBuffer.length} bytes)`);
 
       // Always use dlwatermark.png from public folder for all package types
       watermarkPath = path.join(process.cwd(), 'public', 'dlwatermark.png');
       
+      console.log(`🔍 Checking watermark file at: ${watermarkPath}`);
+      console.log(`🔍 Current working directory: ${process.cwd()}`);
+      console.log(`🔍 Public directory exists: ${fs.existsSync(path.join(process.cwd(), 'public'))}`);
+      
       if (!fs.existsSync(watermarkPath)) {
-        console.warn(`Watermark file not found at ${watermarkPath}, video watermarking skipped`);
-        return null;
+        console.error(`❌ Watermark file not found at: ${watermarkPath}`);
+        // Try alternative paths
+        const altPaths = [
+          path.join(process.cwd(), 'public', 'dlwatermark.png'),
+          path.join(__dirname, '..', '..', 'public', 'dlwatermark.png'),
+          path.join(process.cwd(), 'dlwatermark.png'),
+        ];
+        for (const altPath of altPaths) {
+          if (fs.existsSync(altPath)) {
+            console.log(`✅ Found watermark at alternative path: ${altPath}`);
+            watermarkPath = altPath;
+            break;
+          }
+        }
+        if (!fs.existsSync(watermarkPath)) {
+          console.error(`❌ Watermark file not found in any location`);
+          return null;
+        }
       }
 
-      // FFmpeg command to overlay watermark across lower half
-      // Scale watermark to 60% of video width to match example (covers lower portion)
+      console.log(`✅ Using watermark: ${watermarkPath} (exists: ${fs.existsSync(watermarkPath)})`);
+
+      // FFmpeg command to overlay watermark at bottom center
+      // Scale watermark to 60% of video width, positioned at bottom with 10px margin
       const ffmpegArgs = [
         '-y', // Overwrite output file
         '-i', inputPath, // Input video
         '-i', watermarkPath, // Watermark image
         '-filter_complex',
-        `[1:v]scale=iw*0.6:-1[wm];[0:v][wm]overlay=(W-w)/2:H-h-10:format=auto`, // Overlay at bottom center, larger size to cover lower half
+        `[1:v]scale=iw*0.6:-1[wm];[0:v][wm]overlay=(W-w)/2:H-h-10:format=auto`, // Overlay at bottom center
         '-c:v', 'libx264', // Video codec
         '-preset', 'veryfast', // Encoding preset
         '-crf', '23', // Quality
-        '-c:a', 'copy', // Copy audio
+        '-c:a', 'copy', // Copy audio (preserve original audio)
+        '-movflags', '+faststart', // Enable fast start for web playback
         outputPath, // Output file
       ];
 
-      // Run FFmpeg
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn(ffmpegPath, ffmpegArgs, { stdio: 'pipe' });
+      console.log(`🎬 Running FFmpeg with args:`, ffmpegArgs.join(' '));
+
+      // Run FFmpeg with timeout (5 minutes max)
+      const watermarkedBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const proc = spawn(ffmpegPath!, ffmpegArgs, { stdio: 'pipe' });
         
         let stderr = '';
+        let stdout = '';
+        
+        proc.stdout?.on('data', (data: Buffer) => {
+          stdout += data.toString();
+        });
+        
         proc.stderr.on('data', (data: Buffer) => {
           stderr += data.toString();
         });
         
         proc.on('error', (err: Error) => {
+          console.error('❌ FFmpeg spawn error:', err);
           reject(new Error(`FFmpeg spawn error: ${err.message}`));
         });
         
+        // Set timeout (5 minutes)
+        const timeout = setTimeout(() => {
+          proc.kill('SIGKILL');
+          reject(new Error('FFmpeg timeout after 5 minutes'));
+        }, 5 * 60 * 1000);
+        
         proc.on('exit', (code: number) => {
+          clearTimeout(timeout);
           if (code === 0) {
-            resolve();
+            resolve(fs.readFileSync(outputPath));
           } else {
-            reject(new Error(`FFmpeg exited with code ${code}: ${stderr}`));
+            console.error(`❌ FFmpeg exited with code ${code}`);
+            console.error('FFmpeg stderr:', stderr);
+            reject(new Error(`FFmpeg exited with code ${code}. Last error: ${stderr.split('\n').slice(-5).join('\n')}`));
           }
         });
       });
 
-      // Read watermarked video
-      const watermarkedBuffer = await fs.promises.readFile(outputPath);
+      console.log(`✅ Successfully watermarked video - output size: ${watermarkedBuffer.length} bytes`);
 
-      console.log(`✅ Applied dlwatermark.png to video - package: ${packageType}`);
-
-      // Cleanup
-      await fs.promises.rm(tmpDir, { recursive: true, force: true });
+      // Cleanup temp files
+      try {
+        await fs.promises.rm(tmpDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to cleanup temp directory:', cleanupError);
+      }
 
       return watermarkedBuffer;
     } catch (error) {
@@ -268,14 +369,16 @@ export async function applyWatermarkToVideo(
       try {
         await fs.promises.rm(tmpDir, { recursive: true, force: true });
       } catch (cleanupError) {
-        // Ignore cleanup errors
+        console.warn('⚠️ Failed to cleanup temp directory after error:', cleanupError);
       }
+      
+      console.error('❌ Error during video watermarking:', error);
       throw error;
     }
   } catch (error) {
-    console.error('Error applying video watermark:', error);
-    // Return null to indicate video watermarking failed, but don't throw
-    // This allows the download endpoint to handle it gracefully
+    console.error('❌ Error applying video watermark:', error);
+    // Return null to indicate video watermarking failed
+    // The download endpoint will handle this based on package type
     return null;
   }
 }

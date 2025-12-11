@@ -138,50 +138,60 @@ export default function GalleryContainer({
       const contentType = response.headers.get('content-type');
       
       if (contentType?.includes('application/json')) {
-        // Premium package or video without watermark - signed URL returned
+        // Premium package without watermark - signed URL returned
         const data = await response.json();
         if (data.success && data.data?.url) {
-          // For videos, always fetch as blob to force download (browsers try to play videos)
-          // For images, we can use the direct URL with download attribute
           const isVideo = data.data.isVideo || item.isVideo;
           const filename = data.data.filename || item.filename || (isVideo ? 'video.mp4' : 'photo.jpg');
           
-          if (isVideo) {
-            // Fetch the video as a blob to force download
-            const videoResponse = await fetch(data.data.url);
-            const videoBlob = await videoResponse.blob();
-            const url = window.URL.createObjectURL(videoBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
+          // Always fetch as blob to force download (prevents opening in new window)
+          const fileResponse = await fetch(data.data.url);
+          const fileBlob = await fileResponse.blob();
+          const url = window.URL.createObjectURL(fileBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = filename;
+          link.style.display = 'none'; // Hide the link
+          document.body.appendChild(link);
+          link.click();
+          // Small delay before cleanup to ensure download starts
+          setTimeout(() => {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-          } else {
-            // For images, use direct download
-            const link = document.createElement('a');
-            link.href = data.data.url;
-            link.download = filename;
-            // Don't use target='_blank' for downloads - it causes videos to open instead
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
+          }, 100);
         }
       } else {
-        // Basic/Freebie - watermarked file returned directly
+        // Basic/Freebie - watermarked file returned directly as binary
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        // Ensure proper filename with extension
-        const filename = item.filename || (item.isVideo ? 'video.mp4' : 'photo.jpg');
+        // Get filename from Content-Disposition header or use item filename
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = item.filename || (item.isVideo ? 'video.mp4' : 'photo.jpg');
+        
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+            // Decode URI if needed
+            try {
+              filename = decodeURIComponent(filename);
+            } catch (e) {
+              // Keep original if decode fails
+            }
+          }
+        }
+        
         link.download = filename;
+        link.style.display = 'none'; // Hide the link
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        // Small delay before cleanup to ensure download starts
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
       }
     } catch (error) {
       console.error('Download error:', error);

@@ -420,12 +420,12 @@ export default function FullScreenLightbox({
 
         <div onClick={(e) => e.stopPropagation()}>
           <SocialShare
-            url={typeof window !== 'undefined' ? window.location.href : ''}
+            url={currentItem.url}
             title={event?.name 
               ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
               : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!')}
             description={event?.name 
-              ? `Check out this ${currentItem.isVideo ? 'video' : 'photo'} from ${event.name}`
+              ? `Check out this ${currentItem.isVideo ? 'video' : 'photo'} from ${event.name}. View the full gallery: ${typeof window !== 'undefined' ? window.location.href : ''}`
               : `Check out this ${currentItem.isVideo ? 'video' : 'photo'}!`}
             imageUrl={currentItem.url}
           >

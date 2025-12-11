@@ -236,11 +236,11 @@ function ListLayout({
                   </div>
                 </>
               ) : (
-                <img
+                <ImageWithErrorFallback
                   src={item.thumbnail_url || item.url}
+                  fallbackSrc={item.url}
                   alt={item.alt || item.filename || 'Photo'}
                   className="w-full h-full object-cover"
-                  loading="lazy"
                 />
               )}
             </div>
@@ -279,6 +279,71 @@ function ListLayout({
 }
 
 /**
+ * Image component with error fallback
+ */
+function ImageWithErrorFallback({
+  src,
+  fallbackSrc,
+  alt,
+  className,
+}: {
+  src: string;
+  fallbackSrc?: string;
+  alt: string;
+  className?: string;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(src);
+
+  const handleError = () => {
+    console.warn('❌ Image failed to load:', currentSrc);
+    
+    // Try fallback URL if available and different
+    if (!imageError && fallbackSrc && fallbackSrc !== currentSrc) {
+      console.log('🔄 Trying fallback URL:', fallbackSrc);
+      setCurrentSrc(fallbackSrc);
+      setImageError(false);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  if (imageError) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200 text-gray-400">
+        <svg
+          className="w-8 h-8 mb-1"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+        <p className="text-xs text-center px-2">Image unavailable</p>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      className={className}
+      loading="lazy"
+      onError={handleError}
+      onLoad={() => {
+        if (imageError) setImageError(false);
+      }}
+    />
+  );
+}
+
+/**
  * Gallery Item Card Component
  * Reusable card for grid and masonry layouts
  */
@@ -293,6 +358,9 @@ function GalleryItemCard({
   onItemClick: (index: number) => void;
   aspectRatio: 'square' | 'preserve';
 }) {
+  const [imageError, setImageError] = useState(false);
+  const [imageSrc, setImageSrc] = useState(item.thumbnail_url || item.url);
+
   // For square layout, always use 1:1
   // For masonry, let images determine their own height naturally (no fixed aspect ratio)
   const containerStyle =
@@ -307,6 +375,21 @@ function GalleryItemCard({
           display: 'block',
           // No fixed height or aspect ratio - let content determine height
         };
+
+  // Handle image load error - try fallback URL
+  const handleImageError = () => {
+    console.warn('❌ Image failed to load:', imageSrc);
+    
+    // If we were using thumbnail_url, try the main url
+    if (imageSrc === item.thumbnail_url && item.url && item.url !== item.thumbnail_url) {
+      console.log('🔄 Trying fallback URL:', item.url);
+      setImageSrc(item.url);
+      setImageError(false);
+    } else {
+      // Both URLs failed, show error state
+      setImageError(true);
+    }
+  };
 
   return (
     <div
@@ -351,9 +434,27 @@ function GalleryItemCard({
             </div>
           </div>
         </>
+      ) : imageError ? (
+        // Error state - show placeholder
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200 text-gray-400">
+          <svg
+            className="w-12 h-12 mb-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <p className="text-xs text-center px-2">Image unavailable</p>
+        </div>
       ) : (
         <img
-          src={item.thumbnail_url || item.url}
+          src={imageSrc}
           alt={item.alt || item.filename || 'Photo'}
           className={aspectRatio === 'square' ? 'w-full h-full object-cover' : 'w-full h-auto object-contain'}
           style={aspectRatio === 'square'
@@ -361,6 +462,13 @@ function GalleryItemCard({
             : { width: '100%', height: 'auto', display: 'block' }
           }
           loading="lazy"
+          onError={handleImageError}
+          onLoad={() => {
+            // Reset error state on successful load
+            if (imageError) {
+              setImageError(false);
+            }
+          }}
         />
       )}
     </div>
