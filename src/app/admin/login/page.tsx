@@ -23,6 +23,7 @@ export default function AdminLoginPage() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for session management
         body: JSON.stringify({ email, password, action: 'login' }),
       });
 
@@ -34,8 +35,11 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Redirect to dashboard on success
-      router.push('/admin/dashboard');
+      // Wait a moment for cookies to be set, then redirect
+      // Using window.location.replace ensures a full page reload so cookies are available
+      setTimeout(() => {
+        window.location.replace('/admin/dashboard');
+      }, 100);
     } catch (err) {
       console.error(err);
       setError('Server error');

@@ -44,6 +44,7 @@ export default function AdminManagePage() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'verify' }),
       });
 
@@ -75,6 +76,7 @@ export default function AdminManagePage() {
       const res = await fetch('/api/admin/list-admins', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -109,6 +111,7 @@ export default function AdminManagePage() {
       const res = await fetch('/api/admin/create-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -142,6 +145,7 @@ export default function AdminManagePage() {
       const res = await fetch('/api/admin/delete-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ adminId }),
       });
 
@@ -164,6 +168,7 @@ export default function AdminManagePage() {
       await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'logout' }),
       });
       router.push('/admin/login');

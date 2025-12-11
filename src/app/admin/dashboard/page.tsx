@@ -106,7 +106,9 @@ export default function AdminDashboardPage() {
   const loadClaimLinks = async () => {
     setClaimLinksLoading(true);
     try {
-      const res = await fetch('/api/admin/claim-links');
+      const res = await fetch('/api/admin/claim-links', {
+        credentials: 'include',
+      });
       const result = await res.json();
       if (result.success) {
         setClaimLinks(result.data.links || []);
@@ -170,6 +172,7 @@ export default function AdminDashboardPage() {
       const res = await fetch('/api/admin/generate-claim-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({}), // No expiration
       });
 
