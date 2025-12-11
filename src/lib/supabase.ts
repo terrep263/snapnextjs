@@ -30,7 +30,7 @@ export const getPhotoPublicUrl = (filePath: string): string => {
  * @param url - The original URL (may be old Supabase format or already custom domain)
  * @returns The URL using the custom domain
  */
-export const transformToCustomDomain = (url: string): string => {
+export const transformToCustomDomain = (url: string | null | undefined): string | null | undefined => {
   if (!url) return url;
   
   // Already using custom domain
@@ -47,6 +47,12 @@ export const transformToCustomDomain = (url: string): string => {
     return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${match[1]}`;
   }
   
-  // Return original if no pattern match
+  // If URL is a relative path or just a filename, construct full URL
+  // Pattern: events/<event-id>/header-<timestamp>.<ext> or similar
+  if (url.startsWith('events/') || !url.startsWith('http')) {
+    return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${url}`;
+  }
+  
+  // Return original if no pattern match (might be external URL)
   return url;
 };

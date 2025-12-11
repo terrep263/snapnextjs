@@ -5,7 +5,6 @@ import {
   stripExifData,
   generateImageThumbnail,
   getImageDimensions,
-  detectFileTypeFromMagicBytes,
 } from '@/lib/upload-utils';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 import ErrorLogger from '@/lib/errorLogger';
@@ -176,9 +175,11 @@ export async function POST(request: NextRequest) {
         // Continue without thumbnail
       }
     } else if (isVideo) {
-      // For videos, we'll set thumbnail_url to the video URL itself
-      // Video thumbnail generation can be handled separately or client-side
-      // For now, we'll leave it null and let the frontend handle it
+      // For videos, we'll set thumbnail_url to the video URL itself after upload
+      // Browsers can generate poster frames from the video automatically
+      // The poster attribute on video elements will use this thumbnail_url
+      // Future: Can generate actual thumbnail frames using FFmpeg if needed
+      // Note: thumbnailUrl will be set to publicUrl after upload
     }
 
     // Upload main file to storage
@@ -197,7 +198,10 @@ export async function POST(request: NextRequest) {
 
     // Get public URLs
     const publicUrl = getPhotoPublicUrl(filePath);
-    const thumbnailUrl = thumbnailPath ? getPhotoPublicUrl(thumbnailPath) : null;
+    // For videos, use video URL as thumbnail; for images, use generated thumbnail if available
+    const thumbnailUrl = isVideo 
+      ? publicUrl 
+      : (thumbnailPath ? getPhotoPublicUrl(thumbnailPath) : null);
 
     // Create photo record in database
     const { data: photoData, error: dbError } = await supabase
@@ -211,7 +215,6 @@ export async function POST(request: NextRequest) {
         thumbnail_url: thumbnailUrl || publicUrl, // Fallback to main URL if no thumbnail
         thumbnail_path: thumbnailPath,
         size: buffer.length,
-        file_size: buffer.length,
         type: fileType,
         mime_type: fileType,
         is_video: isVideo,

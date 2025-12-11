@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { GalleryItem, GalleryPermissions } from './types';
 import { GalleryLayout } from './GalleryControls';
 import Masonry from 'react-masonry-css';
@@ -60,6 +60,11 @@ export default function GalleryContent({
   totalPages = 1,
   onPageChange,
 }: GalleryContentProps) {
+  // Debug: Log layout changes (must be before any conditional returns)
+  useEffect(() => {
+    console.log('🎨 Gallery layout changed to:', layout);
+  }, [layout]);
+
   // Paginate items
   const paginatedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -82,13 +87,11 @@ export default function GalleryContent({
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Layout-specific rendering */}
-      {layout === 'grid' && (
+      {layout === 'grid' ? (
         <GridLayout items={paginatedItems} onItemClick={onItemClick} />
-      )}
-      {layout === 'masonry' && (
+      ) : layout === 'masonry' ? (
         <MasonryLayout items={paginatedItems} onItemClick={onItemClick} />
-      )}
-      {layout === 'list' && (
+      ) : (
         <ListLayout items={paginatedItems} onItemClick={onItemClick} />
       )}
 
@@ -107,6 +110,7 @@ export default function GalleryContent({
 /**
  * Grid Layout Component
  * Responsive grid: 2 cols mobile, 3 tablet, 4 desktop, 5 large desktop
+ * All items are square (same aspect ratio)
  */
 function GridLayout({
   items,
@@ -118,13 +122,14 @@ function GridLayout({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4">
       {items.map((item, index) => (
-        <GalleryItemCard
-          key={item.id}
-          item={item}
-          index={index}
-          onItemClick={onItemClick}
-          aspectRatio="square"
-        />
+        <div key={item.id} className="aspect-square w-full">
+          <GalleryItemCard
+            item={item}
+            index={index}
+            onItemClick={onItemClick}
+            aspectRatio="square"
+          />
+        </div>
       ))}
     </div>
   );
@@ -150,22 +155,31 @@ function MasonryLayout({
   };
 
   return (
-    <Masonry
-      breakpointCols={breakpointColumns}
-      className="masonry-grid"
-      columnClassName="masonry-grid_column"
-    >
-      {items.map((item, index) => (
-        <div key={item.id} className="mb-3 sm:mb-4">
-          <GalleryItemCard
-            item={item}
-            index={index}
-            onItemClick={onItemClick}
-            aspectRatio="preserve"
-          />
-        </div>
-      ))}
-    </Masonry>
+    <div className="w-full">
+      <Masonry
+        breakpointCols={breakpointColumns}
+        className="masonry-grid"
+        columnClassName="masonry-grid_column"
+      >
+        {items.map((item, index) => (
+          <div 
+            key={item.id} 
+            className="break-inside-avoid"
+            style={{ 
+              width: '100%',
+              marginBottom: '12px',
+            }}
+          >
+            <GalleryItemCard
+              item={item}
+              index={index}
+              onItemClick={onItemClick}
+              aspectRatio="preserve"
+            />
+          </div>
+        ))}
+      </Masonry>
+    </div>
   );
 }
 
@@ -190,15 +204,28 @@ function ListLayout({
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4">
             {/* Thumbnail */}
-            <div className="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
+            <div className="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden relative">
               {item.isVideo ? (
-                <div className="w-full h-full flex items-center justify-center bg-gray-800 relative">
-                  <img
-                    src={item.thumbnail_url || item.url}
-                    alt={item.alt || item.filename || 'Video thumbnail'}
-                    className="w-full h-full object-cover opacity-50"
+                <>
+                  <video
+                    src={item.url}
+                    poster={item.thumbnail_url && item.thumbnail_url !== item.url ? item.thumbnail_url : undefined}
+                    className="w-full h-full object-cover"
+                    preload="metadata"
+                    muted
+                    playsInline
+                    onLoadedMetadata={(e) => {
+                      // Seek to 10% of duration to get a better thumbnail frame (skip first frame which might be black)
+                      const video = e.currentTarget;
+                      if (video.duration > 1) {
+                        video.currentTime = Math.min(1, video.duration * 0.1);
+                      }
+                    }}
+                    onError={(e) => {
+                      console.warn('Video thumbnail load error:', e);
+                    }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
                     <svg
                       className="w-12 h-12 text-white drop-shadow-lg"
                       fill="currentColor"
@@ -207,7 +234,7 @@ function ListLayout({
                       <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                     </svg>
                   </div>
-                </div>
+                </>
               ) : (
                 <img
                   src={item.thumbnail_url || item.url}
@@ -266,27 +293,53 @@ function GalleryItemCard({
   onItemClick: (index: number) => void;
   aspectRatio: 'square' | 'preserve';
 }) {
-  const aspectRatioStyle =
-    aspectRatio === 'preserve' && item.width && item.height
-      ? { aspectRatio: `${item.width} / ${item.height}` }
-      : { aspectRatio: '1 / 1' };
+  // For square layout, always use 1:1
+  // For masonry, let images determine their own height naturally (no fixed aspect ratio)
+  const containerStyle =
+    aspectRatio === 'square'
+      ? { 
+          aspectRatio: '1 / 1',
+          width: '100%',
+          display: 'block',
+        }
+      : {
+          width: '100%',
+          display: 'block',
+          // No fixed height or aspect ratio - let content determine height
+        };
 
   return (
     <div
-      className="relative bg-gray-100 rounded-lg overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity"
-      style={aspectRatioStyle}
+      className="relative bg-gray-100 rounded-lg overflow-hidden cursor-pointer group hover:opacity-90 transition-opacity w-full"
+      style={containerStyle}
       onClick={() => onItemClick(index)}
     >
       {item.isVideo ? (
         <>
-          <img
-            src={item.thumbnail_url || item.url}
-            alt={item.alt || item.filename || 'Video thumbnail'}
-            className="w-full h-full object-cover"
-            loading="lazy"
+          <video
+            src={item.url}
+            poster={item.thumbnail_url && item.thumbnail_url !== item.url ? item.thumbnail_url : undefined}
+            className={aspectRatio === 'square' ? 'w-full h-full object-cover' : 'w-full h-auto object-contain'}
+            style={aspectRatio === 'square' 
+              ? { width: '100%', height: '100%', display: 'block' }
+              : { width: '100%', height: 'auto', display: 'block' }
+            }
+            preload="metadata"
+            muted
+            playsInline
+            onLoadedMetadata={(e) => {
+              // Seek to 1 second to get a better thumbnail frame (skip first frame which might be black)
+              const video = e.currentTarget;
+              if (video.duration > 1) {
+                video.currentTime = Math.min(1, video.duration * 0.1);
+              }
+            }}
+            onError={(e) => {
+              console.warn('Video thumbnail load error:', e);
+            }}
           />
           {/* Video Play Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
               <svg
                 className="w-6 h-6 sm:w-8 sm:h-8 text-gray-900 ml-1"
@@ -302,7 +355,11 @@ function GalleryItemCard({
         <img
           src={item.thumbnail_url || item.url}
           alt={item.alt || item.filename || 'Photo'}
-          className="w-full h-full object-cover"
+          className={aspectRatio === 'square' ? 'w-full h-full object-cover' : 'w-full h-auto object-contain'}
+          style={aspectRatio === 'square'
+            ? { width: '100%', height: '100%', display: 'block' }
+            : { width: '100%', height: 'auto', display: 'block' }
+          }
           loading="lazy"
         />
       )}

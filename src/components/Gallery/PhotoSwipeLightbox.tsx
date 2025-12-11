@@ -187,9 +187,9 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
 
               <video
                 key={items[videoIndex].url}
-                muted
                 controls
                 autoPlay
+                poster={items[videoIndex].thumbnail_url || undefined}
                 className="w-full h-auto object-contain bg-black"
                 style={{
                   maxHeight: '90vh',

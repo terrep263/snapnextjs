@@ -43,6 +43,20 @@ export default function EventGalleryHeader({ event }: EventGalleryHeaderProps) {
     return `hsl(${hue}, 70%, 50%)`;
   }, [event.name]);
 
+  // Debug: Log image URLs and verify they're valid
+  if (typeof window !== 'undefined') {
+    console.log('🖼️ EventGalleryHeader received event data:', {
+      eventId: event.id,
+      eventName: event.name,
+      header_image: event.header_image,
+      profile_image: event.profile_image,
+      hasHeaderImage: !!event.header_image,
+      hasProfileImage: !!event.profile_image,
+      headerImageType: typeof event.header_image,
+      profileImageType: typeof event.profile_image,
+    });
+  }
+
   return (
     <div className="relative w-full">
       {/* Banner Section */}
@@ -53,6 +67,13 @@ export default function EventGalleryHeader({ event }: EventGalleryHeaderProps) {
             alt={`${event.name} header`}
             className="w-full h-full object-cover"
             loading="eager"
+            onError={(e) => {
+              console.error('❌ Header image failed to load:', event.header_image);
+              console.error('Error details:', e);
+            }}
+            onLoad={() => {
+              console.log('✅ Header image loaded successfully:', event.header_image);
+            }}
           />
           {/* Subtle overlay for better text contrast if needed */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/0 to-black/10" />
@@ -90,6 +111,13 @@ export default function EventGalleryHeader({ event }: EventGalleryHeaderProps) {
               alt={`${event.name} profile`}
               className="rounded-full border-4 border-white object-cover shadow-lg w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-[120px] lg:h-[120px]"
               loading="eager"
+              onError={(e) => {
+                console.error('❌ Profile image failed to load:', event.profile_image);
+                console.error('Error details:', e);
+              }}
+              onLoad={() => {
+                console.log('✅ Profile image loaded successfully:', event.profile_image);
+              }}
             />
           </div>
         ) : (

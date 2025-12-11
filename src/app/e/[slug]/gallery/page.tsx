@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import GalleryContainer from '@/components/Gallery/GalleryContainer';
-import { EventData } from '@/lib/gallery-utils';
+import { EventData, getPackageType } from '@/lib/gallery-utils';
 import { GalleryItem } from '@/components/Gallery/types';
 // Feature flags removed - new gallery is now the default and only gallery
 
@@ -36,14 +36,16 @@ export default function GalleryPage() {
     if (event?.id) {
       loadPhotos();
     }
-  }, [event?.id, currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id, currentPage, isAdmin, isOwner]);
 
   // Load all photos for lightbox on first page load
   useEffect(() => {
     if (event?.id && currentPage === 1 && totalPhotos > 0 && allPhotos.length === 0) {
       loadAllPhotosForLightbox();
     }
-  }, [event?.id, currentPage, totalPhotos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event?.id, currentPage, totalPhotos, isAdmin, isOwner]);
 
   const loadAllPhotosForLightbox = async () => {
     if (!event?.id) return;
@@ -52,8 +54,9 @@ export default function GalleryPage() {
       console.log('📸 Loading all photos for lightbox:', event.id);
 
       // Fetch all photos (no pagination) for lightbox navigation
+      // Include unapproved photos for development/testing
       const response = await fetch(
-        `/api/events/${event.id}/gallery?limit=1000&page=1`
+        `/api/events/${event.id}/gallery?limit=1000&page=1&includeUnapproved=true`
       );
       const result = await response.json();
 
@@ -98,10 +101,10 @@ export default function GalleryPage() {
 
       console.log('🔍 Loading event for gallery:', slug);
 
-      // Load event from database
+      // Load event from database - explicitly select header_image and profile_image
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('*')
+        .select('*, header_image, profile_image')
         .eq('slug', slug)
         .single();
 
@@ -122,17 +125,75 @@ export default function GalleryPage() {
       }
 
       // Transform header and profile images to use custom domain
+      // Note: URLs might already be transformed, but transformToCustomDomain handles that
+      let transformedHeaderImage: string | null | undefined = null;
+      let transformedProfileImage: string | null | undefined = null;
+
+      if (eventData.header_image) {
+        transformedHeaderImage = transformToCustomDomain(eventData.header_image);
+        console.log('🔄 Transforming header image:', {
+          original: eventData.header_image,
+          transformed: transformedHeaderImage,
+        });
+      } else {
+        console.log('⚠️ No header_image found in database for event:', eventData.id);
+      }
+
+      if (eventData.profile_image) {
+        transformedProfileImage = transformToCustomDomain(eventData.profile_image);
+        console.log('🔄 Transforming profile image:', {
+          original: eventData.profile_image,
+          transformed: transformedProfileImage,
+        });
+      } else {
+        console.log('⚠️ No profile_image found in database for event:', eventData.id);
+      }
+
       const transformedEvent: EventData = {
         ...eventData,
-        header_image: eventData.header_image
-          ? transformToCustomDomain(eventData.header_image)
-          : null,
-        profile_image: eventData.profile_image
-          ? transformToCustomDomain(eventData.profile_image)
-          : null,
+        header_image: transformedHeaderImage || undefined,
+        profile_image: transformedProfileImage || undefined,
       };
 
-      console.log('✅ Event loaded:', transformedEvent.name);
+      // Debug: Log image URLs to help diagnose loading issues
+      console.log('🖼️ Event images loaded from database:', {
+        eventId: eventData.id,
+        eventSlug: eventData.slug,
+        eventName: eventData.name,
+        raw_header_image: eventData.header_image,
+        raw_profile_image: eventData.profile_image,
+        transformed_header_image: transformedHeaderImage,
+        transformed_profile_image: transformedProfileImage,
+        final_header_image: transformedEvent.header_image,
+        final_profile_image: transformedEvent.profile_image,
+        hasHeaderImage: !!transformedEvent.header_image,
+        hasProfileImage: !!transformedEvent.profile_image,
+      });
+
+      // If this is the sample event, verify it's configured as freebie
+      if (slug === 'sample-event-slug') {
+        console.log('📋 Sample event configuration:', {
+          is_freebie: eventData.is_freebie,
+          is_free: eventData.is_free,
+          payment_type: eventData.payment_type,
+          packageType: getPackageType(transformedEvent),
+        });
+      }
+
+      // Log package type for debugging
+      const packageType = getPackageType(transformedEvent);
+      console.log('✅ Event loaded:', {
+        name: transformedEvent.name,
+        id: transformedEvent.id,
+        slug: transformedEvent.slug,
+        packageType,
+        is_freebie: transformedEvent.is_freebie,
+        is_free: transformedEvent.is_free,
+        payment_type: transformedEvent.payment_type,
+        hasHeaderImage: !!transformedEvent.header_image,
+        hasProfileImage: !!transformedEvent.profile_image,
+      });
+      
       setEvent(transformedEvent);
 
       // Check admin status
@@ -179,8 +240,9 @@ export default function GalleryPage() {
       console.log('📸 Loading photos for event:', event.id, 'page:', currentPage);
 
       // Use the existing gallery API endpoint with pagination
+      // Include unapproved photos for development/testing
       const response = await fetch(
-        `/api/events/${event.id}/gallery?page=${currentPage}&limit=50`
+        `/api/events/${event.id}/gallery?page=${currentPage}&limit=50&includeUnapproved=true`
       );
       const result = await response.json();
 

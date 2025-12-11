@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* Masonry Grid Styles */
+/* Masonry Grid Styles - Pinterest-style columnar layout */
 .masonry-grid {
-  display: flex;
-  width: auto;
+  display: flex !important;
+  width: 100%;
   margin-left: -12px;
   margin-right: -12px;
 }
@@ -12,6 +12,20 @@
   padding-left: 12px;
   padding-right: 12px;
   background-clip: padding-box;
+  width: 100% !important;
+}
+
+.masonry-grid_column > div {
+  width: 100% !important;
+  margin-bottom: 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  display: block !important;
+}
+
+.masonry-grid_column > div > div {
+  width: 100% !important;
+  height: auto !important;
 }
 
 @media (min-width: 640px) {
@@ -22,6 +36,9 @@
   .masonry-grid_column {
     padding-left: 16px;
     padding-right: 16px;
+  }
+  .masonry-grid_column > div {
+    margin-bottom: 16px;
   }
 }
 

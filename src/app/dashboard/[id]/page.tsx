@@ -48,18 +48,36 @@ export default function Dashboard() {
 
   const loadEventData = async () => {
     try {
-      // Handle mock events for development
-      if (eventId === 'mock_event_id' || eventId === 'sample-event-id') {
-        const mockEvent = {
-          id: eventId,
-          name: 'Sample Event for Development',
-          slug: 'sample-event-dev',
-          created_at: new Date().toISOString(),
-          status: 'active'
-        };
-        setEventData(mockEvent);
-        setLoading(false);
-        return;
+      console.log('📊 Loading event data for dashboard:', eventId);
+
+      // For sample-event-id, try to load by slug first (sample-event-slug)
+      // This ensures the dashboard and gallery use the same event
+      if (eventId === 'sample-event-id') {
+        const { data: eventBySlug, error: slugError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('slug', 'sample-event-slug')
+          .single();
+
+        if (eventBySlug && !slugError) {
+          console.log('✅ Loaded sample event by slug:', eventBySlug);
+          setEventData(eventBySlug);
+          // Load images from database
+          if (eventBySlug.header_image) {
+            const transformedHeader = transformToCustomDomain(eventBySlug.header_image);
+            setHeaderImage(transformedHeader || null);
+          }
+          if (eventBySlug.profile_image) {
+            const transformedProfile = transformToCustomDomain(eventBySlug.profile_image);
+            setProfileImage(transformedProfile || null);
+          }
+          if (eventBySlug.cover_photo_url) {
+            const transformedCover = transformToCustomDomain(eventBySlug.cover_photo_url);
+            setCoverPhotoUrl(transformedCover || null);
+          }
+          setLoading(false);
+          return;
+        }
       }
 
       // Try to get from localStorage first
@@ -73,7 +91,7 @@ export default function Dashboard() {
         }
       }
 
-      // Otherwise fetch from database
+      // Otherwise fetch from database by ID
       const { data: event, error } = await supabase
         .from('events')
         .select('*')
@@ -82,26 +100,54 @@ export default function Dashboard() {
 
       if (error) {
         console.error('Error loading event:', error);
-        // If database fails, create a mock event
+        // If database fails and it's sample-event-id, try slug as fallback
+        if (eventId === 'sample-event-id') {
+          const { data: eventBySlug } = await supabase
+            .from('events')
+            .select('*')
+            .eq('slug', 'sample-event-slug')
+            .single();
+          
+          if (eventBySlug) {
+            console.log('✅ Loaded sample event by slug (fallback):', eventBySlug);
+            setEventData(eventBySlug);
+            if (eventBySlug.header_image) {
+              const transformedHeader = transformToCustomDomain(eventBySlug.header_image);
+              setHeaderImage(transformedHeader || null);
+            }
+            if (eventBySlug.profile_image) {
+              const transformedProfile = transformToCustomDomain(eventBySlug.profile_image);
+              setProfileImage(transformedProfile || null);
+            }
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Final fallback: create a mock event
         const mockEvent = {
           id: eventId,
           name: 'Sample Event (Database Not Connected)',
-          slug: 'sample-event',
+          slug: eventId === 'sample-event-id' ? 'sample-event-slug' : 'sample-event',
           created_at: new Date().toISOString(),
           status: 'active'
         };
         setEventData(mockEvent);
       } else {
+        console.log('✅ Loaded event from database:', event);
         setEventData(event);
-        // Load images from database
+        // Load images from database and transform URLs
         if (event.header_image) {
-          setHeaderImage(event.header_image);
+          const transformedHeader = transformToCustomDomain(event.header_image);
+          setHeaderImage(transformedHeader || null);
         }
         if (event.profile_image) {
-          setProfileImage(event.profile_image);
+          const transformedProfile = transformToCustomDomain(event.profile_image);
+          setProfileImage(transformedProfile || null);
         }
         if (event.cover_photo_url) {
-          setCoverPhotoUrl(event.cover_photo_url);
+          const transformedCover = transformToCustomDomain(event.cover_photo_url);
+          setCoverPhotoUrl(transformedCover || null);
         }
       }
     } catch (error) {
@@ -302,12 +348,25 @@ export default function Dashboard() {
   const handleImageUpload = async (type: 'header' | 'profile') => {
     const targetEventId = eventData?.id || eventId;
     const targetEventSlug = typeof eventData?.slug === 'string' ? eventData.slug : null;
-    const storageScope = targetEventId || targetEventSlug;
+    
+    // For sample-event-id, ensure we use sample-event-slug
+    const finalSlug = (eventId === 'sample-event-id' && !targetEventSlug) 
+      ? 'sample-event-slug' 
+      : targetEventSlug;
+    
+    const storageScope = targetEventId || finalSlug;
 
     if (!storageScope) {
       console.warn('Cannot upload image: event data not loaded');
       return;
     }
+
+    console.log('📤 Uploading image:', {
+      type,
+      targetEventId,
+      targetEventSlug: finalSlug,
+      storageScope,
+    });
 
     const input = document.createElement('input');
     input.type = 'file';
@@ -369,7 +428,29 @@ export default function Dashboard() {
           let updateSucceeded = false;
           let lastError: any = null;
 
-          if (targetEventId) {
+          // For sample-event-id, always try to update by slug first (sample-event-slug)
+          if (eventId === 'sample-event-id' && finalSlug) {
+            const { data: updatedBySlug, error: slugError } = await supabase
+              .from('events')
+              .update(updateData)
+              .eq('slug', finalSlug)
+              .select('id, slug');
+
+            if (slugError) {
+              lastError = slugError;
+              if (slugError.code !== 'PGRST116') {
+                console.error('Database update by slug failed:', slugError);
+              }
+            } else {
+              updateSucceeded = !!updatedBySlug?.length;
+              if (updateSucceeded) {
+                console.log(`✅ ${type} image saved by slug (${finalSlug}):`, publicUrl);
+              }
+            }
+          }
+
+          // Try by ID if slug update didn't work
+          if (!updateSucceeded && targetEventId) {
             const { data: updatedById, error: dbError } = await supabase
               .from('events')
               .update(updateData)
@@ -381,16 +462,20 @@ export default function Dashboard() {
               if (dbError.code !== 'PGRST116') {
                 console.error('Database update by ID failed:', dbError);
               }
+            } else {
+              updateSucceeded = !!updatedById?.length;
+              if (updateSucceeded) {
+                console.log(`✅ ${type} image saved by ID (${targetEventId}):`, publicUrl);
+              }
             }
-
-            updateSucceeded = !!updatedById?.length;
           }
 
-          if (!updateSucceeded && targetEventSlug) {
+          // Try by slug as final fallback
+          if (!updateSucceeded && finalSlug && eventId !== 'sample-event-id') {
             const { data: updatedBySlug, error: slugError } = await supabase
               .from('events')
               .update(updateData)
-              .eq('slug', targetEventSlug)
+              .eq('slug', finalSlug)
               .select('id');
 
             if (slugError) {
@@ -398,15 +483,21 @@ export default function Dashboard() {
               if (slugError.code !== 'PGRST116') {
                 console.error('Database update by slug failed:', slugError);
               }
+            } else {
+              updateSucceeded = !!updatedBySlug?.length;
+              if (updateSucceeded) {
+                console.log(`✅ ${type} image saved by slug (${finalSlug}):`, publicUrl);
+              }
             }
-
-            updateSucceeded = !!updatedBySlug?.length;
           }
 
           if (updateSucceeded) {
-            console.log(`✅ ${type} image saved successfully:`, publicUrl);
+            console.log(`✅ ${type} image saved successfully to database:`, publicUrl);
+            // Reload event data to get updated images
+            await loadEventData();
           } else if (!lastError || lastError.code === 'PGRST116') {
-            console.warn(`No matching event row found when saving ${type} image.`);
+            console.warn(`⚠️ No matching event row found when saving ${type} image.`);
+            console.warn('Tried:', { targetEventId, finalSlug, eventId });
           }
           
         } catch (error) {
@@ -420,9 +511,13 @@ export default function Dashboard() {
   const removeImage = async (type: 'header' | 'profile') => {
     const targetEventId = eventData?.id || eventId;
     const targetEventSlug = typeof eventData?.slug === 'string' ? eventData.slug : null;
-    const storageScope = targetEventId || targetEventSlug;
+    
+    // For sample-event-id, ensure we use sample-event-slug
+    const finalSlug = (eventId === 'sample-event-id' && !targetEventSlug) 
+      ? 'sample-event-slug' 
+      : targetEventSlug;
 
-    if (!storageScope) {
+    if (!targetEventId && !finalSlug) {
       console.warn('Cannot remove image: event data not loaded');
       return;
     }
@@ -445,7 +540,26 @@ export default function Dashboard() {
       let updateSucceeded = false;
       let lastError: any = null;
 
-      if (targetEventId) {
+      // For sample-event-id, always try to update by slug first (sample-event-slug)
+      if (eventId === 'sample-event-id' && finalSlug) {
+        const { data: updatedBySlug, error: slugError } = await supabase
+          .from('events')
+          .update(updateData)
+          .eq('slug', finalSlug)
+          .select('id');
+
+        if (slugError) {
+          lastError = slugError;
+          if (slugError.code !== 'PGRST116') {
+            console.error('Database remove by slug failed:', slugError);
+          }
+        } else {
+          updateSucceeded = !!updatedBySlug?.length;
+        }
+      }
+
+      // Try by ID if slug update didn't work
+      if (!updateSucceeded && targetEventId) {
         const { data: updatedById, error } = await supabase
           .from('events')
           .update(updateData)
@@ -457,16 +571,17 @@ export default function Dashboard() {
           if (error.code !== 'PGRST116') {
             console.error('Database remove by ID failed:', error);
           }
+        } else {
+          updateSucceeded = !!updatedById?.length;
         }
-
-        updateSucceeded = !!updatedById?.length;
       }
 
-      if (!updateSucceeded && targetEventSlug) {
+      // Try by slug as final fallback
+      if (!updateSucceeded && finalSlug && eventId !== 'sample-event-id') {
         const { data: updatedBySlug, error: slugError } = await supabase
           .from('events')
           .update(updateData)
-          .eq('slug', targetEventSlug)
+          .eq('slug', finalSlug)
           .select('id');
 
         if (slugError) {
@@ -474,9 +589,17 @@ export default function Dashboard() {
           if (slugError.code !== 'PGRST116') {
             console.error('Database remove by slug failed:', slugError);
           }
+        } else {
+          updateSucceeded = !!updatedBySlug?.length;
         }
+      }
 
-        updateSucceeded = !!updatedBySlug?.length;
+      if (updateSucceeded) {
+        console.log(`✅ ${type} image removed successfully`);
+        // Reload event data to reflect changes
+        await loadEventData();
+      } else if (!lastError || lastError.code === 'PGRST116') {
+        console.warn(`⚠️ No matching event row found when removing ${type} image.`);
       }
 
       if (!updateSucceeded && (!lastError || lastError.code === 'PGRST116')) {
@@ -487,13 +610,16 @@ export default function Dashboard() {
     }
 
     // Also remove from localStorage
+    const storageScope = targetEventId || finalSlug;
     const localStorageKeys = new Set<string>();
-    localStorageKeys.add(`${type}Image_${storageScope}`);
-    if (targetEventId && storageScope !== targetEventId) {
+    if (storageScope) {
+      localStorageKeys.add(`${type}Image_${storageScope}`);
+    }
+    if (targetEventId && storageScope && storageScope !== targetEventId) {
       localStorageKeys.add(`${type}Image_${targetEventId}`);
     }
-    if (targetEventSlug) {
-      localStorageKeys.add(`${type}Image_${targetEventSlug}`);
+    if (finalSlug) {
+      localStorageKeys.add(`${type}Image_${finalSlug}`);
     }
     localStorageKeys.forEach((key) => localStorage.removeItem(key));
   };
@@ -994,7 +1120,7 @@ export default function Dashboard() {
                     <div className="relative">
                       <div className="relative aspect-[1.91/1] w-full max-w-md overflow-hidden rounded-lg border-2 border-purple-200 shadow-md">
                         <img 
-                          src={transformToCustomDomain(coverPhotoUrl)} 
+                          src={coverPhotoUrl ? (transformToCustomDomain(coverPhotoUrl) || coverPhotoUrl) : ''} 
                           alt="Cover photo preview"
                           className="w-full h-full object-cover"
                         />
@@ -1231,7 +1357,7 @@ export default function Dashboard() {
                       >
                         <div className="aspect-square">
                           <img
-                            src={transformToCustomDomain(photo.thumbnail_url || photo.url)}
+                            src={(photo.thumbnail_url || photo.url) ? (transformToCustomDomain(photo.thumbnail_url || photo.url) || photo.thumbnail_url || photo.url) : ''}
                             alt={photo.filename || 'Photo'}
                             className="w-full h-full object-cover"
                           />

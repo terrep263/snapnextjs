@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Load event and photo (select fields needed for package detection)
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, slug, is_freebie, is_free, watermark_enabled, feed_enabled, password_hash')
+      .select('id, name, slug, is_freebie, is_free, watermark_enabled, feed_enabled, password_hash, payment_type')
       .eq('id', eventId)
       .single();
 
@@ -78,6 +78,19 @@ export async function POST(request: NextRequest) {
     // Detect package type using centralized function
     const packageType = getPackageType(event);
     const needsWatermark = shouldApplyWatermark(event, packageType);
+    
+    // Log package detection for debugging
+    console.log('📦 Download request:', {
+      eventId: event.id,
+      eventName: event.name,
+      is_freebie: event.is_freebie,
+      is_free: event.is_free,
+      payment_type: event.payment_type,
+      packageType,
+      needsWatermark,
+      photoId,
+      isVideo: photo.is_video,
+    });
 
     // For Premium without watermark, return signed URL to original
     if (packageType === 'premium' && !needsWatermark) {
@@ -93,12 +106,15 @@ export async function POST(request: NextRequest) {
 
       incrementRateLimit(downloadKey);
 
+      // For videos, indicate that client should fetch as blob to force download
       return NextResponse.json({
         success: true,
         data: {
           url: signedUrlData.signedUrl,
           isWatermarked: false,
           packageType: 'premium',
+          isVideo: photo.is_video,
+          filename: photo.filename || (photo.is_video ? 'video.mp4' : 'photo.jpg'),
           expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
         },
       });
@@ -163,6 +179,8 @@ export async function POST(request: NextRequest) {
             url: signedUrlData?.signedUrl || photo.url,
             isWatermarked: false,
             packageType,
+            isVideo: true,
+            filename: photo.filename || 'video.mp4',
             note: 'Video watermarking coming soon',
           },
         });

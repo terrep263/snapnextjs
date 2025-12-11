@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { GalleryItem } from './types';
 import { EventData, getPackageType } from '@/lib/gallery-utils';
+import { SocialShare } from '@/components/SocialShare';
 
 export interface FullScreenLightboxProps {
   items: GalleryItem[];
@@ -64,10 +65,10 @@ export default function FullScreenLightbox({
       return 'Download original file';
     }
     if (packageType === 'freebie') {
-      return 'Download includes SnapWorxx watermark';
+      return 'Download (includes watermark)';
     }
     if (packageType === 'basic') {
-      return 'Download includes SnapWorxx watermark';
+      return 'Download (includes watermark)';
     }
     return 'Download';
   };
@@ -222,6 +223,31 @@ export default function FullScreenLightbox({
   const handleShare = useCallback(() => {
     if (currentItem && onShare) {
       onShare(currentItem, event);
+    } else {
+      // Fallback: Use native share API or copy link
+      const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+      const shareTitle = event?.name 
+        ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
+        : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!');
+      
+      if (navigator.share) {
+        navigator.share({
+          title: shareTitle,
+          text: shareTitle,
+          url: shareUrl,
+        }).catch((err) => {
+          if (err.name !== 'AbortError') {
+            console.error('Share failed:', err);
+          }
+        });
+      } else {
+        // Fallback to copy link
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          alert('Link copied to clipboard!');
+        }).catch((err) => {
+          console.error('Copy failed:', err);
+        });
+      }
     }
   }, [currentItem, event, onShare]);
 
@@ -337,8 +363,8 @@ export default function FullScreenLightbox({
             src={currentItem.url}
             controls
             autoPlay
-            muted
             playsInline
+            poster={currentItem.thumbnail_url || undefined}
             className="max-w-full max-h-[95vh] rounded-lg"
             onPlay={handleVideoPlay}
             onPause={handleVideoPause}
@@ -392,23 +418,32 @@ export default function FullScreenLightbox({
           </span>
         </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleShare();
-          }}
-          className="p-2 text-white hover:text-gray-300 transition-colors rounded-lg hover:bg-white/10"
-          aria-label="Share"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8.684 13.342C8.885 12.938 9 12.482 9 12c0-.482-.115-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            />
-          </svg>
-        </button>
+        <div onClick={(e) => e.stopPropagation()}>
+          <SocialShare
+            url={typeof window !== 'undefined' ? window.location.href : ''}
+            title={event?.name 
+              ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
+              : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!')}
+            description={event?.name 
+              ? `Check out this ${currentItem.isVideo ? 'video' : 'photo'} from ${event.name}`
+              : `Check out this ${currentItem.isVideo ? 'video' : 'photo'}!`}
+            imageUrl={currentItem.url}
+          >
+            <button
+              className="p-2 text-white hover:text-gray-300 transition-colors rounded-lg hover:bg-white/10"
+              aria-label="Share"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.885 12.938 9 12.482 9 12c0-.482-.115-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </button>
+          </SocialShare>
+        </div>
 
         <button
           onClick={(e) => {

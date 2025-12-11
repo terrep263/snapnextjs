@@ -133,11 +133,26 @@ export function UniversalShare({
     if (!canNativeShare) return false;
     
     try {
-      await navigator.share({
+      const shareData: any = {
         title: shareTitle || 'Check out this photo!',
         text: description || '',
         url: shareUrl,
-      });
+      };
+
+      // If we have an image URL, try to fetch and include it as a file
+      if (mediaUrl && !isVideo) {
+        try {
+          const response = await fetch(mediaUrl);
+          const blob = await response.blob();
+          const file = new File([blob], 'photo.jpg', { type: blob.type });
+          shareData.files = [file];
+        } catch (fileErr) {
+          // If file fetch fails, just share the URL
+          console.warn('Could not fetch file for sharing:', fileErr);
+        }
+      }
+
+      await navigator.share(shareData);
       onShareComplete?.('native');
       setIsOpen(false);
       return true;
@@ -148,7 +163,7 @@ export function UniversalShare({
       }
       return false;
     }
-  }, [canNativeShare, shareTitle, description, shareUrl, onShareComplete]);
+  }, [canNativeShare, shareTitle, description, shareUrl, mediaUrl, isVideo, onShareComplete]);
 
   // Copy to clipboard
   const handleCopyLink = useCallback(async () => {
@@ -280,7 +295,7 @@ export function UniversalShare({
                 {/* Facebook */}
                 <div className="flex flex-col items-center gap-1">
                   <FacebookShareButton
-                    url={shareUrl}
+                    url={mediaUrl || shareUrl}
                     hashtag={hashtags.length > 0 ? `#${hashtags[0]}` : undefined}
                     onClick={() => handleShareEvent('facebook')}
                     className="hover:scale-110 transition-transform"
@@ -293,8 +308,8 @@ export function UniversalShare({
                 {/* X (Twitter) */}
                 <div className="flex flex-col items-center gap-1">
                   <TwitterShareButton
-                    url={shareUrl}
-                    title={shareTitle}
+                    url={mediaUrl || shareUrl}
+                    title={`${shareTitle}${mediaUrl ? ` ${mediaUrl}` : ''}`}
                     hashtags={hashtags}
                     onClick={() => handleShareEvent('twitter')}
                     className="hover:scale-110 transition-transform"
@@ -308,7 +323,7 @@ export function UniversalShare({
                 <div className="flex flex-col items-center gap-1">
                   <WhatsappShareButton
                     url={shareUrl}
-                    title={shareTitle}
+                    title={`${shareTitle}\n\n${mediaUrl ? `View: ${mediaUrl}` : ''}`}
                     onClick={() => handleShareEvent('whatsapp')}
                     className="hover:scale-110 transition-transform"
                   >
@@ -333,9 +348,9 @@ export function UniversalShare({
                 {/* LinkedIn */}
                 <div className="flex flex-col items-center gap-1">
                   <LinkedinShareButton
-                    url={shareUrl}
+                    url={mediaUrl || shareUrl}
                     title={shareTitle}
-                    summary={description}
+                    summary={`${description}${mediaUrl ? `\n\nView: ${mediaUrl}` : ''}`}
                     onClick={() => handleShareEvent('linkedin')}
                     className="hover:scale-110 transition-transform"
                   >
@@ -374,8 +389,8 @@ export function UniversalShare({
                 {/* Reddit */}
                 <div className="flex flex-col items-center gap-1">
                   <RedditShareButton
-                    url={shareUrl}
-                    title={shareTitle}
+                    url={mediaUrl || shareUrl}
+                    title={`${shareTitle}${mediaUrl ? ` - ${mediaUrl}` : ''}`}
                     onClick={() => handleShareEvent('reddit')}
                     className="hover:scale-110 transition-transform"
                   >
@@ -389,7 +404,7 @@ export function UniversalShare({
                   <EmailShareButton
                     url={shareUrl}
                     subject={shareTitle || 'Check out this photo!'}
-                    body={description || 'I wanted to share this with you:'}
+                    body={`${description || 'I wanted to share this with you:'}${mediaUrl ? `\n\nView: ${mediaUrl}` : ''}`}
                     onClick={() => handleShareEvent('email')}
                     className="hover:scale-110 transition-transform"
                   >

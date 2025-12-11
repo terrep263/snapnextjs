@@ -20,29 +20,67 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // Include cookies for session management
+        signal: controller.signal,
         body: JSON.stringify({ email, password, action: 'login' }),
       });
 
-      const data = await res.json();
+      clearTimeout(timeoutId);
 
+      // Check if response is ok before parsing JSON
       if (!res.ok) {
-        setError(data.error || 'Login failed');
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = `Login failed: ${res.status} ${res.statusText}`;
+        }
+        setError(errorMessage);
         setLoading(false);
         return;
       }
 
-      // Wait a moment for cookies to be set, then redirect
-      // Using window.location.replace ensures a full page reload so cookies are available
-      setTimeout(() => {
-        window.location.replace('/admin/dashboard');
-      }, 100);
+      // Parse response
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        setError('Invalid response from server');
+        setLoading(false);
+        return;
+      }
+
+      // Check if login was successful
+      if (data.success) {
+        // Wait a moment for cookies to be set, then redirect
+        // Using window.location.replace ensures a full page reload so cookies are available
+        setTimeout(() => {
+          window.location.replace('/admin/dashboard');
+        }, 100);
+      } else {
+        setError(data.error || 'Login failed');
+        setLoading(false);
+      }
     } catch (err) {
-      console.error(err);
-      setError('Server error');
+      console.error('Login error:', err);
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          setError('Request timed out. Please try again.');
+        } else {
+          setError(err.message || 'Server error. Please try again.');
+        }
+      } else {
+        setError('Server error. Please try again.');
+      }
       setLoading(false);
     }
   };

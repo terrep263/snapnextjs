@@ -138,17 +138,36 @@ export default function GalleryContainer({
       const contentType = response.headers.get('content-type');
       
       if (contentType?.includes('application/json')) {
-        // Premium package - signed URL returned
+        // Premium package or video without watermark - signed URL returned
         const data = await response.json();
         if (data.success && data.data?.url) {
-          // Trigger download from signed URL
-          const link = document.createElement('a');
-          link.href = data.data.url;
-          link.download = item.filename || 'download';
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
+          // For videos, always fetch as blob to force download (browsers try to play videos)
+          // For images, we can use the direct URL with download attribute
+          const isVideo = data.data.isVideo || item.isVideo;
+          const filename = data.data.filename || item.filename || (isVideo ? 'video.mp4' : 'photo.jpg');
+          
+          if (isVideo) {
+            // Fetch the video as a blob to force download
+            const videoResponse = await fetch(data.data.url);
+            const videoBlob = await videoResponse.blob();
+            const url = window.URL.createObjectURL(videoBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+          } else {
+            // For images, use direct download
+            const link = document.createElement('a');
+            link.href = data.data.url;
+            link.download = filename;
+            // Don't use target='_blank' for downloads - it causes videos to open instead
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
         }
       } else {
         // Basic/Freebie - watermarked file returned directly
@@ -156,7 +175,9 @@ export default function GalleryContainer({
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = item.filename || 'download';
+        // Ensure proper filename with extension
+        const filename = item.filename || (item.isVideo ? 'video.mp4' : 'photo.jpg');
+        link.download = filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -173,9 +194,9 @@ export default function GalleryContainer({
     // Bulk download - implemented in dashboard
   };
 
-  const handleShareClick = (item: GalleryItem) => {
-    // Placeholder for social sharing
-    // Share item - handled by lightbox
+  const handleShareClick = (item: GalleryItem, eventData?: EventData) => {
+    // Share functionality - opens share modal via UniversalShare
+    // This is handled in FullScreenLightbox component
   };
 
   const handleModerate = async (item: GalleryItem, action: string) => {
