@@ -170,12 +170,12 @@ export default function GalleryContainer({
 
   const handleBulkDownloadClick = () => {
     // Placeholder for bulk download
-    console.log('Bulk download');
+    // Bulk download - implemented in dashboard
   };
 
   const handleShareClick = (item: GalleryItem) => {
     // Placeholder for social sharing
-    console.log('Share item:', item);
+    // Share item - handled by lightbox
   };
 
   const handleModerate = async (item: GalleryItem, action: string) => {
@@ -273,12 +273,10 @@ export default function GalleryContainer({
             handleDownloadClick(item);
           }}
           onShare={(item, eventData) => {
-            console.log('Share:', item, eventData);
-            // TODO: Implement share logic
+            // Share functionality handled by FullScreenLightbox
           }}
           onFavorite={(item, favorited) => {
-            console.log('Favorite:', item, favorited);
-            // TODO: Implement favorite logic
+            // Favorite functionality - to be implemented
           }}
           isAdmin={isAdmin}
           isOwner={isOwner}

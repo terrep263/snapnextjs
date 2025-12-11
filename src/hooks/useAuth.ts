@@ -67,10 +67,10 @@ export function useAuth() {
   }, [router]);
 
   const login = useCallback(
-    async (email: string, code: string) => {
+    async (email: string, password: string) => {
       try {
         setAuthState((prev) => ({ ...prev, loading: true, error: null }));
-        const response = await adminApi.login(email, code);
+        const response = await adminApi.login(email, password);
 
         if (response.success) {
           setAuthState({

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Lock, Settings, BarChart3, Shield } from 'lucide-react';
 
@@ -13,6 +14,13 @@ interface AdminLink {
 }
 
 export default function AdminNavigation() {
+  const [currentDate, setCurrentDate] = useState<string>('');
+
+  // Set date only on client to avoid hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString());
+  }, []);
+
   const adminLinks: AdminLink[] = [
     // Access Section
     {
@@ -157,7 +165,9 @@ export default function AdminNavigation() {
         {/* Footer Info */}
         <div className="mt-12 text-center text-sm text-gray-500">
           <p>Total Admin Routes: {adminLinks.length}</p>
-          <p className="mt-2">Last updated: {new Date().toLocaleDateString()}</p>
+          {currentDate && (
+            <p className="mt-2">Last updated: {currentDate}</p>
+          )}
         </div>
       </div>
     </div>

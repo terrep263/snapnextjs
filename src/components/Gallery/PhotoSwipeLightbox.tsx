@@ -44,7 +44,7 @@ export default function PhotoSwipeLightbox({ items, open, index, onClose, onInde
   // Handle video modal
   useEffect(() => {
     if (open && index >= 0 && items && items.length > 0 && items[index] && isVideoItem(items[index])) {
-      console.log('🎬 Opening video modal for index:', index);
+      // Video modal handling
       setVideoIndex(index);
       setShowVideoModal(true);
 

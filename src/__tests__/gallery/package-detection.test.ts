@@ -2,7 +2,7 @@
  * Unit Tests: Package Detection
  */
 
-import { detectPackageType } from '@/lib/download-utils';
+import { getPackageType } from '@/lib/gallery-utils';
 import { EventData } from '@/lib/gallery-utils';
 
 describe('Package Detection', () => {
@@ -15,7 +15,7 @@ describe('Package Detection', () => {
       is_free: false,
     };
 
-    expect(detectPackageType(event)).toBe('freebie');
+    expect(getPackageType(event)).toBe('freebie');
   });
 
   test('detects Basic package correctly', () => {
@@ -27,7 +27,7 @@ describe('Package Detection', () => {
       is_free: true,
     };
 
-    expect(detectPackageType(event)).toBe('basic');
+    expect(getPackageType(event)).toBe('basic');
   });
 
   test('detects Premium package correctly', () => {
@@ -39,7 +39,7 @@ describe('Package Detection', () => {
       is_free: false,
     };
 
-    expect(detectPackageType(event)).toBe('premium');
+    expect(getPackageType(event)).toBe('premium');
   });
 
   test('Freebie takes priority over Basic', () => {
@@ -51,7 +51,7 @@ describe('Package Detection', () => {
       is_free: true,
     };
 
-    expect(detectPackageType(event)).toBe('freebie');
+    expect(getPackageType(event)).toBe('freebie');
   });
 });
 

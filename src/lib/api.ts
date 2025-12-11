@@ -157,8 +157,8 @@ export const throwIfError = <T,>(response: ApiResponse<T>): T => {
 export const adminApi = {
   verify: () => apiPost('/api/admin/auth', { action: 'verify' }),
   logout: () => apiPost('/api/admin/auth', { action: 'logout' }),
-  login: (email: string, code: string) =>
-    apiPost('/api/admin/auth', { action: 'login', email, code }),
+  login: (email: string, password: string) =>
+    apiPost('/api/admin/auth', { action: 'login', email, password }),
   getStats: () => apiGet('/api/admin/promo-stats'),
   getEvents: () => apiGet('/api/admin/promo-events'),
   getBlockedEmails: () => apiGet('/api/admin/blocked-emails'),

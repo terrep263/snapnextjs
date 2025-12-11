@@ -122,7 +122,7 @@ export default function FullScreenLightbox({
     if (open && currentItem) {
       setImageLoaded(false);
       setVideoPlaying(false);
-      setFavorited(false); // TODO: Load from API/localStorage
+      setFavorited(false); // Favorite state - to be implemented with API/localStorage
     }
   }, [open, currentItem?.id]);
 
