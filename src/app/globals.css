@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Masonry Grid Styles - Pinterest-style columnar layout */
 .masonry-grid {
