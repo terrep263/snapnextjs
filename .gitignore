@@ -38,4 +38,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# secret key files
+pk_test_*.txt
+resend key.txt
+strip key*.txt
 next-env.d.ts
