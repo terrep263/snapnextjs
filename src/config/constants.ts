@@ -28,20 +28,20 @@ export const API_ENDPOINTS = {
   },
   // Checkout & Payment
   CHECKOUT: {
-    CREATE_SESSION: '/api/checkout/create-checkout-session',
-    VERIFY_PAYMENT: '/api/checkout/verify-payment',
+    CREATE_SESSION: '/api/create-checkout-session',
+    VERIFY_PAYMENT: '/api/verify-payment',
   },
   // Stripe
   STRIPE: {
-    PROMOTIONS: '/api/stripe/stripe-promotions',
-    COUPONS: '/api/stripe/stripe-coupons',
-    DISCOUNT_OFFER: '/api/stripe/discount-offer',
+    PROMOTIONS: '/api/stripe-promotions',
+    COUPONS: '/api/stripe-coupons',
+    DISCOUNT_OFFER: '/api/discount-offer',
   },
   // Photos & Media
   PHOTOS: '/api/photos',
   UPLOAD: '/api/upload',
   // Email
-  EMAIL: '/api/email/send-email',
+  EMAIL: '/api/send-email',
   // Testing
   TEST_DB: '/api/test-db',
   DEBUG_EVENT: '/api/debug-event',
