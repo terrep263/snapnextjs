@@ -131,7 +131,7 @@ async function handleCheckoutComplete(
   const { error } = await supabase
     .from('events')
     .update({
-      payment_status: 'paid',
+      status: 'active',
       stripe_session_id: session.id,
       last_webhook_received: new Date().toISOString(),
     })
@@ -212,7 +212,7 @@ async function handlePaymentSuccess(
   const { error } = await supabase
     .from('events')
     .update({
-      payment_status: 'paid',
+      status: 'active',
       stripe_payment_intent_id: paymentIntent.id,
       last_webhook_received: new Date().toISOString(),
     })
@@ -240,7 +240,7 @@ async function handlePaymentFailed(
   const { error } = await supabase
     .from('events')
     .update({
-      payment_status: 'failed',
+      status: 'failed',
       last_webhook_received: new Date().toISOString(),
     })
     .eq('id', eventId);

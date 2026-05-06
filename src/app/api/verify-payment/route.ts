@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Look up the row that create-checkout-session reserved
     const { data: event, error: lookupError } = await supabase
       .from('events')
-      .select('id, name, slug, payment_status, owner_email')
+      .select('id, name, slug, status, owner_email')
       .eq('stripe_session_id', sessionId)
       .maybeSingle();
 
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If still pending, check Stripe and flip pending → paid (idempotent vs webhook)
-    if (event.payment_status !== 'paid') {
+    if (event.status !== 'active') {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status !== 'paid') {
         return NextResponse.json(
@@ -58,9 +58,9 @@ export async function POST(request: NextRequest) {
 
       const { error: updateError, data: updated } = await supabase
         .from('events')
-        .update({ payment_status: 'paid', status: 'active' })
+        .update({ status: 'active' })
         .eq('id', event.id)
-        .eq('payment_status', 'pending')
+        .eq('status', 'pending_payment')
         .select('id')
         .maybeSingle();
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           })
           .catch((e) => console.error('Email send failed:', e));
       }
-      event.payment_status = 'paid';
+      event.status = 'active';
     }
 
     return NextResponse.json({
