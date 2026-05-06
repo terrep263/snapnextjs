@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     // If still pending, check Stripe and flip pending → paid (idempotent vs webhook)
     if (event.status !== 'active') {
+      // status is 'inactive' (pending payment) — verify with Stripe
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status !== 'paid') {
         return NextResponse.json(
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
         .from('events')
         .update({ status: 'active' })
         .eq('id', event.id)
-        .eq('status', 'pending_payment')
+        .eq('status', 'inactive')
         .select('id')
         .maybeSingle();
 

@@ -240,7 +240,7 @@ async function handlePaymentFailed(
   const { error } = await supabase
     .from('events')
     .update({
-      status: 'failed',
+      status: 'inactive',
       last_webhook_received: new Date().toISOString(),
     })
     .eq('id', eventId);

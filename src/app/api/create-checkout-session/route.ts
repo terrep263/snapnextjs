@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       name: eventName,
       slug: eventSlug,
       owner_email: emailAddress,
-      status: 'pending_payment',
+      status: 'inactive',
       created_at: new Date().toISOString(),
     });
 
