@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment system not configured' }, { status: 500 });
     }
 
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-06-20' });
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-10-29.clover' });
     const supabase = getServiceRoleClient();
 
     // Reserve the event row in 'pending' state BEFORE talking to Stripe
