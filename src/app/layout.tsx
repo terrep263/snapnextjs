@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import TempNavigation from "@/components/TempNavigation";
 
+const showTempNavigation = process.env.NODE_ENV !== 'production';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -39,38 +41,18 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/purple logo/purplelogo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/purple logo/purplelogo.png" />
-        <script 
-          src="https://pushlapgrowth.com/affiliate-tracker.js" 
-          data-affiliate 
-          data-program-id="e4fb576e-d34e-49f4-aec3-66f6d36f1ef2" 
+        <script
+          src="https://pushlapgrowth.com/affiliate-tracker.js"
+          data-affiliate
+          data-program-id="e4fb576e-d34e-49f4-aec3-66f6d36f1ef2"
           async
         />
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            // Check for PushLap window.affiliateId after script loads
-            window.addEventListener('load', function() {
-              setTimeout(function() {
-                console.log('🔍 Checking PushLap affiliate tracking...');
-                console.log('window.affiliateId:', window.affiliateId);
-                console.log('localStorage affiliate:', localStorage.getItem('affiliate'));
-                
-                if (window.affiliateId) {
-                  console.log('✅ PushLap window.affiliateId detected:', window.affiliateId);
-                } else if (localStorage.getItem('affiliate')) {
-                  console.log('✅ Affiliate in localStorage:', localStorage.getItem('affiliate'));
-                } else {
-                  console.log('⚠️ No affiliate tracking detected');
-                }
-              }, 1500);
-            });
-          `
-        }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <TempNavigation />
+        {showTempNavigation && <TempNavigation />}
       </body>
     </html>
   );

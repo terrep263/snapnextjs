@@ -1,36 +1,15 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
+  if (process.env.NODE_ENV !== 'production') {
+    return {
+      rules: { userAgent: '*', disallow: '/' },
+    };
+  }
   return {
     rules: [
-      {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/admin', '/api', '/auth', '/_next', '/private'],
-        crawlDelay: 1,
-      },
-      // Block AI scraper bots
-      {
-        userAgent: 'GPTBot',
-        disallow: '/',
-      },
-      {
-        userAgent: 'CCBot',
-        disallow: '/',
-      },
-      {
-        userAgent: 'anthropic-ai',
-        disallow: '/',
-      },
-      {
-        userAgent: 'Claude-Web',
-        disallow: '/',
-      },
-      {
-        userAgent: 'Omgili',
-        disallow: '/',
-      },
+      { userAgent: '*', allow: '/', disallow: ['/admin/', '/api/'] },
     ],
-    sitemap: 'https://snapworxx.com/sitemap.xml',
+    sitemap: `${process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com'}/sitemap.xml`,
   };
 }

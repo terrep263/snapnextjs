@@ -17,23 +17,7 @@ function SuccessContent() {
     const isMock = searchParams.get('mock') === 'true';
 
     if (sessionId) {
-      if (isMock) {
-        // Handle mock session for development
-        const mockEvent = {
-          id: 'mock_event_id',
-          name: 'Mock Event for Development',
-          slug: 'mock-event-dev',
-          dashboardUrl: getDashboardUrl('mock_event_id'),
-          eventUrl: getEventUrl('mock-event-dev')
-        };
-        
-        setEventId(mockEvent.id);
-        setEventData(mockEvent);
-        localStorage.setItem('currentEvent', JSON.stringify(mockEvent));
-        setLoading(false);
-      } else {
-        verifyPayment(sessionId);
-      }
+      verifyPayment(sessionId);
     } else {
       setLoading(false);
     }
@@ -41,7 +25,6 @@ function SuccessContent() {
 
   const verifyPayment = async (sessionId: string) => {
     try {
-      console.log('🔍 Verifying payment with session ID:', sessionId);
       const response = await fetch('/api/verify-payment', {
         method: 'POST',
         headers: {
@@ -52,11 +35,7 @@ function SuccessContent() {
 
       const result = await response.json();
 
-      console.log('📄 Verify payment response:', result);
-      console.log('✅ Response status:', response.status, response.ok);
-
       if (!response.ok) {
-        console.error('❌ Payment verification failed:', result);
         throw new Error(result.details || result.error || 'Payment verification failed');
       }
 
@@ -66,32 +45,14 @@ function SuccessContent() {
       
       // Store event details in localStorage for easy access
       localStorage.setItem('currentEvent', JSON.stringify(event));
-      
-      // Store ownership for this event
+
       if (event.owner_email) {
         localStorage.setItem('userEmail', event.owner_email);
       }
-      const ownedEvents = JSON.parse(localStorage.getItem('ownedEvents') || '[]');
-      if (!ownedEvents.includes(event.id)) {
-        ownedEvents.push(event.id);
-        localStorage.setItem('ownedEvents', JSON.stringify(ownedEvents));
-      }
-      
+
     } catch (error) {
       console.error('Error verifying payment:', error);
-      // For development, still show success but with mock data
-      if (process.env.NODE_ENV === 'development') {
-        const mockEvent = {
-          id: 'fallback_event_id',
-          name: 'Event (Verification Failed)',
-          slug: 'fallback-event',
-          dashboardUrl: getDashboardUrl('fallback_event_id'),
-          eventUrl: getEventUrl('fallback-event')
-        };
-        setEventId(mockEvent.id);
-        setEventData(mockEvent);
-        localStorage.setItem('currentEvent', JSON.stringify(mockEvent));
-      }
+      setLoading(false);
     } finally {
       setLoading(false);
     }

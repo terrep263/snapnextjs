@@ -7,7 +7,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
-import { STORAGE_KEYS } from '@/config/constants';
 
 export interface AuthState {
   authenticated: boolean;
@@ -50,7 +49,6 @@ export function useAuth() {
           loading: false,
           error: null,
         });
-        router.push('/admin/login');
         return false;
       }
     } catch (error) {
@@ -61,10 +59,9 @@ export function useAuth() {
         loading: false,
         error: message,
       });
-      router.push('/admin/login');
       return false;
     }
-  }, [router]);
+  }, []);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -104,7 +101,6 @@ export function useAuth() {
   const logout = useCallback(async () => {
     try {
       await adminApi.logout();
-      sessionStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION);
       setAuthState({
         authenticated: false,
         email: null,

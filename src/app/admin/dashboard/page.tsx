@@ -56,6 +56,14 @@ function getEventType(event: PromoEvent): string {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { authenticated, email: adminEmail, loading: authLoading, logout } = useAuth();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !authenticated) {
+      router.push('/admin/login');
+    }
+  }, [authenticated, authLoading, router]);
+
   const [blockEmail, setBlockEmail] = useState('');
   const [isBlockingEmail, setIsBlockingEmail] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState<string | null>(null);

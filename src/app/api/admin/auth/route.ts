@@ -1,18 +1,10 @@
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 
-/**
- * Hash password using SHA-256
- */
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
-
-/**
- * Generate a secure session token
- */
 function generateSessionToken(email: string, secret: string): string {
   const timestamp = Date.now();
   const random = crypto.randomBytes(16).toString('hex');
@@ -22,9 +14,6 @@ function generateSessionToken(email: string, secret: string): string {
     .digest('hex');
 }
 
-/**
- * Set admin session cookies
- */
 async function setAdminCookies(
   email: string,
   role: string,
@@ -36,18 +25,14 @@ async function setAdminCookies(
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax' as const,
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 24 * 60 * 60,
     path: '/',
   };
-
   cookieStore.set('admin_session', sessionToken, cookieOptions);
   cookieStore.set('admin_email', email, cookieOptions);
   cookieStore.set('admin_role', role, cookieOptions);
 }
 
-/**
- * Clear admin session cookies
- */
 async function clearAdminCookies() {
   const cookieStore = await cookies();
   cookieStore.delete('admin_session');
@@ -55,12 +40,18 @@ async function clearAdminCookies() {
   cookieStore.delete('admin_role');
 }
 
-/**
- * Admin Authentication API Route
- * Handles: login, logout, verify
- */
 export async function POST(req: Request) {
   try {
+    // Rate limiting — 5 attempts per minute per IP
+    const identifier = getClientIdentifier(req);
+    const rateCheck = checkRateLimit(`auth:${identifier}`, 5);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many attempts. Please wait before trying again.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { email, password, action } = body;
 
@@ -71,13 +62,20 @@ export async function POST(req: Request) {
       );
     }
 
-    const sessionSecret = process.env.ADMIN_SESSION_SECRET || 'default-secret-change-in-production';
+    const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+    if (!sessionSecret && action === 'login') {
+      console.error('CRITICAL: ADMIN_SESSION_SECRET environment variable is not set');
+      return NextResponse.json(
+        { success: false, error: 'Server misconfiguration. Contact administrator.' },
+        { status: 500 }
+      );
+    }
+
     const isProduction = process.env.NODE_ENV === 'production';
     const supabase = getServiceRoleClient();
 
-    // ===== LOGIN ACTION =====
+    // ===== LOGIN =====
     if (action === 'login') {
-      // Validate input
       if (!email || !password) {
         return NextResponse.json(
           { success: false, error: 'Email and password are required' },
@@ -85,7 +83,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return NextResponse.json(
@@ -94,25 +91,22 @@ export async function POST(req: Request) {
         );
       }
 
-      // Query admin account from database
       const { data: adminAccounts, error: dbError } = await supabase
         .from('admin_accounts')
         .select('id, email, password_hash, full_name, role, is_active')
         .eq('email', email.toLowerCase().trim())
         .limit(1);
 
-      // Handle database errors
       if (dbError) {
-        console.error('❌ Admin login - Database error:', dbError);
+        console.error('Admin login - Database error:', dbError);
         return NextResponse.json(
           { success: false, error: 'Database error. Please try again.' },
           { status: 500 }
         );
       }
 
-      // Check if admin account exists
       if (!adminAccounts || adminAccounts.length === 0) {
-        // Don't reveal if email exists or not (security best practice)
+        incrementRateLimit(`auth:${identifier}`);
         return NextResponse.json(
           { success: false, error: 'Invalid email or password' },
           { status: 401 }
@@ -121,62 +115,70 @@ export async function POST(req: Request) {
 
       const adminAccount = adminAccounts[0];
 
-      // Check if account is active
       if (!adminAccount.is_active) {
         return NextResponse.json(
-          { success: false, error: 'Account is inactive. Please contact an administrator.' },
+          { success: false, error: 'Account is inactive. Contact an administrator.' },
           { status: 403 }
         );
       }
 
-      // Verify password
-      const passwordHash = hashPassword(password);
-      if (passwordHash !== adminAccount.password_hash) {
-        // Log failed login attempt (without revealing which field was wrong)
-        console.warn(`⚠️ Failed login attempt for email: ${email}`);
+      // Use bcrypt.compare — works with both bcrypt hashes and legacy SHA-256 hashes
+      // during migration period
+      let passwordValid = false;
+      if (adminAccount.password_hash.startsWith('$2')) {
+        // bcrypt hash
+        passwordValid = await bcrypt.compare(password, adminAccount.password_hash);
+      } else {
+        // Legacy SHA-256 — still support during migration, log warning
+        const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
+        passwordValid = sha256Hash === adminAccount.password_hash;
+        if (passwordValid) {
+          console.warn(
+            `Admin account ${adminAccount.email} is using legacy SHA-256 password hash. ` +
+            `Please update to bcrypt by resetting the password.`
+          );
+          // Auto-upgrade hash to bcrypt on successful login
+          const newHash = await bcrypt.hash(password, 12);
+          await supabase
+            .from('admin_accounts')
+            .update({ password_hash: newHash })
+            .eq('id', adminAccount.id);
+        }
+      }
+
+      if (!passwordValid) {
+        incrementRateLimit(`auth:${identifier}`);
+        console.warn(`Failed login attempt for: ${email}`);
         return NextResponse.json(
           { success: false, error: 'Invalid email or password' },
           { status: 401 }
         );
       }
 
-      // Update last_login timestamp
       await supabase
         .from('admin_accounts')
         .update({ last_login: new Date().toISOString() })
         .eq('id', adminAccount.id);
 
-      // Log the successful login action
       try {
         await supabase.from('admin_audit_logs').insert([
           {
             admin_id: adminAccount.id,
             action: 'login',
             resource_type: 'admin_session',
-            details: { 
-              email: adminAccount.email, 
+            details: {
+              email: adminAccount.email,
               role: adminAccount.role,
               timestamp: new Date().toISOString(),
             },
           },
         ]);
       } catch (auditError) {
-        // Log audit error but don't fail the login
         console.error('Failed to log audit entry:', auditError);
       }
 
-      // Create session token
-      const sessionToken = generateSessionToken(adminAccount.email, sessionSecret);
-
-      // Set cookies
-      await setAdminCookies(
-        adminAccount.email,
-        adminAccount.role,
-        sessionToken,
-        isProduction
-      );
-
-      console.log(`✅ Admin login successful: ${adminAccount.email} (${adminAccount.role})`);
+      const sessionToken = generateSessionToken(adminAccount.email, sessionSecret!);
+      await setAdminCookies(adminAccount.email, adminAccount.role, sessionToken, isProduction);
 
       return NextResponse.json({
         success: true,
@@ -188,12 +190,11 @@ export async function POST(req: Request) {
       });
     }
 
-    // ===== LOGOUT ACTION =====
+    // ===== LOGOUT =====
     if (action === 'logout') {
       const cookieStore = await cookies();
       const adminEmail = cookieStore.get('admin_email')?.value;
 
-      // Log the logout action if we have the email
       if (adminEmail) {
         try {
           const { data: adminAccount } = await supabase
@@ -208,10 +209,7 @@ export async function POST(req: Request) {
                 admin_id: adminAccount.id,
                 action: 'logout',
                 resource_type: 'admin_session',
-                details: { 
-                  email: adminEmail,
-                  timestamp: new Date().toISOString(),
-                },
+                details: { email: adminEmail, timestamp: new Date().toISOString() },
               },
             ]);
           }
@@ -220,13 +218,11 @@ export async function POST(req: Request) {
         }
       }
 
-      // Clear cookies
       await clearAdminCookies();
-
       return NextResponse.json({ success: true, message: 'Logged out successfully' });
     }
 
-    // ===== VERIFY ACTION =====
+    // ===== VERIFY =====
     if (action === 'verify') {
       const cookieStore = await cookies();
       const session = cookieStore.get('admin_session')?.value;
@@ -237,7 +233,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ authenticated: false }, { status: 200 });
       }
 
-      // Optionally verify the session token is still valid by checking the admin account
       try {
         const { data: adminAccount } = await supabase
           .from('admin_accounts')
@@ -246,7 +241,6 @@ export async function POST(req: Request) {
           .single();
 
         if (!adminAccount || !adminAccount.is_active) {
-          // Clear invalid session
           await clearAdminCookies();
           return NextResponse.json({ authenticated: false }, { status: 200 });
         }
@@ -268,16 +262,13 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   } catch (err) {
-    console.error('❌ Admin auth error:', err);
-    
-    // Handle JSON parse errors
+    console.error('Admin auth error:', err);
     if (err instanceof SyntaxError) {
       return NextResponse.json(
         { success: false, error: 'Invalid request format' },
         { status: 400 }
       );
     }
-
     return NextResponse.json(
       { success: false, error: 'Server error. Please try again later.' },
       { status: 500 }

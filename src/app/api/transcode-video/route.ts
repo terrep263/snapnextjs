@@ -115,7 +115,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req?: Request) {
+export async function GET() {
   const available = ffmpegAvailable();
   return NextResponse.json({ available });
 }

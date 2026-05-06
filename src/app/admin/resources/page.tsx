@@ -15,6 +15,7 @@ interface PageGroup {
     description: string;
     badge?: string;
     isExternal?: boolean;
+    disabled?: boolean;
   }[];
 }
 
@@ -60,18 +61,21 @@ export default function AdminResourcesPage() {
           label: 'Event Dashboard',
           description: 'View specific event with photos and details',
           badge: 'Sample',
+          disabled: true,
         },
         {
           url: '/e/sample-event-slug',
           label: 'Event Gallery',
           description: 'View event gallery with header/profile images',
           badge: 'Sample',
+          disabled: true,
         },
         {
           url: '/e/sample-event-slug/upload',
           label: 'Event Upload',
           description: 'Upload media to event',
           badge: 'Sample',
+          disabled: true,
         },
       ],
     },
@@ -219,42 +223,66 @@ export default function AdminResourcesPage() {
                 {/* Pages Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {group.pages.map((page) => (
-                    <Link
-                      key={page.url}
-                      href={page.url}
-                      className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white p-6 transition-all hover:shadow-lg hover:border-purple-300 hover:scale-105"
-                    >
-                      {/* Badge */}
-                      {page.badge && (
-                        <div className="absolute top-3 right-3">
-                          <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                            page.badge === 'Dev'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : page.badge === 'Sample'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {page.badge}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Content */}
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between pr-12">
-                          <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                            {page.label}
-                          </h3>
-                          <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-gray-600">{page.description}</p>
-                        <div className="pt-2">
-                          <code className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-mono">
-                            {page.url}
-                          </code>
+                    page.disabled ? (
+                      <div
+                        key={page.url}
+                        className="relative overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-6 opacity-50 cursor-not-allowed"
+                      >
+                        {page.badge && (
+                          <div className="absolute top-3 right-3">
+                            <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+                              {page.badge}
+                            </span>
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <h3 className="font-semibold text-gray-500">{page.label}</h3>
+                          <p className="text-sm text-gray-400">{page.description}</p>
+                          <div className="pt-2">
+                            <code className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-mono">
+                              {page.url} (sample — not clickable in production)
+                            </code>
+                          </div>
                         </div>
                       </div>
-                    </Link>
+                    ) : (
+                      <Link
+                        key={page.url}
+                        href={page.url}
+                        className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white p-6 transition-all hover:shadow-lg hover:border-purple-300 hover:scale-105"
+                      >
+                        {/* Badge */}
+                        {page.badge && (
+                          <div className="absolute top-3 right-3">
+                            <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                              page.badge === 'Dev'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : page.badge === 'Sample'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {page.badge}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Content */}
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between pr-12">
+                            <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
+                              {page.label}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-purple-600 transition-colors flex-shrink-0" />
+                          </div>
+                          <p className="text-sm text-gray-600">{page.description}</p>
+                          <div className="pt-2">
+                            <code className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-mono">
+                              {page.url}
+                            </code>
+                          </div>
+                        </div>
+                      </Link>
+                    )
                   ))}
                 </div>
               </div>

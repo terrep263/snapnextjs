@@ -35,7 +35,7 @@ export default function AdminSidebar() {
   ];
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 shadow-sm min-h-screen">
+    <div className="w-64 bg-white border-r border-gray-200 shadow-sm min-h-screen flex flex-col">
       {/* Sidebar Header */}
       <div className="p-6 border-b border-gray-100">
         <Link href="/admin/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -81,7 +81,7 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Footer Info */}
-      <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-100 bg-gradient-to-t from-gray-50 to-transparent">
+      <div className="mt-auto p-4 border-t border-gray-100 bg-gradient-to-t from-gray-50 to-transparent">
         <div className="text-xs text-gray-500 space-y-1">
           <p className="font-semibold text-gray-700">Admin Section</p>
           <p>Manage all aspects of your Snapworxx platform from here.</p>

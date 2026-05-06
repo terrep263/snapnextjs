@@ -38,6 +38,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Vercel screenshots (legacy)
+public/screencapture-*.png
 
 # secret key files
 pk_test_*.txt

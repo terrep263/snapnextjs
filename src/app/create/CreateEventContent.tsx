@@ -38,35 +38,6 @@ export default function CreateEventContent() {
       }));
       validateAffiliateCode(refCode);
     }
-    
-    // Check if PushLap affiliate tracking is available
-    const checkAffiliateId = () => {
-      if (typeof window !== 'undefined') {
-        const windowAffiliate = (window as any).affiliateId;
-        const storageAffiliate = localStorage.getItem('affiliate');
-        
-        console.log('🔍 Affiliate check on create page:', {
-          'window.affiliateId': windowAffiliate,
-          'localStorage.affiliate': storageAffiliate
-        });
-        
-        if (windowAffiliate || storageAffiliate) {
-          console.log('✅ Affiliate tracking ready for checkout');
-        } else {
-          // Check again after delay for async script
-          setTimeout(() => {
-            const delayedWindow = (window as any).affiliateId;
-            const delayedStorage = localStorage.getItem('affiliate');
-            console.log('🔍 Delayed affiliate check:', {
-              'window.affiliateId': delayedWindow,
-              'localStorage.affiliate': delayedStorage
-            });
-          }, 2000);
-        }
-      }
-    };
-    
-    checkAffiliateId();
   }, [searchParams]);
 
   const validateAffiliateCode = async (code: string) => {
@@ -107,8 +78,11 @@ export default function CreateEventContent() {
     }
   };
 
+  const PRICE_PREMIUM = parseInt(process.env.NEXT_PUBLIC_PRICE_PREMIUM || '49', 10);
+  const PRICE_BASIC = parseInt(process.env.NEXT_PUBLIC_PRICE_BASIC || '29', 10);
+
   const getDisplayPrice = () => {
-    const basePrice = selectedPackage === 'premium' ? 49 : 29;
+    const basePrice = selectedPackage === 'premium' ? PRICE_PREMIUM : PRICE_BASIC;
     return { original: basePrice, discounted: basePrice, savings: 0 };
   };
 
@@ -181,7 +155,7 @@ export default function CreateEventContent() {
     setError(null);
 
     try {
-      const basePrice = selectedPackage === 'premium' ? 4900 : 2900;
+      const basePrice = selectedPackage === 'premium' ? PRICE_PREMIUM * 100 : PRICE_BASIC * 100;
 
       // Capture PushLap affiliate ID - check window.affiliateId first (as per docs)
       let affiliateId: string | undefined;
@@ -192,14 +166,6 @@ export default function CreateEventContent() {
         const storageAffiliate = localStorage.getItem('affiliate');
         
         affiliateId = windowAffiliate || storageAffiliate || undefined;
-        
-        if (affiliateId) {
-          console.log('✅ Sending affiliate to Stripe:', affiliateId, {
-            source: windowAffiliate ? 'window.affiliateId' : 'localStorage'
-          });
-        } else {
-          console.log('⚠️ No affiliate ID found for checkout');
-        }
       }
 
       const response = await fetch('/api/create-checkout-session', {
@@ -398,7 +364,7 @@ export default function CreateEventContent() {
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Basic Package</h3>
                       <div className="mt-2">
-                        <span className="text-3xl font-bold text-gray-900">$29</span>
+                        <span className="text-3xl font-bold text-gray-900">${PRICE_BASIC}</span>
                         <span className="text-gray-500"> one time</span>
                       </div>
                     </div>
@@ -443,7 +409,7 @@ export default function CreateEventContent() {
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">Premium Package</h3>
                       <div className="mt-2">
-                        <span className="text-3xl font-bold text-gray-900">$49</span>
+                        <span className="text-3xl font-bold text-gray-900">${PRICE_PREMIUM}</span>
                         <span className="text-gray-500"> one time</span>
                       </div>
                     </div>
