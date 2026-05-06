@@ -18,3 +18,4 @@ Set all variables from `.env.local.example` in the Coolify service environment p
 - All env vars must be set in Coolify panel — `.env.local` is local dev only.
 - Stripe webhook endpoint: `https://yourdomain.com/api/stripe-webhook`
 - Register webhook in Stripe dashboard with events: `checkout.session.completed`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded`
+# cache bust 
