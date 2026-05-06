@@ -1,6 +1,7 @@
 # ── Stage 1: deps ──────────────────────────────────────────────────────────────
 FROM node:22-alpine AS deps
 WORKDIR /app
+# Cache bust: 2026-05-06
 COPY package.json package-lock.json* ./
 RUN npm install --legacy-peer-deps
 
@@ -22,7 +23,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Standalone output only — no node_modules, no source
+# Standalone output — copy server, static files, and public assets
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
