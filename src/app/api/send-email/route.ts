@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await retryOperation(
       async () => {
         return await resend.emails.send({
-          from: 'SnapWorxx <noreply@snapworxx.app>',
+          from: 'SnapWorxx <noreply@snapworxx.com>',
           to,
           subject: `Your SnapWorxx Event: ${sanitizedEventName}`,
           html: `
