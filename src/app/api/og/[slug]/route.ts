@@ -42,8 +42,11 @@ export async function GET(
     }
 
     if (imageUrl) {
-      // Redirect to the actual image
-      return NextResponse.redirect(imageUrl);
+      // Ensure we use direct Supabase URL not custom domain
+      const directUrl = imageUrl.includes('sharedfrom.snapworxx.com')
+        ? imageUrl.replace('https://sharedfrom.snapworxx.com', process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ofmzpgbuawtwtzgrtiwr.supabase.co')
+        : imageUrl;
+      return NextResponse.redirect(directUrl);
     }
 
     // Fallback to default

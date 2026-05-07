@@ -261,7 +261,8 @@ export default function CreateEventContent() {
                     name="eventDate"
                     value={formData.eventDate}
                     onChange={handleInputChange}
-                    className="w-full rounded-md border border-gray-300 px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    onClick={(e) => (e.target as HTMLInputElement).showPicker?.()}
+                    className="w-full rounded-md border border-gray-300 px-4 py-3 text-gray-900 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
                   />
                 </div>
 

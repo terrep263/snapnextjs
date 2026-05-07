@@ -1,40 +1,33 @@
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-// Custom domain for shared storage URLs
-const STORAGE_CUSTOM_DOMAIN = 'https://sharedfrom.snapworxx.com';
+// Use direct Supabase URL for storage
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ofmzpgbuawtwtzgrtiwr.supabase.co';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
 
-// Transform Supabase URLs to custom domain
-const transformToCustomDomain = (url: string): string => {
+// Transform any storage URL to direct Supabase URL
+const transformToDirectUrl = (url: string): string => {
   if (!url) return url;
-  if (url.includes('sharedfrom.snapworxx.com')) return url;
-  
-  const supabaseStoragePattern = /https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\/photos\/(.*)/;
-  const match = url.match(supabaseStoragePattern);
-  
-  if (match) {
-    return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${match[1]}`;
+  // Already direct Supabase URL
+  if (url.includes('supabase.co')) return url;
+  // Convert legacy custom domain
+  if (url.includes('sharedfrom.snapworxx.com')) {
+    const match = url.match(/sharedfrom\.snapworxx\.com\/storage\/v1\/object\/public\/photos\/(.*)/);
+    if (match) return `${SUPABASE_URL}/storage/v1/object/public/photos/${match[1]}`;
   }
   return url;
 };
 
 // Transform URL to use Supabase Image Transformations for OG image (1200x630)
-// Using 'cover' mode to ensure exact dimensions for Facebook large card
 const transformToOgImage = (url: string): string => {
   if (!url) return url;
-  
-  // Convert to render endpoint with resize params
-  // Format: /storage/v1/render/image/public/bucket/path?width=1200&height=630&resize=cover
-  const storagePattern = /(.*)\/storage\/v1\/object\/public\/photos\/(.*)/;
-  const match = url.match(storagePattern);
-  
+  const directUrl = transformToDirectUrl(url);
+  const storagePattern = /(.*)(\/storage\/v1\/object\/public\/photos\/)(.*)$/;
+  const match = directUrl.match(storagePattern);
   if (match) {
-    const baseUrl = match[1];
-    const path = match[2];
-    // Use 'cover' to guarantee 1200x630 output (required for Facebook large card)
-    return `${baseUrl}/storage/v1/render/image/public/photos/${path}?width=1200&height=630&resize=cover`;
+    return `${match[1]}/storage/v1/render/image/public/photos/${match[3]}?width=1200&height=630&resize=cover`;
   }
-  return url;
+  return directUrl;
 };
 
 type Props = {
@@ -122,12 +115,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       if (selectedPhoto) {
         const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
         if (rawUrl) {
-          const customDomainUrl = transformToCustomDomain(rawUrl);
-          previewImage = transformToOgImage(customDomainUrl);
+        const directUrl = transformToDirectUrl(rawUrl);
+        previewImage = transformToOgImage(directUrl);
         }
       }
     } else if (event.header_image) {
-      const customDomainUrl = transformToCustomDomain(event.header_image);
+      const customDomainUrl = transformToDirectUrl(event.header_image);
       previewImage = transformToOgImage(customDomainUrl);
     }
 
@@ -142,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       openGraph: {
         title,
         description,
-        url: `https://snapworxx.com/e/${slug}`,
+        url: `${APP_URL}/e/${slug}`,
         siteName: 'Snapworxx',
         images: [
           {
