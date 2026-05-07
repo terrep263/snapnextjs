@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const galleryUrl = `${APP_URL}/e/${slug}/gallery`;
   const photoUrl = `${APP_URL}/e/${slug}/photo/${photoId}`;
 
-  let ogImage = `${APP_URL}/og-default.svg`;
+  let ogImage = `${APP_URL}/og-image.png`;
   if (photo?.storage_url || photo?.url) {
     const rawUrl = photo.storage_url || photo.url;
     // Use direct Supabase URL — Facebook crawler needs direct access, no proxy
