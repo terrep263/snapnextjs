@@ -22,8 +22,8 @@ export default function TestEmail() {
         body: JSON.stringify({
           to: 'terrep263@gmail.com',
           eventName: 'Test Event - Email Functionality Check',
-          dashboardUrl: 'https://snapnextjs.vercel.app/dashboard/test-event-123',
-          eventUrl: 'https://snapnextjs.vercel.app/e/test-event-slug'
+          dashboardUrl: `${window.location.origin}/dashboard/test-event-123`,
+          eventUrl: `${window.location.origin}/e/test-event-slug`
         }),
       });
 
