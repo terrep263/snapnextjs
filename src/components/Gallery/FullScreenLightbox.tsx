@@ -221,33 +221,31 @@ export default function FullScreenLightbox({
   }, [currentItem, event, onDownload]);
 
   const handleShare = useCallback(() => {
-    if (currentItem && onShare) {
+    // Build branded share URL — server-rendered page with correct OG tags
+    const shareUrl = event?.slug && currentItem?.id
+      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/e/${event.slug}/photo/${currentItem.id}`
+      : typeof window !== 'undefined' ? window.location.href : '';
+
+    const shareTitle = event?.name
+      ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
+      : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!');
+
+    if (onShare) {
       onShare(currentItem, event);
+    } else if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareTitle,
+        url: shareUrl,
+      }).catch((err) => {
+        if (err.name !== 'AbortError') console.error('Share failed:', err);
+      });
     } else {
-      // Fallback: Use native share API or copy link
-      const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-      const shareTitle = event?.name 
-        ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
-        : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!');
-      
-      if (navigator.share) {
-        navigator.share({
-          title: shareTitle,
-          text: shareTitle,
-          url: shareUrl,
-        }).catch((err) => {
-          if (err.name !== 'AbortError') {
-            console.error('Share failed:', err);
-          }
-        });
-      } else {
-        // Fallback to copy link
-        navigator.clipboard.writeText(shareUrl).then(() => {
-          alert('Link copied to clipboard!');
-        }).catch((err) => {
-          console.error('Copy failed:', err);
-        });
-      }
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('Link copied to clipboard!');
+      }).catch((err) => {
+        console.error('Copy failed:', err);
+      });
     }
   }, [currentItem, event, onShare]);
 
@@ -420,13 +418,15 @@ export default function FullScreenLightbox({
 
         <div onClick={(e) => e.stopPropagation()}>
           <SocialShare
-            url={currentItem.url}
+            url={event?.slug && currentItem?.id
+              ? `${typeof window !== 'undefined' ? window.location.origin : ''}/e/${event.slug}/photo/${currentItem.id}`
+              : typeof window !== 'undefined' ? window.location.href : ''}
             title={event?.name 
               ? `${currentItem.isVideo ? 'Video' : 'Photo'} from ${event.name}`
               : (currentItem.isVideo ? 'Check out this video!' : 'Check out this photo!')}
             description={event?.name 
-              ? `Check out this ${currentItem.isVideo ? 'video' : 'photo'} from ${event.name}. View the full gallery: ${typeof window !== 'undefined' ? window.location.href : ''}`
-              : `Check out this ${currentItem.isVideo ? 'video' : 'photo'}!`}
+              ? `Check out this ${currentItem.isVideo ? 'video' : 'photo'} from ${event.name} on SnapWorxx`
+              : `Check out this ${currentItem.isVideo ? 'video' : 'photo'} on SnapWorxx!`}
             imageUrl={currentItem.url}
           >
             <button

@@ -92,8 +92,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // Find a photo for OG image - prefer landscape photos
-    let previewImage = 'https://snapworxx.com/og-default.jpg';
+    // Find a photo for OG image - use direct Supabase URL (Facebook crawler needs this)
+    let previewImage = `${APP_URL}/og-default.png`;
     
     // Try to find a LANDSCAPE photo (crops better with cover mode)
     const { data: photos } = await supabase
@@ -115,13 +115,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       if (selectedPhoto) {
         const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
         if (rawUrl) {
-        const directUrl = transformToDirectUrl(rawUrl);
-        previewImage = transformToOgImage(directUrl);
+          // Use direct Supabase URL for OG images — Facebook crawler needs direct access
+          const directUrl = transformToDirectUrl(rawUrl);
+          previewImage = transformToOgImage(directUrl);
         }
       }
     } else if (event.header_image) {
-      const customDomainUrl = transformToDirectUrl(event.header_image);
-      previewImage = transformToOgImage(customDomainUrl);
+      // Use direct Supabase URL for header image OG
+      const directUrl = transformToDirectUrl(event.header_image);
+      previewImage = transformToOgImage(directUrl);
     }
 
     const title = `${event.name} | Snapworxx`;

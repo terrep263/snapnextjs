@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="150" cy="150" r="200" fill="white" fill-opacity="0.05"/>
+  <circle cx="1100" cy="500" r="280" fill="white" fill-opacity="0.05"/>
+  <circle cx="1050" cy="100" r="130" fill="white" fill-opacity="0.07"/>
+  <!-- Camera icon -->
+  <g transform="translate(460, 140)">
+    <rect x="0" y="35" width="280" height="190" rx="24" fill="none" stroke="white" stroke-width="6" stroke-opacity="0.8"/>
+    <circle cx="140" cy="130" r="65" fill="none" stroke="white" stroke-width="6" stroke-opacity="0.8"/>
+    <circle cx="140" cy="130" r="38" fill="white" fill-opacity="0.25"/>
+    <rect x="20" y="16" width="70" height="24" rx="10" fill="none" stroke="white" stroke-width="5" stroke-opacity="0.7"/>
+    <circle cx="234" cy="62" r="11" fill="white" fill-opacity="0.6"/>
+  </g>
+  <!-- Brand name -->
+  <text x="600" y="420" font-family="Arial Black, Arial, sans-serif" font-size="78" font-weight="900" fill="white" text-anchor="middle" letter-spacing="6">SNAPWORXX</text>
+  <text x="600" y="472" font-family="Arial, sans-serif" font-size="28" fill="white" fill-opacity="0.8" text-anchor="middle" letter-spacing="3">Photo Sharing for Every Event</text>
+  <text x="600" y="570" font-family="Arial, sans-serif" font-size="22" fill="white" fill-opacity="0.55" text-anchor="middle">snapworxx.com</text>
+</svg>
