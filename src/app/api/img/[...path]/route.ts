@@ -21,7 +21,6 @@ export async function GET(
     const upstream = qs ? `${base}/${filePath}?${qs}` : `${base}/${filePath}`;
     const res = await fetch(upstream, {
       headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '' },
-      next: { revalidate: 86400 },
     });
 
     if (!res.ok) return new NextResponse('Not found', { status: res.status });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceRoleClient } from '@/lib/supabase';
+import { getServiceRoleClient, transformToCustomDomain } from '@/lib/supabase';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -240,22 +240,25 @@ export async function GET(
     const totalPages = Math.ceil(totalPhotos / limit);
     const hasMore = offset + uniquePhotos.length < totalPhotos;
 
-    // Transform photos to include proper URLs
-    // Handle optional columns gracefully (they may not exist if migration hasn't been run)
-    const transformedPhotos = uniquePhotos.map((photo: any) => ({
-      id: photo.id,
-      filename: photo.filename || photo.original_filename || 'photo',
-      original_filename: photo.original_filename || photo.filename || 'photo',
-      storage_url: photo.storage_url || photo.url || '',
-      thumbnail_url: photo.thumbnail_url || photo.storage_url || photo.url || '',
-      width: photo.width || null,
-      height: photo.height || null,
-      uploaded_at: photo.uploaded_at || photo.created_at || null,
-      file_size: photo.file_size || photo.size || null,
-      mime_type: photo.mime_type || photo.type || 'image/jpeg',
-      is_video: photo.is_video || (photo.type && photo.type.startsWith('video/')) || false,
-      url: photo.storage_url || photo.url || '', // For backward compatibility
-    }));
+    // Transform photos to include proper proxy URLs
+    const transformedPhotos = uniquePhotos.map((photo: any) => {
+      const rawUrl = photo.storage_url || photo.url || '';
+      const rawThumb = photo.thumbnail_url || photo.storage_url || photo.url || '';
+      return {
+        id: photo.id,
+        filename: photo.filename || photo.original_filename || 'photo',
+        original_filename: photo.original_filename || photo.filename || 'photo',
+        storage_url: transformToCustomDomain(rawUrl) || rawUrl,
+        thumbnail_url: transformToCustomDomain(rawThumb) || rawThumb,
+        width: photo.width || null,
+        height: photo.height || null,
+        uploaded_at: photo.uploaded_at || photo.created_at || null,
+        file_size: photo.file_size || photo.size || null,
+        mime_type: photo.mime_type || photo.type || 'image/jpeg',
+        is_video: photo.is_video || (photo.type && photo.type.startsWith('video/')) || false,
+        url: transformToCustomDomain(rawUrl) || rawUrl,
+      };
+    });
 
     const response = NextResponse.json({
       success: true,
