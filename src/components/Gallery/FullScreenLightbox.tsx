@@ -265,18 +265,17 @@ export default function FullScreenLightbox({
     setVideoPlaying(false);
   }, []);
 
-  if (!open || !currentItem) return null;
-
   // Accessibility: Focus management
   useEffect(() => {
     if (open) {
-      // Focus the lightbox container when opened
       const container = document.getElementById('lightbox-container');
       if (container) {
         container.focus();
       }
     }
   }, [open]);
+
+  if (!open || !currentItem) return null;
 
   return (
     <div
