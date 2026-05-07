@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getServiceRoleClient } from '@/lib/supabase';
 import ErrorLogger from '@/lib/errorLogger';
+import { sendEventConfirmationEmail } from '@/lib/email';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -142,6 +143,26 @@ async function handleCheckoutComplete(
   }
 
   console.log(`Event ${eventId} payment confirmed via checkout.session.completed`);
+
+  // Fetch event slug for correct gallery URL
+  const { data: eventRow } = await supabase
+    .from('events')
+    .select('slug')
+    .eq('id', eventId)
+    .single();
+
+  // Send confirmation email — single authoritative send
+  const ownerEmail = metadata?.emailAddress || session.customer_details?.email;
+  const eventName = metadata?.eventName || 'Your Event';
+
+  if (ownerEmail && eventRow?.slug) {
+    await sendEventConfirmationEmail({
+      to: ownerEmail,
+      eventName,
+      eventId,
+      eventSlug: eventRow.slug,
+    });
+  }
 
   // Handle affiliate referral if this was an affiliate sale
   if (metadata?.isAffiliateReferral === 'true' && metadata?.affiliateId) {
