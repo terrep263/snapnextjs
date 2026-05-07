@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const eventName = event?.name || 'Event Gallery';
   const galleryUrl = `${APP_URL}/e/${slug}/gallery`;
+  const photoUrl = `${APP_URL}/e/${slug}/photo/${photoId}`;
 
   let ogImage = `${APP_URL}/og-default.svg`;
   if (photo?.storage_url || photo?.url) {
@@ -45,7 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: galleryUrl,
+      url: photoUrl,
       siteName: 'SnapWorxx',
       images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
       type: 'website',
