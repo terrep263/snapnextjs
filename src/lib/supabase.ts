@@ -9,8 +9,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Custom domain for shared storage URLs
-const STORAGE_CUSTOM_DOMAIN = 'https://sharedfrom.snapworxx.com';
+// Use direct Supabase URL — custom domain requires Supabase enterprise plan configuration
+const STORAGE_BASE_URL = `${supabaseUrl}/storage/v1/object/public/photos`;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -31,31 +31,35 @@ export const getServiceRoleClient = () => {
 };
 
 /**
- * Get the public URL for a file in the photos bucket using the custom domain.
+ * Get the public URL for a file in the photos bucket.
  */
 export const getPhotoPublicUrl = (filePath: string): string => {
-  return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${filePath}`;
+  return `${STORAGE_BASE_URL}/${filePath}`;
 };
 
 /**
- * Transform any Supabase storage URL to use the custom domain.
+ * Transform any storage URL to use the direct Supabase URL.
+ * Handles legacy custom domain URLs by converting them back.
  */
 export const transformToCustomDomain = (
   url: string | null | undefined
 ): string | null | undefined => {
   if (!url) return url;
 
-  if (url.includes('sharedfrom.snapworxx.com')) return url;
+  // Already a direct Supabase URL — return as-is
+  if (url.includes('supabase.co')) return url;
 
-  const supabaseStoragePattern =
-    /https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\/photos\/(.*)/;
-  const match = url.match(supabaseStoragePattern);
-  if (match) {
-    return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${match[1]}`;
+  // Convert legacy custom domain URLs to direct Supabase URL
+  if (url.includes('sharedfrom.snapworxx.com')) {
+    const match = url.match(/sharedfrom\.snapworxx\.com\/storage\/v1\/object\/public\/photos\/(.*)/);
+    if (match) {
+      return `${STORAGE_BASE_URL}/${match[1]}`;
+    }
   }
 
-  if (url.startsWith('events/') || !url.startsWith('http')) {
-    return `${STORAGE_CUSTOM_DOMAIN}/storage/v1/object/public/photos/${url}`;
+  // Handle relative paths
+  if (!url.startsWith('http')) {
+    return `${STORAGE_BASE_URL}/${url}`;
   }
 
   return url;
