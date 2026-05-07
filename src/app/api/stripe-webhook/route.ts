@@ -128,13 +128,17 @@ async function handleCheckoutComplete(
     throw new Error('No event_id in session metadata');
   }
 
-  // Update event payment status
+  // Determine package from Stripe metadata
+  const packageType = metadata?.package === 'premium' ? 'premium' : 'basic';
+
+  // Update event payment status and package
   const { error } = await supabase
     .from('events')
     .update({
       status: 'active',
       stripe_session_id: session.id,
       last_webhook_received: new Date().toISOString(),
+      package: packageType,
     })
     .eq('id', eventId);
 

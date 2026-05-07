@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = 'SnapWorxx <noreply@snapworxx.com>';
+const FROM = process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
 
 export interface EventEmailParams {

@@ -9,6 +9,7 @@ export interface EventData {
   id: string;
   name: string;
   slug: string;
+  package?: string | null;
   header_image?: string | null;
   profile_image?: string | null;
   is_freebie?: boolean;
@@ -30,17 +31,15 @@ export interface EventData {
  * Logic: Freebie > Premium (has premium features) > Basic (paid) > Basic (free promo)
  */
 export function getPackageType(event: EventData): PackageType {
-  // Freebie: explicitly marked as freebie
-  if (event.is_freebie === true || event.payment_type === 'freebie') {
-    return 'freebie';
-  }
+  // Primary: read from package column (set by webhook after payment)
+  if (event.package === 'premium') return 'premium';
+  if (event.package === 'freebie') return 'freebie';
+  if (event.package === 'basic') return 'basic';
 
-  // Premium: has premium features (feed_enabled or password protection)
-  if (event.feed_enabled === true || event.password_hash) {
-    return 'premium';
-  }
+  // Fallback for legacy events without package column
+  if (event.is_freebie === true || event.payment_type === 'freebie') return 'freebie';
+  if (event.feed_enabled === true || event.password_hash) return 'premium';
 
-  // Basic: everything else (paid or free promo)
   return 'basic';
 }
 

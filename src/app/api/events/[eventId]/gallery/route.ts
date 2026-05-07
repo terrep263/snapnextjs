@@ -41,11 +41,18 @@ export async function GET(
         id,
         filename,
         url,
+        storage_url,
+        thumbnail_url,
         file_path,
         size,
         type,
+        mime_type,
+        is_video,
+        width,
+        height,
         created_at,
-        event_id
+        event_id,
+        is_approved
       `,
         { count: 'exact' }
       )
