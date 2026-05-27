@@ -185,10 +185,10 @@ export default function UploadPage() {
                 {/* Specifications */}
                 <div className="mt-8 md:mt-12 pt-6 md:pt-8 border-t border-gray-200">
                   <p className="text-xs md:text-sm text-gray-600 mb-2 md:mb-4">
-                    <strong>Supported formats:</strong> JPG, PNG, MP4, MOV, WebM
+                    <strong>Supported formats:</strong> JPG, PNG, HEIC (iPhone), MP4, MOV, WebM
                   </p>
                   <p className="text-xs md:text-sm text-gray-600">
-                    <strong>File limits:</strong> Up to 50MB for videos, 10MB for photos
+                    <strong>File limits:</strong> Up to 20 files per upload • Videos must be under 200 MB
                   </p>
                 </div>
               </div>
