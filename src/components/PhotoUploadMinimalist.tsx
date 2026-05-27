@@ -11,6 +11,132 @@ import { MediaAuditLogger } from '@/lib/mediaAuditLogger';
 import { MediaBackupManager } from '@/lib/mediaBackupManager';
 import { getPhotoPublicUrl } from '@/lib/supabase';
 
+// ─── Mobile upload safety constants ──────────────────────────────────────────
+const MAX_BATCH_SIZE = 20;
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200 MB per video
+
+// ─── Extension → MIME mapping (authoritative source) ─────────────────────────
+const EXT_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  webm: 'video/webm',
+  flv: 'video/x-flv',
+  wmv: 'video/x-ms-wmv',
+  '3gp': 'video/3gpp',
+  '3g2': 'video/3gpp2',
+  hevc: 'video/mp4',
+  h265: 'video/mp4',
+  m2ts: 'video/mp2t',
+  mts: 'video/mp2t',
+  ts: 'video/mp2t',
+};
+
+const VIDEO_EXTS = new Set([
+  'mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv',
+  '3gp', '3g2', 'hevc', 'h265', 'm2ts', 'mts', 'ts',
+]);
+
+function getExt(name: string): string {
+  return (name.split('.').pop() || '').toLowerCase();
+}
+
+function isVideoFile(file: File): boolean {
+  if (file.type.startsWith('video/')) return true;
+  return VIDEO_EXTS.has(getExt(file.name));
+}
+
+// Always prefer the extension-based MIME — fixes iPhone Safari sending
+// image/heic or blank MIME, and Android sending application/octet-stream.
+function mimeFor(file: File): string {
+  const ext = getExt(file.name);
+  if (EXT_MIME[ext]) return EXT_MIME[ext];
+  if (file.type && file.type !== 'application/octet-stream') return file.type;
+  return 'application/octet-stream';
+}
+
+// Strip iPhone Live Photo .mov sidecars (IMG_1234.mov paired with IMG_1234.heic)
+function filterLivePhotoSidecars(files: File[]): File[] {
+  const heicBases = new Set(
+    files
+      .filter((f) => /\.(heic|heif)$/i.test(f.name))
+      .map((f) => f.name.replace(/\.(heic|heif)$/i, '').toLowerCase())
+  );
+  return files.filter((f) => {
+    if (/\.mov$/i.test(f.name)) {
+      const base = f.name.replace(/\.mov$/i, '').toLowerCase();
+      if (heicBases.has(base)) {
+        console.log(`🗑️ Skipping iPhone Live Photo sidecar: ${f.name}`);
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+// Convert HEIC/HEIF → JPEG in the browser so Android/Windows guests can view
+// iPhone photos. Dynamic import keeps the ~200 KB lib out of the initial bundle.
+async function convertHeicIfNeeded(file: File): Promise<File> {
+  const ext = getExt(file.name);
+  const isHeic =
+    ext === 'heic' ||
+    ext === 'heif' ||
+    file.type === 'image/heic' ||
+    file.type === 'image/heif';
+  if (!isHeic) return file;
+
+  try {
+    console.log(`🔄 Converting HEIC → JPEG: ${file.name}`);
+    // heic2any ships no TypeScript types; import as any.
+    const mod: any = await import('heic2any');
+    const convert = mod.default || mod;
+    const result = await convert({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.92,
+    });
+    const blob: Blob = Array.isArray(result) ? result[0] : result;
+    const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+    const converted = new File([blob], newName, {
+      type: 'image/jpeg',
+      lastModified: file.lastModified,
+    });
+    console.log(
+      `✅ HEIC converted: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB) → ${newName} (${(converted.size / 1024 / 1024).toFixed(2)} MB)`
+    );
+    return converted;
+  } catch (err) {
+    console.warn(`⚠️ HEIC conversion failed for ${file.name}, uploading original:`, err);
+    return file;
+  }
+}
+
+// Exponential-backoff retry for transient network failures (500ms, 1s, 2s).
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, label = ''): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries - 1) {
+        const delay = 500 * Math.pow(2, attempt);
+        console.warn(`⏳ Retry ${attempt + 1}/${retries - 1} for ${label} after ${delay}ms:`, err);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 interface PhotoUploadProps {
   eventData: any;
   onUploadComplete: () => void;
@@ -22,6 +148,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
   const [dragActive, setDragActive] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, 'success' | 'error'>>({});
+  const [batchError, setBatchError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const chunkedUploader = new ChunkedUploader();
@@ -48,7 +175,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
   }
 
   const uploadToSupabase = async (
-    files: FileList,
+    files: File[],
     progress: Record<string, number>,
     results: Record<string, 'success' | 'error'>
   ) => {
@@ -63,126 +190,119 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
       throw new Error('Event information is missing. Please refresh the page and try again.');
     }
 
-    // Check photo limit for free promo events
+    // Free-event photo cap check
     if (eventData.is_free && eventData.max_photos) {
-      const { data: existingPhotos, error: countError } = await supabase
+      const { data: existingPhotos } = await supabase
         .from('photos')
         .select('id', { count: 'exact', head: true })
         .eq('event_id', eventData.id);
-      
+
       const currentPhotoCount = existingPhotos?.length || 0;
       const remainingSlots = eventData.max_photos - currentPhotoCount;
-      
+
       if (remainingSlots <= 0) {
         throw new Error(`Photo limit reached! This free event has a maximum of ${eventData.max_photos} photos.`);
       }
-      
       if (files.length > remainingSlots) {
         throw new Error(`Only ${remainingSlots} photo slots remaining (max ${eventData.max_photos} total). Please select fewer files.`);
       }
     }
 
-    for (const file of Array.from(files)) {
-      const key = `${file.name}-${file.size}`;
+    for (const inputFile of files) {
+      const key = `${inputFile.name}-${inputFile.size}`;
 
       try {
-        console.log(`🚀 Starting upload for: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-        console.log(`📋 File details:`, {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          extension: file.name.split('.').pop()?.toLowerCase()
-        });
+        console.log(`🚀 Starting upload for: ${inputFile.name} (${(inputFile.size / 1024 / 1024).toFixed(2)} MB)`);
 
-        // Determine if file is video - support all video formats explicitly
-        // iPhone videos often have empty MIME types, so rely on extension
-        const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        const videoExtensions = ['mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv', '3gp', '3g2', 'hevc', 'm2ts', 'mts', 'ts'];
-        const isVideo = file.type.startsWith('video/') || videoExtensions.includes(fileExtension || '') || (!file.type && videoExtensions.includes(fileExtension || ''));
-        
-        // Detect H.265/HEVC videos
-        const isH265 = fileExtension === 'hevc' || fileExtension === 'h265' || file.name.toLowerCase().includes('hevc') || file.name.toLowerCase().includes('h265');
-        
-        console.log(`🎬 iPhone/Video Upload - Is video: ${isVideo}, Is H.265: ${isH265}, Extension: ${fileExtension}, MIME: '${file.type}', Size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-        
-        // Warn about large files early
+        // Phase 3: HEIC/HEIF → JPEG conversion for cross-platform viewing
+        const file = await convertHeicIfNeeded(inputFile);
+
+        const fileExtension = getExt(file.name);
+        const isVideo = isVideoFile(file);
+        const isH265 =
+          fileExtension === 'hevc' ||
+          fileExtension === 'h265' ||
+          file.name.toLowerCase().includes('hevc') ||
+          file.name.toLowerCase().includes('h265');
+
+        console.log(`🎬 Upload — Is video: ${isVideo}, Is H.265: ${isH265}, Ext: ${fileExtension}, MIME: '${file.type}', Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+
         if (file.size > 500 * 1024 * 1024) {
-          console.warn(`⚠️ Large file detected (${(file.size / 1024 / 1024).toFixed(2)}MB). This may take a while to upload.`);
+          console.warn(`⚠️ Large file detected (${(file.size / 1024 / 1024).toFixed(2)} MB).`);
         }
-        
+
         let processedFile = file;
         let filePublicUrl = '';
-        let transcodedUrl = '';
 
-        // H.265 videos MUST be transcoded - Android doesn't support H.265
+        // H.265 video — upload then trigger server-side transcode for Android compatibility
         if (isH265) {
           try {
-            console.log(`🔄 H.265 video detected - transcoding to H.264 MP4 for Android compatibility...`);
-            // Upload original first to get URL
+            console.log(`🔄 H.265 video detected — transcoding to H.264 MP4 for Android compatibility...`);
             const timestamp = Date.now();
             const safeName = file.name.replace(/[^a-z0-9.-]/gi, '_');
             const tempPath = `${eventData.id}/${timestamp}-${safeName}`;
-            
-            const { data: uploadData, error: uploadError } = await supabase.storage
-              .from('photos')
-              .upload(tempPath, file, { 
-                cacheControl: '3600', 
-                upsert: false,
-                contentType: 'video/mp4'
-              });
 
-            if (!uploadError) {
-              filePublicUrl = getPhotoPublicUrl(tempPath);
-              
-              // Trigger server-side transcode
-              console.log(`📤 Triggering H.265→H.264 transcode for: ${filePublicUrl}`);
-              const transcodeResponse = await fetch('/api/transcode-video', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sourceUrl: filePublicUrl,
-                  eventId: eventData.id,
-                  formats: ['mp4']
-                })
-              });
-              
-              if (transcodeResponse.ok) {
-                const transcodeData = await transcodeResponse.json();
-                if (transcodeData.mp4) {
-                  transcodedUrl = transcodeData.mp4;
-                  filePublicUrl = transcodedUrl; // Use transcoded version
-                  console.log(`✅ H.265 transcoded successfully: ${transcodedUrl}`);
-                }
-              } else {
-                console.warn(`⚠️ Transcode request failed, using original H.265`);
+            await withRetry(
+              async () => {
+                const { error } = await supabase.storage
+                  .from('photos')
+                  .upload(tempPath, file, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    contentType: 'video/mp4',
+                  });
+                if (error) throw error;
+              },
+              3,
+              `h265-upload:${file.name}`
+            );
+
+            filePublicUrl = getPhotoPublicUrl(tempPath);
+
+            console.log(`📤 Triggering H.265→H.264 transcode for: ${filePublicUrl}`);
+            const transcodeResponse = await fetch('/api/transcode-video', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sourceUrl: filePublicUrl,
+                eventId: eventData.id,
+                formats: ['mp4'],
+              }),
+            });
+
+            if (transcodeResponse.ok) {
+              const transcodeData = await transcodeResponse.json();
+              if (transcodeData.mp4) {
+                filePublicUrl = transcodeData.mp4;
+                console.log(`✅ H.265 transcoded successfully: ${filePublicUrl}`);
               }
+            } else {
+              console.warn(`⚠️ Transcode request failed, using original H.265`);
             }
           } catch (err) {
             console.warn(`⚠️ H.265 transcode error: ${err}`);
           }
         }
 
-        // Video compression is OPTIONAL - skip if it fails or file is under 100MB (unless H.265)
+        // Optional video compression for non-H.265 videos > 100 MB
         if (!isH265 && isVideo && file.size > 100 * 1024 * 1024) {
           try {
             console.log(`🔄 Attempting video compression for large file...`);
             const compressionResult = await videoCompressor.compressVideo(file);
             if (compressionResult.success && compressionResult.file) {
               processedFile = compressionResult.file;
-              console.log(`✅ Video compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(processedFile.size / 1024 / 1024).toFixed(2)}MB`);
+              console.log(`✅ Video compressed: ${(file.size / 1024 / 1024).toFixed(2)} MB → ${(processedFile.size / 1024 / 1024).toFixed(2)} MB`);
             } else {
-              console.log(`⚠️ Compression not needed or failed - uploading original file`);
-              processedFile = file;
+              console.log(`⚠️ Compression not needed or failed — uploading original`);
             }
           } catch (err) {
             console.warn(`⚠️ Compression error (uploading original): ${err}`);
-            processedFile = file;
           }
         } else if (!isH265 && isVideo) {
-          console.log(`📹 Video under 100MB - uploading without compression`);
+          console.log(`📹 Video under 100 MB — uploading without compression`);
         }
 
-        // Create file path (skip if already uploaded for H.265 transcode)
+        // Main upload path (skip if already uploaded via H.265 branch)
         let filePath = '';
         if (!filePublicUrl) {
           const timestamp = Date.now();
@@ -192,46 +312,26 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           progress[key] = 10;
           setUploadProgress({ ...progress });
 
-          // Upload to Supabase with explicit content type
-          let contentType = file.type;
-          if (!contentType || contentType === 'application/octet-stream' || contentType === '' || contentType === 'video/quicktime') {
-            const mimeMap: Record<string, string> = {
-              'mov': 'video/quicktime',
-              'mp4': 'video/mp4',
-              'avi': 'video/x-msvideo',
-              'mkv': 'video/x-matroska',
-              'webm': 'video/webm',
-              'flv': 'video/x-flv',
-              'wmv': 'video/x-ms-wmv',
-              '3gp': 'video/3gpp',
-              '3g2': 'video/3gpp2',
-              'hevc': 'video/mp4',
-              'h265': 'video/mp4',
-              'jpg': 'image/jpeg',
-              'jpeg': 'image/jpeg',
-              'png': 'image/png',
-              'gif': 'image/gif',
-              'webp': 'image/webp',
-              'heic': 'image/heic',
-              'heif': 'image/heif'
-            };
-            contentType = mimeMap[fileExtension || ''] || 'application/octet-stream';
-          }
+          // Phase 2: always derive MIME from extension
+          const contentType = mimeFor(processedFile);
           console.log(`📤 Uploading with MIME type: ${contentType} (original was: '${file.type}')`);
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('photos')
-            .upload(filePath, processedFile, { 
-              cacheControl: '3600', 
-              upsert: false,
-              contentType: contentType
-            });
 
-          if (uploadError) {
-            console.error(`❌ Supabase upload error for ${file.name}:`, uploadError);
-            throw uploadError;
-          }
-          
+          // Phase 2: retry on transient network failure
+          await withRetry(
+            async () => {
+              const { error } = await supabase.storage
+                .from('photos')
+                .upload(filePath, processedFile, {
+                  cacheControl: '3600',
+                  upsert: false,
+                  contentType,
+                });
+              if (error) throw error;
+            },
+            3,
+            `upload:${file.name}`
+          );
+
           console.log(`✅ File uploaded to storage: ${filePath}`);
           filePublicUrl = getPhotoPublicUrl(filePath);
         }
@@ -239,7 +339,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 80;
         setUploadProgress({ ...progress });
 
-        // Get or create event
+        // Ensure event row exists
         const { data: existingEvent } = await supabase
           .from('events')
           .select('id')
@@ -251,29 +351,14 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             id: eventData.id,
             name: eventData.name || 'Event Gallery',
             slug: eventData.slug || eventData.id,
-            status: 'active'
+            status: 'active',
           }]);
         }
 
-        // Save photo metadata with explicit MIME type for all video formats
-        // Handle iPhone videos that come with empty or generic MIME types
-        let mimeType = file.type;
-        if (!mimeType || mimeType === 'application/octet-stream' || mimeType === '' || mimeType === 'video/quicktime') {
-          const mimeMap: Record<string, string> = {
-            'mov': 'video/quicktime',
-            'mp4': 'video/mp4',
-            'avi': 'video/x-msvideo',
-            'mkv': 'video/x-matroska',
-            'webm': 'video/webm',
-            'flv': 'video/x-flv',
-            'wmv': 'video/x-ms-wmv',
-            '3gp': 'video/3gpp',
-            '3g2': 'video/3gpp2'
-          };
-          mimeType = mimeMap[fileExtension || ''] || (isVideo ? 'video/quicktime' : 'application/octet-stream');
-        }
+        // Save photo metadata with normalized MIME
+        const mimeType = mimeFor(processedFile);
         console.log(`💾 Saving to database with MIME: ${mimeType}`);
-        
+
         const { error: insertError } = await supabase.from('photos').insert([{
           event_id: eventData.id,
           filename: file.name,
@@ -282,18 +367,11 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           size: processedFile.size,
           type: mimeType,
           is_video: isVideo,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         }]);
-        
+
         if (insertError) {
           console.error(`❌ Database insert error for ${file.name}:`, insertError);
-          console.error(`Insert details:`, {
-            event_id: eventData.id,
-            filename: file.name,
-            size: processedFile.size,
-            type: mimeType,
-            is_video: isVideo
-          });
           throw insertError;
         }
 
@@ -302,16 +380,14 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         results[key] = 'success';
         setUploadProgress({ ...progress });
         setUploadResults({ ...results });
-
       } catch (err) {
-        console.error(`❌ Upload error for ${file.name}:`, err);
-        console.error(`File size: ${(file.size / 1024 / 1024).toFixed(2)}MB, MIME type: '${file.type}'`);
-        
-        // Provide user-friendly error message
-        if (file.size > 500 * 1024 * 1024) {
-          console.error('💡 Large file detected - consider reducing video quality on your iPhone (Settings > Camera > Record Video)');
+        console.error(`❌ Upload error for ${inputFile.name}:`, err);
+        console.error(`File size: ${(inputFile.size / 1024 / 1024).toFixed(2)} MB, MIME: '${inputFile.type}'`);
+
+        if (inputFile.size > 500 * 1024 * 1024) {
+          console.error('💡 Large file — consider reducing video quality on iPhone (Settings → Camera → Record Video)');
         }
-        
+
         results[key] = 'error';
         setUploadResults({ ...results });
       }
@@ -340,27 +416,56 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
     }
   }, []);
 
-  const handleFiles = useCallback(async (files: FileList) => {
-    if (!files.length) return;
+  const handleFiles = useCallback(
+    async (fileList: FileList) => {
+      if (!fileList.length) return;
+      setBatchError(null);
 
-    setUploading(true);
-    const progress: Record<string, number> = {};
-    const results: Record<string, 'success' | 'error'> = {};
+      // Phase 2: filter iPhone Live Photo .mov sidecars
+      const files = filterLivePhotoSidecars(Array.from(fileList));
 
-    try {
-      await uploadToSupabase(files, progress, results);
-      
-      // Check if all uploads were successful
-      const allSuccessful = Object.values(results).every(r => r === 'success');
-      if (allSuccessful) {
-        setTimeout(onUploadComplete, 1500);
+      // Phase 2: hard-cap batch size
+      if (files.length > MAX_BATCH_SIZE) {
+        const msg = `Please select up to ${MAX_BATCH_SIZE} files at a time. You selected ${files.length}.`;
+        console.warn(`⚠️ ${msg}`);
+        setBatchError(msg);
+        return;
       }
-    } catch (err) {
-      console.error('❌ Batch upload error:', err);
-    } finally {
-      setUploading(false);
-    }
-  }, [eventData, onUploadComplete]);
+
+      // Phase 2: reject oversized videos up front
+      const tooBig = files.find((f) => isVideoFile(f) && f.size > MAX_VIDEO_BYTES);
+      if (tooBig) {
+        const sizeMb = (tooBig.size / 1024 / 1024).toFixed(0);
+        const msg = `Video "${tooBig.name}" is ${sizeMb} MB. Videos must be under 200 MB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`;
+        console.warn(`⚠️ ${msg}`);
+        setBatchError(msg);
+        return;
+      }
+
+      if (!files.length) return;
+
+      setUploading(true);
+      const progress: Record<string, number> = {};
+      const results: Record<string, 'success' | 'error'> = {};
+
+      try {
+        await uploadToSupabase(files, progress, results);
+
+        const allSuccessful =
+          Object.keys(results).length > 0 &&
+          Object.values(results).every((r) => r === 'success');
+        if (allSuccessful) {
+          setTimeout(onUploadComplete, 1500);
+        }
+      } catch (err: any) {
+        console.error('❌ Batch upload error:', err);
+        setBatchError(err?.message || 'Batch upload failed. Please try again.');
+      } finally {
+        setUploading(false);
+      }
+    },
+    [eventData, onUploadComplete]
+  );
 
   return (
     <div className="space-y-6">
@@ -380,7 +485,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv,.3gp"
+          accept="image/*,video/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.mp4,.mov,.avi,.mkv,.webm,.flv,.wmv,.3gp,.3g2"
           onChange={handleChange}
           disabled={disabled || uploading}
           className="hidden"
@@ -399,11 +504,21 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             </p>
 
             <p className="text-xs text-gray-500">
-              Images & Videos • JPG, PNG, MP4, MOV, MKV, WEBM • Up to 100MB
+              Photos & Videos • iPhone HEIC supported • Up to {MAX_BATCH_SIZE} at a time • Videos ≤ 200 MB
             </p>
           </div>
         </div>
       </div>
+
+      {/* Batch error banner */}
+      {batchError && (
+        <div className="rounded-lg p-4 border bg-red-50 border-red-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" strokeWidth={2} />
+            <p className="text-sm text-red-800">{batchError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Upload Progress */}
       {Object.keys(uploadProgress).length > 0 && (
