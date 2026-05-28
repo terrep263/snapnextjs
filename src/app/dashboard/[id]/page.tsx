@@ -660,13 +660,28 @@ export default function Dashboard() {
     }
   };
 
-  // Load saved images from localStorage
+  // Load saved images from localStorage.
+  // Guard: ignore — and purge — any legacy base64 `data:` blobs that may still be
+  // cached from an older build. They must never override the real Storage URL,
+  // since a multi-MB data URI in an <img src> is what caused gallery load failures.
   useEffect(() => {
     if (eventId) {
-      const savedHeader = localStorage.getItem(`headerImage_${eventId}`);
-      const savedProfile = localStorage.getItem(`profileImage_${eventId}`);
-      if (savedHeader) setHeaderImage(savedHeader);
-      if (savedProfile) setProfileImage(savedProfile);
+      const headerKey = `headerImage_${eventId}`;
+      const profileKey = `profileImage_${eventId}`;
+      const savedHeader = localStorage.getItem(headerKey);
+      const savedProfile = localStorage.getItem(profileKey);
+
+      if (savedHeader?.startsWith('data:')) {
+        localStorage.removeItem(headerKey); // drop stale base64
+      } else if (savedHeader) {
+        setHeaderImage(savedHeader);
+      }
+
+      if (savedProfile?.startsWith('data:')) {
+        localStorage.removeItem(profileKey); // drop stale base64
+      } else if (savedProfile) {
+        setProfileImage(savedProfile);
+      }
     }
   }, [eventId]);
 
