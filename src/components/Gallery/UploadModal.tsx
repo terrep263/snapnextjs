@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { EventData } from '@/lib/gallery-utils';
 import { supabase } from '@/lib/supabase';
-import { GALLERY_MAX_PHOTO_SIZE, GALLERY_MAX_VIDEO_SIZE } from '@/config/constants';
+import { GALLERY_MAX_PHOTO_SIZE } from '@/config/constants';
 
 export interface UploadModalProps {
   isOpen: boolean;
@@ -26,11 +26,138 @@ type UploadFile = {
   uploadedId?: string;
 };
 
+// ─── Mobile upload safety constants (ported from PhotoUploadMinimalist) ────────
+const MAX_BATCH_SIZE = 20;
 const MAX_PHOTO_SIZE = GALLERY_MAX_PHOTO_SIZE;
-const MAX_VIDEO_SIZE = GALLERY_MAX_VIDEO_SIZE;
+// Tighter than GALLERY_MAX_VIDEO_SIZE (500 MB) for mobile reliability —
+// matches the dedicated upload page so both surfaces behave identically.
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/webp'];
-const ACCEPTED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/mov', 'video/hevc'];
+const ACCEPTED_IMAGE_TYPES = [
+  'image/jpeg', 'image/jpg', 'image/png',
+  'image/heic', 'image/heif', 'image/webp', 'image/gif',
+];
+const ACCEPTED_VIDEO_TYPES = [
+  'video/mp4', 'video/quicktime', 'video/mov', 'video/hevc',
+  'video/webm', 'video/x-matroska', 'video/3gpp', 'video/3gpp2',
+  'video/x-msvideo',
+];
+
+// ─── Extension → MIME mapping (authoritative source) ─────────────────────────
+const EXT_MIME: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  avi: 'video/x-msvideo',
+  mkv: 'video/x-matroska',
+  webm: 'video/webm',
+  flv: 'video/x-flv',
+  wmv: 'video/x-ms-wmv',
+  '3gp': 'video/3gpp',
+  '3g2': 'video/3gpp2',
+  hevc: 'video/mp4',
+  h265: 'video/mp4',
+};
+
+const VIDEO_EXTS = new Set([
+  'mov', 'mp4', 'avi', 'mkv', 'webm', 'flv', 'wmv',
+  '3gp', '3g2', 'hevc', 'h265', 'm2ts', 'mts', 'ts',
+]);
+
+function getExt(name: string): string {
+  return (name.split('.').pop() || '').toLowerCase();
+}
+
+function isVideoFile(file: File): boolean {
+  if (file.type.startsWith('video/')) return true;
+  return VIDEO_EXTS.has(getExt(file.name));
+}
+
+// Always prefer extension-based MIME — iPhone Safari often sends blank or
+// generic types that the server's magic-byte sniffer struggles with.
+function mimeFor(file: File): string {
+  const ext = getExt(file.name);
+  if (EXT_MIME[ext]) return EXT_MIME[ext];
+  if (file.type && file.type !== 'application/octet-stream') return file.type;
+  return 'application/octet-stream';
+}
+
+// Strip iPhone Live Photo .mov sidecars (IMG_1234.mov paired with IMG_1234.heic)
+function filterLivePhotoSidecars(files: File[]): File[] {
+  const heicBases = new Set(
+    files
+      .filter((f) => /\.(heic|heif)$/i.test(f.name))
+      .map((f) => f.name.replace(/\.(heic|heif)$/i, '').toLowerCase())
+  );
+  return files.filter((f) => {
+    if (/\.mov$/i.test(f.name)) {
+      const base = f.name.replace(/\.mov$/i, '').toLowerCase();
+      if (heicBases.has(base)) {
+        console.log(`🗑️ Skipping iPhone Live Photo sidecar: ${f.name}`);
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+// Convert HEIC/HEIF → JPEG in the browser so Android/Windows guests can view
+// iPhone photos. Dynamic import keeps the ~200 KB library out of the initial bundle.
+async function convertHeicIfNeeded(file: File): Promise<File> {
+  const ext = getExt(file.name);
+  const isHeic =
+    ext === 'heic' ||
+    ext === 'heif' ||
+    file.type === 'image/heic' ||
+    file.type === 'image/heif';
+  if (!isHeic) return file;
+
+  try {
+    console.log(`🔄 Converting HEIC → JPEG: ${file.name}`);
+    const mod: any = await import('heic2any');
+    const convert = mod.default || mod;
+    const result = await convert({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.92,
+    });
+    const blob: Blob = Array.isArray(result) ? result[0] : result;
+    const newName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+    return new File([blob], newName, {
+      type: 'image/jpeg',
+      lastModified: file.lastModified,
+    });
+  } catch (err) {
+    console.warn(`⚠️ HEIC conversion failed for ${file.name}, uploading original:`, err);
+    return file;
+  }
+}
+
+// Retry an async operation with exponential backoff (500ms, 1s, 2s).
+// Preserves AbortSignal cancellation: AbortError is re-thrown immediately.
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, label = ''): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      if (err?.name === 'AbortError') throw err;
+      lastErr = err;
+      if (attempt < retries - 1) {
+        const delay = 500 * Math.pow(2, attempt);
+        console.warn(`⏳ Retry ${attempt + 1}/${retries - 1} for ${label} after ${delay}ms:`, err);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastErr;
+}
 
 /**
  * UploadModal Component
@@ -94,29 +221,30 @@ export default function UploadModal({
 
   // Validate file type and size
   const validateFile = (file: File): { valid: boolean; error?: string } => {
-    const isImage = ACCEPTED_IMAGE_TYPES.includes(file.type) || 
-                   file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i);
+    const isImage = ACCEPTED_IMAGE_TYPES.includes(file.type) ||
+                   !!file.name.match(/\.(jpg|jpeg|png|heic|heif|webp|gif)$/i);
     const isVideo = ACCEPTED_VIDEO_TYPES.includes(file.type) ||
-                   file.name.match(/\.(mp4|mov|hevc)$/i);
+                   isVideoFile(file);
 
     if (!isImage && !isVideo) {
       return {
         valid: false,
-        error: `File type not supported. Accepted: JPEG, PNG, HEIC, WebP (images) or MP4, MOV, HEVC (videos).`,
+        error: `File type not supported. Accepted: JPEG, PNG, HEIC, HEIF, WebP, GIF (images) or MP4, MOV, HEVC, WebM, MKV, 3GP (videos).`,
       };
     }
 
     if (isImage && file.size > MAX_PHOTO_SIZE) {
       return {
         valid: false,
-        error: `File too large. Maximum size is 25MB per photo.`,
+        error: `Photo too large. Maximum size is ${(MAX_PHOTO_SIZE / 1024 / 1024).toFixed(0)} MB per photo.`,
       };
     }
 
-    if (isVideo && file.size > MAX_VIDEO_SIZE) {
+    if (isVideo && file.size > MAX_VIDEO_BYTES) {
+      const sizeMb = (file.size / 1024 / 1024).toFixed(0);
       return {
         valid: false,
-        error: `File too large. Maximum size is 500MB per video.`,
+        error: `Video "${file.name}" is ${sizeMb} MB. Videos must be under 200 MB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`,
       };
     }
 
@@ -168,8 +296,18 @@ export default function UploadModal({
   // Handle file selection
   const handleFiles = useCallback(
     async (selectedFiles: FileList | File[]) => {
-      const fileArray = Array.from(selectedFiles);
       setError(null);
+
+      // Phase 2: filter iPhone Live Photo .mov sidecars first
+      const fileArray = filterLivePhotoSidecars(Array.from(selectedFiles));
+
+      // Phase 2: hard-cap batch size for mobile memory safety
+      if (fileArray.length > MAX_BATCH_SIZE) {
+        setError(
+          `Please select up to ${MAX_BATCH_SIZE} files at a time. You selected ${fileArray.length}.`
+        );
+        return;
+      }
 
       // Validate all files first
       const validationErrors: string[] = [];
@@ -293,7 +431,9 @@ export default function UploadModal({
   const uploadSingleFile = async (uploadFile: UploadFile, signal: AbortSignal): Promise<void> => {
     if (!eventId) throw new Error('Event ID is required');
 
-    const file = uploadFile.file;
+    // Phase 3: HEIC/HEIF → JPEG conversion for cross-platform viewing.
+    // Runs BEFORE FormData is built so the server receives a JPEG.
+    const file = await convertHeicIfNeeded(uploadFile.file);
 
     try {
       // Create FormData for API request
@@ -302,7 +442,7 @@ export default function UploadModal({
       formData.append('eventId', eventId);
       formData.append('filename', file.name);
 
-      // Track upload progress
+      // Track upload progress (simulated; server doesn't stream progress)
       let progress = 0;
       const progressInterval = setInterval(() => {
         if (progress < 90) {
@@ -315,12 +455,16 @@ export default function UploadModal({
         }
       }, 300);
 
-      // Upload via API endpoint
-      const response = await fetch('/api/upload/chunked', {
-        method: 'POST',
-        body: formData,
-        signal,
-      });
+      // Phase 2: retry the fetch with exponential backoff (AbortSignal-aware).
+      const response = await withRetry(
+        () => fetch('/api/upload/chunked', {
+          method: 'POST',
+          body: formData,
+          signal,
+        }),
+        3,
+        `upload:${file.name}`
+      );
 
       clearInterval(progressInterval);
 
@@ -481,7 +625,7 @@ export default function UploadModal({
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/jpg,image/png,image/heic,image/webp,video/mp4,video/quicktime,video/mov,video/hevc"
+          accept="image/jpeg,image/jpg,image/png,image/heic,image/heif,image/webp,image/gif,video/mp4,video/quicktime,video/mov,video/hevc,video/webm,video/x-matroska,video/3gpp,video/3gpp2,.jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.mp4,.mov,.hevc,.webm,.mkv,.3gp,.3g2"
           capture="environment"
           onChange={(e) => {
             if (e.target.files) {
@@ -565,7 +709,7 @@ function SelectionStep({
           Browse Files
         </button>
         <p className="text-xs text-gray-500 mt-4">
-          Photos: JPEG, PNG, HEIC, WebP (max 25MB) • Videos: MP4, MOV, HEVC (max 500MB)
+          Photos: JPEG, PNG, HEIC (iPhone), WebP (max 25 MB) • Videos: MP4, MOV, HEVC, WebM (max 200 MB) • Up to 20 files at a time
         </p>
       </div>
 

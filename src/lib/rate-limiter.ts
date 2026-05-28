@@ -11,7 +11,9 @@ interface RateLimitEntry {
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in milliseconds
-const MAX_UPLOADS_PER_HOUR = 50;
+// 500/hr per IP — event venues share WiFi, so multiple guests share one identifier.
+// 50/hr was too tight for a 30-guest event burst-uploading on the same network.
+const MAX_UPLOADS_PER_HOUR = 500;
 const MAX_DOWNLOADS_PER_HOUR = 100;
 
 /**
@@ -103,4 +105,3 @@ export function cleanupRateLimitStore(): void {
 if (typeof setInterval !== 'undefined') {
   setInterval(cleanupRateLimitStore, 5 * 60 * 1000);
 }
-
