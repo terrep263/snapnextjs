@@ -137,6 +137,38 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, label = ''): Prom
   throw lastErr;
 }
 
+async function uploadResumable(
+  filePath: string,
+  file: File,
+  contentType: string,
+  onProgress: (bytesUploaded: number, bytesTotal: number) => void
+): Promise<void> {
+  const tus: any = await import('tus-js-client');
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(file, {
+      endpoint: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/upload/resumable`,
+      headers: {
+        authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        'x-upsert': 'false',
+      },
+      chunkSize: 6 * 1024 * 1024,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName: 'photos',
+        objectName: filePath,
+        contentType,
+        cacheControl: '3600',
+      },
+      onProgress,
+      onSuccess: resolve,
+      onError: reject,
+    });
+    upload.start();
+  });
+}
+
 interface PhotoUploadProps {
   eventData: any;
   onUploadComplete: () => void;
@@ -316,21 +348,33 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
           const contentType = mimeFor(processedFile);
           console.log(`📤 Uploading with MIME type: ${contentType} (original was: '${file.type}')`);
 
-          // Phase 2: retry on transient network failure
-          await withRetry(
-            async () => {
-              const { error } = await supabase.storage
-                .from('photos')
-                .upload(filePath, processedFile, {
-                  cacheControl: '3600',
-                  upsert: false,
-                  contentType,
-                });
-              if (error) throw error;
-            },
-            3,
-            `upload:${file.name}`
-          );
+          const RESUMABLE_THRESHOLD = 6 * 1024 * 1024;
+          if (processedFile.size > RESUMABLE_THRESHOLD) {
+            await uploadResumable(
+              filePath,
+              processedFile,
+              contentType,
+              (bytesUploaded, bytesTotal) => {
+                progress[key] = Math.round((bytesUploaded / bytesTotal) * 70) + 10;
+                setUploadProgress({ ...progress });
+              }
+            );
+          } else {
+            await withRetry(
+              async () => {
+                const { error } = await supabase.storage
+                  .from('photos')
+                  .upload(filePath, processedFile, {
+                    cacheControl: '3600',
+                    upsert: false,
+                    contentType,
+                  });
+                if (error) throw error;
+              },
+              3,
+              `upload:${file.name}`
+            );
+          }
 
           console.log(`✅ File uploaded to storage: ${filePath}`);
           filePublicUrl = getPhotoPublicUrl(filePath);
