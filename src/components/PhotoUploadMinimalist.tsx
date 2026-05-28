@@ -10,10 +10,12 @@ import { SecureMediaManager } from '@/lib/secureMediaManager';
 import { MediaAuditLogger } from '@/lib/mediaAuditLogger';
 import { MediaBackupManager } from '@/lib/mediaBackupManager';
 import { getPhotoPublicUrl } from '@/lib/supabase';
+import { GALLERY_MAX_PHOTO_SIZE, GALLERY_MAX_VIDEO_SIZE } from '@/config/constants';
 
 // ─── Mobile upload safety constants ──────────────────────────────────────────
 const MAX_BATCH_SIZE = 20;
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200 MB per video
+const MAX_VIDEO_BYTES = GALLERY_MAX_VIDEO_SIZE; // 1 GB per video
+const MAX_PHOTO_BYTES = GALLERY_MAX_PHOTO_SIZE; // 700 MB per photo
 
 // ─── Extension → MIME mapping (authoritative source) ─────────────────────────
 const EXT_MIME: Record<string, string> = {
@@ -480,7 +482,17 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
       const tooBig = files.find((f) => isVideoFile(f) && f.size > MAX_VIDEO_BYTES);
       if (tooBig) {
         const sizeMb = (tooBig.size / 1024 / 1024).toFixed(0);
-        const msg = `Video "${tooBig.name}" is ${sizeMb} MB. Videos must be under 200 MB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`;
+        const msg = `Video "${tooBig.name}" is ${sizeMb} MB. Videos must be under 1 GB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`;
+        console.warn(`⚠️ ${msg}`);
+        setBatchError(msg);
+        return;
+      }
+
+      // Phase 2: reject oversized photos up front
+      const tooBigPhoto = files.find((f) => !isVideoFile(f) && f.size > MAX_PHOTO_BYTES);
+      if (tooBigPhoto) {
+        const sizeMb = (tooBigPhoto.size / 1024 / 1024).toFixed(0);
+        const msg = `Photo "${tooBigPhoto.name}" is ${sizeMb} MB. Photos must be under 700 MB.`;
         console.warn(`⚠️ ${msg}`);
         setBatchError(msg);
         return;
@@ -548,7 +560,7 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
             </p>
 
             <p className="text-xs text-gray-500">
-              Photos & Videos • iPhone HEIC supported • Up to {MAX_BATCH_SIZE} at a time • Videos ≤ 200 MB
+              Photos & Videos • iPhone HEIC supported • Up to {MAX_BATCH_SIZE} at a time • Photos ≤ 700 MB • Videos ≤ 1 GB
             </p>
           </div>
         </div>

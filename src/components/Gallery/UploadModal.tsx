@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { EventData } from '@/lib/gallery-utils';
 import { supabase } from '@/lib/supabase';
-import { GALLERY_MAX_PHOTO_SIZE } from '@/config/constants';
+import { GALLERY_MAX_PHOTO_SIZE, GALLERY_MAX_VIDEO_SIZE } from '@/config/constants';
 
 export interface UploadModalProps {
   isOpen: boolean;
@@ -28,10 +28,9 @@ type UploadFile = {
 
 // ─── Mobile upload safety constants (ported from PhotoUploadMinimalist) ────────
 const MAX_BATCH_SIZE = 20;
-const MAX_PHOTO_SIZE = GALLERY_MAX_PHOTO_SIZE;
-// Tighter than GALLERY_MAX_VIDEO_SIZE (500 MB) for mobile reliability —
-// matches the dedicated upload page so both surfaces behave identically.
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+const MAX_PHOTO_SIZE = GALLERY_MAX_PHOTO_SIZE; // 700 MB
+// Matches the dedicated upload page so both surfaces behave identically.
+const MAX_VIDEO_BYTES = GALLERY_MAX_VIDEO_SIZE; // 1 GB
 
 const ACCEPTED_IMAGE_TYPES = [
   'image/jpeg', 'image/jpg', 'image/png',
@@ -244,7 +243,7 @@ export default function UploadModal({
       const sizeMb = (file.size / 1024 / 1024).toFixed(0);
       return {
         valid: false,
-        error: `Video "${file.name}" is ${sizeMb} MB. Videos must be under 200 MB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`,
+        error: `Video "${file.name}" is ${sizeMb} MB. Videos must be under 1 GB. On iPhone: Settings → Camera → Record Video → 1080p HD at 30 fps.`,
       };
     }
 
@@ -709,7 +708,7 @@ function SelectionStep({
           Browse Files
         </button>
         <p className="text-xs text-gray-500 mt-4">
-          Photos: JPEG, PNG, HEIC (iPhone), WebP (max 25 MB) • Videos: MP4, MOV, HEVC, WebM (max 200 MB) • Up to 20 files at a time
+          Photos: JPEG, PNG, HEIC (iPhone), WebP (max 700 MB) • Videos: MP4, MOV, HEVC, WebM (max 1 GB) • Up to 20 files at a time
         </p>
       </div>
 
