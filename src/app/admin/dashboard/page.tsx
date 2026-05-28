@@ -72,7 +72,14 @@ export default function AdminDashboardPage() {
   const [claimLinks, setClaimLinks] = useState<any[]>([]);
   const [claimLinksLoading, setClaimLinksLoading] = useState(false);
   const [eventPageIndex, setEventPageIndex] = useState(0);
+  const [eventSearch, setEventSearch] = useState('');
   const EVENTS_PER_PAGE = 20;
+
+  // Snap back to page 1 whenever the search query changes -- otherwise typing
+  // a query while on page 4 of unfiltered results lands on an empty page.
+  useEffect(() => {
+    setEventPageIndex(0);
+  }, [eventSearch]);
 
   // Load stats
   const { data: stats, loading: statsLoading, execute: loadStats } = useAsync(
@@ -453,11 +460,50 @@ export default function AdminDashboardPage() {
         </div>
         
         {/* Events Section */}
-        <div className="mb-12">
+        <div id="event-log" className="mb-12 scroll-mt-24">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Log</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            {events && (events as PromoEvent[]).length > 0 ? (
+            {events && (events as PromoEvent[]).length > 0 ? (() => {
+              // Filter events by name / email / slug / id (case-insensitive substring).
+              // Pagination math below operates on filteredEvents, not the raw list.
+              const allEvents = events as PromoEvent[];
+              const q = eventSearch.trim().toLowerCase();
+              const filteredEvents = q
+                ? allEvents.filter((e) =>
+                    (e.name || '').toLowerCase().includes(q) ||
+                    (e.email || '').toLowerCase().includes(q) ||
+                    (e.slug || '').toLowerCase().includes(q) ||
+                    (e.id || '').toLowerCase().includes(q)
+                  )
+                : allEvents;
+              const totalEventPages = Math.max(1, Math.ceil(filteredEvents.length / EVENTS_PER_PAGE));
+
+              return (
               <div>
+                {/* Search box */}
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={eventSearch}
+                    onChange={(e) => setEventSearch(e.target.value)}
+                    placeholder="Search events by name, email, slug, or ID..."
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    aria-label="Search events"
+                  />
+                  {eventSearch && (
+                    <button
+                      onClick={() => setEventSearch('')}
+                      className="text-sm text-gray-600 hover:text-gray-900 px-2 py-1"
+                      aria-label="Clear search"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {filteredEvents.length} of {allEvents.length}
+                  </span>
+                </div>
+
                 {/* Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -473,7 +519,13 @@ export default function AdminDashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(events as PromoEvent[])
+                      {filteredEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
+                            No events match "{eventSearch}".
+                          </td>
+                        </tr>
+                      ) : filteredEvents
                         .slice(eventPageIndex * EVENTS_PER_PAGE, (eventPageIndex + 1) * EVENTS_PER_PAGE)
                         .map((event: PromoEvent) => (
                           <tr
@@ -553,9 +605,9 @@ export default function AdminDashboardPage() {
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
                   <p className="text-sm text-gray-600">
-                    Showing {Math.min(eventPageIndex * EVENTS_PER_PAGE + 1, (events as PromoEvent[]).length)} to{' '}
-                    {Math.min((eventPageIndex + 1) * EVENTS_PER_PAGE, (events as PromoEvent[]).length)} of{' '}
-                    {(events as PromoEvent[]).length} events
+                    {filteredEvents.length === 0
+                      ? `0 of ${allEvents.length} events`
+                      : `Showing ${Math.min(eventPageIndex * EVENTS_PER_PAGE + 1, filteredEvents.length)} to ${Math.min((eventPageIndex + 1) * EVENTS_PER_PAGE, filteredEvents.length)} of ${filteredEvents.length} events`}
                   </p>
                   <div className="flex gap-3">
                     <Button
@@ -568,15 +620,13 @@ export default function AdminDashboardPage() {
                     </Button>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">
-                        Page {eventPageIndex + 1} of{' '}
-                        {Math.ceil((events as PromoEvent[]).length / EVENTS_PER_PAGE)}
+                        Page {eventPageIndex + 1} of {totalEventPages}
                       </span>
                     </div>
                     <Button
                       onClick={() => setEventPageIndex(eventPageIndex + 1)}
                       disabled={
-                        (eventPageIndex + 1) * EVENTS_PER_PAGE >=
-                        (events as PromoEvent[]).length
+                        (eventPageIndex + 1) * EVENTS_PER_PAGE >= filteredEvents.length
                       }
                       size="sm"
                       variant="secondary"
@@ -586,7 +636,8 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
-            ) : (
+              );
+            })() : (
               <p className="text-gray-500 text-center py-12">No events created yet</p>
             )}
           </div>

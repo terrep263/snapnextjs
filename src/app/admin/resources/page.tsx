@@ -57,25 +57,9 @@ export default function AdminResourcesPage() {
       icon: <FileText className="w-5 h-5" />,
       pages: [
         {
-          url: '/dashboard/sample-event-id',
-          label: 'Event Dashboard',
-          description: 'View specific event with photos and details',
-          badge: 'Sample',
-          disabled: true,
-        },
-        {
-          url: '/e/sample-event-slug',
-          label: 'Event Gallery',
-          description: 'View event gallery with header/profile images',
-          badge: 'Sample',
-          disabled: true,
-        },
-        {
-          url: '/e/sample-event-slug/upload',
-          label: 'Event Upload',
-          description: 'Upload media to event',
-          badge: 'Sample',
-          disabled: true,
+          url: '/admin/dashboard#event-log',
+          label: 'Event Log (All Events)',
+          description: 'Browse and search every event. Click Manage on a row to open that event\u2019s dashboard as the owner \u2014 use this for customer support (QR re-issue, photo recovery, etc.).',
         },
       ],
     },
