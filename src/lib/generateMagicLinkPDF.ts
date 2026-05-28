@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 
 /**
  * Generate a branded PDF flyer for magic link distribution
@@ -190,20 +191,45 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.text('Scan • Upload • Share', phoneX + phoneWidth / 2, phoneY + phoneHeight + 10, { align: 'center' });
 
-  // Add QR code area (placeholder - actual QR would need additional library)
+  // QR code linking to the claim/magic link.
+  // The qrcode library produces a PNG data URL that jsPDF embeds as an image.
   const qrSize = 40;
   const qrX = sidebarWidth + 35;
   const qrY = 145;
-  
+
+  // White card behind the QR (extends the quiet zone) + brand border
   doc.setFillColor(255, 255, 255);
   doc.rect(qrX, qrY, qrSize, qrSize, 'F');
   doc.setDrawColor(124, 58, 237);
   doc.setLineWidth(1);
   doc.rect(qrX, qrY, qrSize, qrSize, 'S');
-  
-  doc.setTextColor(107, 114, 128);
-  doc.setFontSize(8);
-  doc.text('QR Code', qrX + qrSize / 2, qrY + qrSize / 2 + 2, { align: 'center' });
+
+  // Black-on-white for maximum scan reliability across phone cameras and print.
+  // Level 'M' tolerates minor print smudging while keeping the (~70-char) URL
+  // scannable. The image is inset a couple mm to guarantee a white quiet zone.
+  const qrPadding = 2; // mm
+  try {
+    const qrDataUrl = await QRCode.toDataURL(magicLink, {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 512,
+      color: { dark: '#000000', light: '#FFFFFF' },
+    });
+    doc.addImage(
+      qrDataUrl,
+      'PNG',
+      qrX + qrPadding,
+      qrY + qrPadding,
+      qrSize - qrPadding * 2,
+      qrSize - qrPadding * 2
+    );
+  } catch (err) {
+    // Never ship a silently blank box — fall back to a readable label.
+    console.error('Failed to generate QR code for magic link PDF:', err);
+    doc.setTextColor(107, 114, 128);
+    doc.setFontSize(8);
+    doc.text('QR unavailable', qrX + qrSize / 2, qrY + qrSize / 2 + 2, { align: 'center' });
+  }
 
   doc.setTextColor(124, 58, 237);
   doc.setFontSize(9);
