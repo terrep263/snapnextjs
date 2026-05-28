@@ -55,6 +55,14 @@ export default function GalleryContainer({
   const [internalCurrentPage, setInternalCurrentPage] = useState(1);
   const currentPage = externalCurrentPage ?? internalCurrentPage;
   const totalPages = externalTotalPages ?? Math.ceil(photos.length / ITEMS_PER_PAGE);
+
+  // When the parent supplies page + total + handler, it is fetching one page at a
+  // time server-side, so `photos` is already just the current page. Tell
+  // GalleryContent not to slice it again.
+  const serverPaginated =
+    externalCurrentPage !== undefined &&
+    externalTotalPages !== undefined &&
+    externalOnPageChange !== undefined;
   
   const handlePageChange = (page: number) => {
     if (externalOnPageChange) {
@@ -289,6 +297,7 @@ export default function GalleryContainer({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={handlePageChange}
+        serverPaginated={serverPaginated}
       />
 
       {/* Full Screen Lightbox */}

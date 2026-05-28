@@ -16,6 +16,9 @@ export interface GalleryContentProps {
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  // When true, `items` is already the current page (parent paginates server-side),
+  // so this component must NOT slice it again.
+  serverPaginated?: boolean;
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -59,18 +62,26 @@ export default function GalleryContent({
   currentPage = 1,
   totalPages = 1,
   onPageChange,
+  serverPaginated = false,
 }: GalleryContentProps) {
   // Debug: Log layout changes (must be before any conditional returns)
   useEffect(() => {
     console.log('🎨 Gallery layout changed to:', layout);
   }, [layout]);
 
-  // Paginate items
+  // Paginate items.
+  // If the parent is paginating server-side, `items` already holds ONLY the
+  // current page, so slicing again would wipe out page 2+ (e.g. slice(50,100)
+  // on an 11-item page-2 array returns []). In that mode, render items as-is.
+  // Otherwise `items` is the full list and we slice it locally.
   const paginatedItems = useMemo(() => {
+    if (serverPaginated) {
+      return items;
+    }
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return items.slice(startIndex, endIndex);
-  }, [items, currentPage]);
+  }, [items, currentPage, serverPaginated]);
 
   if (loading) {
     return <GallerySkeleton layout={layout} />;
