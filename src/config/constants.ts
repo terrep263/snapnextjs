@@ -58,14 +58,18 @@ export const PAGINATION = {
   MAX_PAGE_SIZE: 100,
 } as const;
 
-// Gallery file size limits (exported directly for easy import)
-export const GALLERY_MAX_PHOTO_SIZE = 700 * 1024 * 1024; // 700 MB per photo
-export const GALLERY_MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1 GB per video
+// Gallery file size limits (exported directly for easy import).
+// Sized to real-world phone uploads: a phone photo is ~2-8 MB (25 MB covers
+// ~99% incl. high-res JPEG/HEIC with headroom), and ~300 MB is ~5 min of
+// 1080p video. Anything larger fails fast with a clear message instead of
+// hanging silently. Longer-video support is a separate (resumable) project.
+export const GALLERY_MAX_PHOTO_SIZE = 25 * 1024 * 1024; // 25 MB per photo
+export const GALLERY_MAX_VIDEO_SIZE = 300 * 1024 * 1024; // 300 MB per video (~5 min 1080p)
 
 export const UPLOAD_LIMITS = {
-  MAX_FILE_SIZE: 1024 * 1024 * 1024, // 1 GB
+  MAX_FILE_SIZE: 300 * 1024 * 1024, // 300 MB
   MAX_PHOTOS_PER_EVENT: 1000,
-  MAX_VIDEO_SIZE: 1024 * 1024 * 1024, // 1 GB
+  MAX_VIDEO_SIZE: 300 * 1024 * 1024, // 300 MB
   GALLERY_MAX_PHOTO_SIZE, // Re-export for backward compatibility
   GALLERY_MAX_VIDEO_SIZE, // Re-export for backward compatibility
   ALLOWED_PHOTO_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
