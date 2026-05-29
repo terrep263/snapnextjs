@@ -92,8 +92,11 @@ export async function POST(request: NextRequest) {
       isVideo: photo.is_video,
     });
 
-    // For Premium without watermark, return signed URL to original
-    if (packageType === 'premium' && !needsWatermark) {
+    // Return a clean signed URL to the original for ANY package that does not
+    // require a watermark. Per product rules only the freebie tier is
+    // watermarked, so basic and premium both download originals here.
+    // (Premium with watermark_enabled explicitly set still falls through.)
+    if (!needsWatermark) {
       // Generate signed URL (1 hour expiry)
       const expiresIn = 3600; // 1 hour
       const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest) {
         data: {
           url: signedUrlData.signedUrl,
           isWatermarked: false,
-          packageType: 'premium',
+          packageType,
           isVideo: photo.is_video,
           filename: photo.filename || (photo.is_video ? 'video.mp4' : 'photo.jpg'),
           expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
@@ -120,7 +123,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // For Basic, Freebie, or Premium with watermark enabled, generate watermarked version
+    // Only tiers that require a watermark reach this point: freebie (always),
+    // or premium with watermark_enabled explicitly set. Generate watermarked version.
     // Extract file path from storage URL or use file_path
     let filePath = photo.file_path;
     
@@ -248,4 +252,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
