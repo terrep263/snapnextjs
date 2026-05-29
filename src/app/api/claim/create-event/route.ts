@@ -175,6 +175,11 @@ export async function POST(req: NextRequest) {
     // Send confirmation email with QR code
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
+      // Use the verified sending domain. RESEND_FROM_EMAIL is set to
+      // noreply@snapworxx.com in production; the fallback also uses the
+      // verified .com domain (NOT .app, which is unverified in Resend).
+      const fromAddress =
+        process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
       const expirationDate = eventExpiresAt.toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -183,7 +188,7 @@ export async function POST(req: NextRequest) {
       });
 
       const { error: emailError } = await resend.emails.send({
-        from: 'SnapWorxx <noreply@snapworxx.app>',
+        from: fromAddress,
         to: emailAddress,
         subject: `Your SnapWorxx Event: ${eventName}`,
         html: `
