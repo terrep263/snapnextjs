@@ -53,10 +53,12 @@ export default function GalleryPage() {
     try {
       console.log('📸 Loading all photos for lightbox:', event.id);
 
-      // Fetch all photos (no pagination) for lightbox navigation
-      // Include unapproved photos for development/testing
+      // Fetch all photos (no pagination) for lightbox navigation.
+      // Only owners/admins may include unapproved (hidden) photos; guests
+      // must never receive them, so hiding a photo actually hides it.
+      const includeUnapproved = isOwner || isAdmin;
       const response = await fetch(
-        `/api/events/${event.id}/gallery?limit=1000&page=1&includeUnapproved=true`
+        `/api/events/${event.id}/gallery?limit=1000&page=1${includeUnapproved ? '&includeUnapproved=true' : ''}`
       );
       const result = await response.json();
 
@@ -239,10 +241,12 @@ export default function GalleryPage() {
       setLoading(true);
       console.log('📸 Loading photos for event:', event.id, 'page:', currentPage);
 
-      // Use the existing gallery API endpoint with pagination
-      // Include unapproved photos for development/testing
+      // Use the existing gallery API endpoint with pagination.
+      // Only owners/admins may include unapproved (hidden) photos; guests
+      // must never receive them, so hiding a photo actually hides it.
+      const includeUnapproved = isOwner || isAdmin;
       const response = await fetch(
-        `/api/events/${event.id}/gallery?page=${currentPage}&limit=50&includeUnapproved=true`
+        `/api/events/${event.id}/gallery?page=${currentPage}&limit=50${includeUnapproved ? '&includeUnapproved=true' : ''}`
       );
       const result = await response.json();
 
@@ -325,4 +329,3 @@ export default function GalleryPage() {
     />
   );
 }
-
