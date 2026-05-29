@@ -207,9 +207,69 @@ export default function GalleryContainer({
     }
   };
 
-  const handleBulkDownloadClick = () => {
-    // Placeholder for bulk download
-    // Bulk download - implemented in dashboard
+  const handleBulkDownloadClick = async () => {
+    if (!event.id) {
+      alert('Event data not loaded');
+      return;
+    }
+
+    // Guests can only bulk-download when the host has enabled it; owners/admins
+    // always can. The permission is resolved upstream into `permissions`.
+    if (!permissions.canBulkDownload) {
+      return;
+    }
+
+    try {
+      const requesterEmail =
+        (typeof window !== 'undefined' && localStorage.getItem('userEmail')) ||
+        undefined;
+
+      const response = await fetch('/api/download/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: event.id, userEmail: requesterEmail }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to start bulk download');
+      }
+
+      const jobId = result.data.jobId;
+
+      // Poll for completion (mirrors the dashboard flow).
+      const poll = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/download/bulk/status/${jobId}`);
+          const statusJson = await statusRes.json();
+          if (statusJson.success) {
+            const job = statusJson.data;
+            if (job.status === 'complete') {
+              clearInterval(poll);
+              (job.downloadUrls || []).forEach((url: string) => {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = '';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              });
+            } else if (job.status === 'failed') {
+              clearInterval(poll);
+              alert(`Bulk download failed: ${job.error || 'Unknown error'}`);
+            }
+          }
+        } catch (e) {
+          // transient poll error; keep polling until timeout below
+        }
+      }, 2000);
+
+      // Safety timeout after 5 minutes.
+      setTimeout(() => clearInterval(poll), 5 * 60 * 1000);
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to start bulk download');
+    }
   };
 
   const handleShareClick = (item: GalleryItem, eventData?: EventData) => {
@@ -283,6 +343,8 @@ export default function GalleryContainer({
         onLayoutChange={setLayout}
         onUploadClick={handleUploadClick}
         sticky={true}
+        canBulkDownload={permissions.canBulkDownload}
+        onBulkDownload={handleBulkDownloadClick}
       />
 
       {/* Gallery Content Area */}
@@ -341,4 +403,3 @@ export default function GalleryContainer({
     </div>
   );
 }
-

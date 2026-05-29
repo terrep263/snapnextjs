@@ -1320,9 +1320,17 @@ export default function Dashboard() {
                 eventSlug={eventData?.slug}
                 eventId={eventId}
                 viewMode="owner"
-                packageType="premium"
+                packageType={
+                  eventData?.is_freebie === true
+                    ? 'freebie'
+                    : eventData?.is_free === true
+                    ? 'basic'
+                    : 'premium'
+                }
                 canDelete
-                canBulkDownload={false}
+                canBulkDownload={
+                  eventData?.is_free !== true && eventData?.is_freebie !== true
+                }
                 onDownload={handleDownloadPhoto}
                 onDelete={handleDeletePhoto}
               />
