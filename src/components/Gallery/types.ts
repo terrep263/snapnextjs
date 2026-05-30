@@ -29,6 +29,9 @@ export interface GalleryItem {
 
   // MIME type (for video detection)
   mimeType?: string;
+
+  // Moderation: false = hidden from guests (only ever populated for owner/admin views)
+  is_approved?: boolean;
 }
 
 export type LayoutType = 'masonry' | 'grid';
