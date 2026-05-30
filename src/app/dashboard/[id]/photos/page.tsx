@@ -35,6 +35,12 @@ export default function PhotoManager() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Email-confirm fallback: when the browser carries no owner identity (e.g.
+  // a previously-sent email link opened on another device), the owner can
+  // re-establish identity by entering the email used to create the event.
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     loadEverything();
@@ -95,33 +101,76 @@ export default function PhotoManager() {
       setAuthorized(isOwner || isAdmin);
 
       if (isOwner || isAdmin) {
-        const { data: photoRows } = await supabase
-          .from('photos')
-          .select(
-            'id, url, storage_url, thumbnail_url, filename, is_video, is_approved, is_flagged, created_at'
-          )
-          .eq('event_id', eventData?.id || eventId)
-          .order('created_at', { ascending: false });
-
-        const mapped: ManagedPhoto[] = (photoRows || []).map((p: any) => ({
-          id: p.id,
-          url: transformToCustomDomain(p.url || p.storage_url) || p.url || p.storage_url || '',
-          thumbnail_url:
-            transformToCustomDomain(p.thumbnail_url || p.url || p.storage_url) ||
-            p.thumbnail_url ||
-            p.url,
-          filename: p.filename,
-          is_video: p.is_video,
-          is_approved: p.is_approved,
-          is_flagged: p.is_flagged,
-          created_at: p.created_at,
-        }));
-        setPhotos(mapped);
+        await fetchPhotos(eventData?.id || eventId);
       }
     } catch (err) {
       console.error('Failed to load photo manager:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load (or reload) this event's photos into state.
+  const fetchPhotos = async (eid: string) => {
+    const { data: photoRows } = await supabase
+      .from('photos')
+      .select(
+        'id, url, storage_url, thumbnail_url, filename, is_video, is_approved, is_flagged, created_at'
+      )
+      .eq('event_id', eid)
+      .order('created_at', { ascending: false });
+
+    const mapped: ManagedPhoto[] = (photoRows || []).map((p: any) => ({
+      id: p.id,
+      url: transformToCustomDomain(p.url || p.storage_url) || p.url || p.storage_url || '',
+      thumbnail_url:
+        transformToCustomDomain(p.thumbnail_url || p.url || p.storage_url) ||
+        p.thumbnail_url ||
+        p.url,
+      filename: p.filename,
+      is_video: p.is_video,
+      is_approved: p.is_approved,
+      is_flagged: p.is_flagged,
+      created_at: p.created_at,
+    }));
+    setPhotos(mapped);
+  };
+
+  // Owner email-confirm fallback. Matches the entered email against the
+  // event's owner_email; on success, establishes identity (localStorage +
+  // cookie, same as the rest of the app) and unlocks the manager.
+  const handleConfirmOwner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setConfirmError(null);
+
+    const entered = confirmEmail.trim().toLowerCase();
+    const owner = (event?.owner_email || '').toLowerCase();
+
+    if (!entered) {
+      setConfirmError('Please enter your email.');
+      return;
+    }
+    if (!owner || entered !== owner) {
+      setConfirmError("That email doesn't match this event's owner.");
+      return;
+    }
+
+    setConfirming(true);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('userEmail', confirmEmail.trim());
+      }
+      if (typeof document !== 'undefined') {
+        document.cookie = `userEmail=${encodeURIComponent(
+          confirmEmail.trim()
+        )}; path=/; max-age=86400; SameSite=Lax`;
+      }
+      setAuthorized(true);
+      await fetchPhotos(event?.id || eventId);
+    } catch (err) {
+      setConfirmError('Something went wrong. Please try again.');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -181,20 +230,58 @@ export default function PhotoManager() {
   if (authorized === false) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="max-w-md text-center">
-          <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">Owner access only</h1>
-          <p className="mb-6 text-gray-600">
-            Only the event owner can manage photos for this event. If this is
-            your event, open it from the original dashboard link you received by
-            email.
-          </p>
-          <Link
-            href={`/dashboard/${eventId}`}
-            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 font-medium text-white transition-colors hover:bg-purple-700"
-          >
-            <ArrowLeft className="h-4 w-4" /> Back to dashboard
-          </Link>
+        <div className="w-full max-w-md">
+          <div className="rounded-2xl bg-white p-8 shadow-lg border border-gray-100">
+            <div className="mb-5 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+                <ShieldCheck className="h-6 w-6 text-purple-600" />
+              </div>
+              <h1 className="mb-2 text-2xl font-bold text-gray-900">Confirm it&apos;s you</h1>
+              <p className="text-gray-600">
+                To manage photos, enter the email you used to create
+                {event?.name ? ` "${event.name}"` : ' this event'}.
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmOwner} className="space-y-4">
+              <input
+                type="email"
+                value={confirmEmail}
+                onChange={(e) => {
+                  setConfirmEmail(e.target.value);
+                  setConfirmError(null);
+                }}
+                placeholder="you@example.com"
+                autoFocus
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 shadow-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+
+              {confirmError && (
+                <p className="text-sm text-red-600">{confirmError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={confirming}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
+              >
+                {confirming ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+                  </>
+                ) : (
+                  'Continue'
+                )}
+              </button>
+            </form>
+
+            <Link
+              href={`/dashboard/${eventId}`}
+              className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back to dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );
