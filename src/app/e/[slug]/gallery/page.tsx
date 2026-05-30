@@ -84,6 +84,7 @@ export default function GalleryPage() {
             ? transformToCustomDomain(photo.thumbnail_url)
             : transformToCustomDomain(photo.storage_url || photo.url || ''),
           size: photo.file_size || photo.size,
+          is_approved: photo.is_approved,
         })
       );
 
@@ -271,6 +272,7 @@ export default function GalleryPage() {
             ? transformToCustomDomain(photo.thumbnail_url)
             : transformToCustomDomain(photo.storage_url || photo.url || ''),
           size: photo.file_size || photo.size,
+          is_approved: photo.is_approved,
         })
       );
 
