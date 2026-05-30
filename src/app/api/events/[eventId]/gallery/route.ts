@@ -166,6 +166,9 @@ export async function GET(
           mime_type: photo.mime_type || photo.type || 'image/jpeg',
           is_video: photo.is_video || (photo.type && photo.type.startsWith('video/')) || false,
           url: photo.storage_url || photo.url || '',
+          // May be undefined on the retry path (column-missing fallback); the
+          // client only badges when this is strictly false, so undefined is safe.
+          is_approved: photo.is_approved,
         }));
         
         const totalRetryPages = Math.ceil(finalRetryCount / limit);
@@ -257,6 +260,9 @@ export async function GET(
         mime_type: photo.mime_type || photo.type || 'image/jpeg',
         is_video: photo.is_video || (photo.type && photo.type.startsWith('video/')) || false,
         url: transformToCustomDomain(rawUrl) || rawUrl,
+        // Surfaced so owner/admin views can mark hidden photos. Guests never
+        // receive unapproved rows, so exposing this is safe.
+        is_approved: photo.is_approved,
       };
     });
 
@@ -312,4 +318,3 @@ export async function GET(
     );
   }
 }
-
