@@ -216,6 +216,11 @@ function ListLayout({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4">
             {/* Thumbnail */}
             <div className="flex-shrink-0 w-full sm:w-32 h-32 bg-gray-100 rounded-lg overflow-hidden relative">
+              {item.is_approved === false && (
+                <div className="absolute top-1 left-1 z-10 flex items-center gap-1 rounded bg-amber-500/95 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm pointer-events-none">
+                  Hidden
+                </div>
+              )}
               {item.isVideo ? (
                 <>
                   <video
@@ -408,6 +413,17 @@ function GalleryItemCard({
       style={containerStyle}
       onClick={() => onItemClick(index)}
     >
+      {/* Hidden-from-guests badge. item.is_approved is only ever false in
+          owner/admin views (guests never receive unapproved photos), so this
+          badge is inherently owner/admin-only and never shown to guests. */}
+      {item.is_approved === false && (
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-md bg-amber-500/95 px-2 py-1 text-xs font-semibold text-white shadow-sm pointer-events-none">
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+          </svg>
+          Hidden from guests
+        </div>
+      )}
       {item.isVideo ? (
         <>
           <video
@@ -586,4 +602,3 @@ function GallerySkeleton({ layout }: { layout: GalleryLayout }) {
     </div>
   );
 }
-
