@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceRoleClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceRoleClient();
     const { referralCode } = await request.json();
 
     if (!referralCode) {
