@@ -9,6 +9,28 @@ export interface AdminSession {
   adminId?: string;
 }
 
+function getLocalDevAdmin(email?: string) {
+  if (process.env.NODE_ENV === 'production') return null;
+
+  const devEmails = (process.env.DEV_ADMIN_EMAILS || process.env.DEV_ADMIN_EMAIL || '')
+    .split(',')
+    .map((value) => value.toLowerCase().trim())
+    .filter(Boolean);
+
+  if (devEmails.length === 0) return null;
+  const devEmail = email
+    ? devEmails.find((value) => value === email.toLowerCase().trim())
+    : devEmails[0];
+
+  if (!devEmail) return null;
+
+  return {
+    id: 'local-dev-admin',
+    email: devEmail,
+    role: 'super_admin',
+  };
+}
+
 /**
  * Verify admin session from cookies
  * Returns session info or null if not authenticated
@@ -22,6 +44,16 @@ export async function verifyAdminSession(): Promise<AdminSession | null> {
 
     if (!session || !adminEmail) {
       return null;
+    }
+
+    const localDevAdmin = getLocalDevAdmin(adminEmail);
+    if (localDevAdmin) {
+      return {
+        authenticated: true,
+        email: localDevAdmin.email,
+        role: adminRole || localDevAdmin.role,
+        adminId: localDevAdmin.id,
+      };
     }
 
     // Verify the session token is still valid by checking the admin account

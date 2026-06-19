@@ -127,3 +127,80 @@ export async function sendEventConfirmationEmail(params: EventEmailParams): Prom
     console.error('[Email] Failed to send:', err);
   }
 }
+
+export interface GalleryLinkEmailParams {
+  to: string;
+  eventName: string;
+  eventSlug: string;
+}
+
+function buildGalleryLinkEmail(params: GalleryLinkEmailParams): string {
+  const { eventName, eventSlug } = params;
+  const galleryUrl = `${BASE_URL}/e/${eventSlug}`;
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;color:#333;">
+    <div style="max-width:600px;margin:0 auto;background:white;">
+      <div style="background:linear-gradient(to right,#7C3AED,#ec4899);padding:30px;text-align:center;">
+        <img src="${BASE_URL}/purple%20logo/purplelogo.png" alt="SnapWorxx" width="80" style="margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;">
+        <h1 style="margin:0;color:white;font-size:24px;font-weight:bold;">Your photos are here 📸</h1>
+      </div>
+      <div style="padding:32px 30px;text-align:center;">
+        <p style="font-size:16px;color:#1f2937;margin-top:0;">Here's your link to the <strong>${eventName}</strong> gallery. Tap it anytime to view, add, and download photos — no rescanning needed.</p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:24px auto;">
+          <tr>
+            <td style="background:#7C3AED;border-radius:8px;">
+              <a href="${galleryUrl}" style="display:inline-block;padding:14px 32px;color:white;text-decoration:none;font-weight:bold;font-size:16px;">Open the gallery →</a>
+            </td>
+          </tr>
+        </table>
+        <div style="background:#faf5ff;padding:12px;border-radius:6px;border:1px solid #e9d5ff;word-break:break-all;">
+          <a href="${galleryUrl}" style="color:#7C3AED;font-size:14px;text-decoration:none;">${galleryUrl}</a>
+        </div>
+        <p style="margin:20px 0 0 0;color:#6b7280;font-size:13px;">Tip: add this page to your home screen to keep it one tap away.</p>
+      </div>
+      <div style="text-align:center;padding:20px;background:#f9fafb;border-top:1px solid #e5e7eb;">
+        <p style="color:#6b7280;font-size:14px;margin:0;">© 2025 SnapWorxx. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+/**
+ * Send a guest the gallery return link ("Where should we send your photos?").
+ * Guest-facing — links only to the public gallery, never the owner dashboard.
+ * Returns a result so callers can surface success/failure to the user.
+ */
+export async function sendGalleryLinkEmail(
+  params: GalleryLinkEmailParams
+): Promise<{ ok: boolean; error?: string }> {
+  const { to, eventName } = params;
+
+  if (!to) return { ok: false, error: 'No recipient address' };
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to,
+      subject: `Your photos from ${eventName}`,
+      html: buildGalleryLinkEmail(params),
+    });
+
+    if (error) {
+      console.error('[Email] Gallery-link Resend error:', error);
+      return { ok: false, error: 'Email provider rejected the request' };
+    }
+
+    console.log(`[Email] Gallery link sent to ${to} — ID: ${data?.id}`);
+    return { ok: true };
+  } catch (err) {
+    console.error('[Email] Gallery-link send failed:', err);
+    return { ok: false, error: 'Failed to send email' };
+  }
+}

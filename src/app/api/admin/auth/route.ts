@@ -14,6 +14,49 @@ function generateSessionToken(email: string, secret: string): string {
     .digest('hex');
 }
 
+function getLocalDevAdmin(email?: string) {
+  if (process.env.NODE_ENV === 'production') return null;
+  // Accept multiple env var names so local dev setups that use
+  // NEXT_PUBLIC_DEV_ADMIN_EMAIL (used by the frontend) still work.
+  const devEmailsRaw =
+    process.env.DEV_ADMIN_EMAILS ||
+    process.env.DEV_ADMIN_EMAIL ||
+    process.env.NEXT_PUBLIC_DEV_ADMIN_EMAIL ||
+    process.env.NEXT_PUBLIC_DEV_ADMIN_EMAILS ||
+    '';
+
+  const devEmails = devEmailsRaw
+    .split(',')
+    .map((value) => value.toLowerCase().trim())
+    .filter(Boolean);
+
+  // Prefer an explicit hash, but allow a plain DEV_ADMIN_PASSWORD in dev
+  // for convenience (we hash it here with SHA-256).
+  let passwordHash =
+    process.env.DEV_ADMIN_PASSWORD_HASH ||
+    process.env.DEV_ADMIN_PASSWORD_SHA256;
+
+  if (!passwordHash && process.env.DEV_ADMIN_PASSWORD) {
+    passwordHash = crypto.createHash('sha256').update(process.env.DEV_ADMIN_PASSWORD).digest('hex');
+  }
+
+  if (devEmails.length === 0 || !passwordHash) return null;
+  const devEmail = email
+    ? devEmails.find((value) => value === email.toLowerCase().trim())
+    : devEmails[0];
+
+  if (!devEmail) return null;
+
+  return {
+    id: 'local-dev-admin',
+    email: devEmail,
+    full_name: 'Local Dev Admin',
+    role: 'super_admin',
+    password_hash: passwordHash,
+    is_active: true,
+  };
+}
+
 async function setAdminCookies(
   email: string,
   role: string,
@@ -89,6 +132,33 @@ export async function POST(req: Request) {
           { success: false, error: 'Invalid email format' },
           { status: 400 }
         );
+      }
+
+      const localDevAdmin = getLocalDevAdmin(email);
+      if (localDevAdmin) {
+        const passwordValid = localDevAdmin.password_hash.startsWith('$2')
+          ? await bcrypt.compare(password, localDevAdmin.password_hash)
+          : crypto.createHash('sha256').update(password).digest('hex') === localDevAdmin.password_hash;
+
+        if (!passwordValid) {
+          incrementRateLimit(`auth:${identifier}`);
+          return NextResponse.json(
+            { success: false, error: 'Invalid email or password' },
+            { status: 401 }
+          );
+        }
+
+        const sessionToken = generateSessionToken(localDevAdmin.email, sessionSecret!);
+        await setAdminCookies(localDevAdmin.email, localDevAdmin.role, sessionToken, isProduction);
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            email: localDevAdmin.email,
+            role: localDevAdmin.role,
+            fullName: localDevAdmin.full_name,
+          },
+        });
       }
 
       const { data: adminAccounts, error: dbError } = await supabase
@@ -195,7 +265,7 @@ export async function POST(req: Request) {
       const cookieStore = await cookies();
       const adminEmail = cookieStore.get('admin_email')?.value;
 
-      if (adminEmail) {
+      if (adminEmail && !getLocalDevAdmin(adminEmail)) {
         try {
           const { data: adminAccount } = await supabase
             .from('admin_accounts')
@@ -231,6 +301,15 @@ export async function POST(req: Request) {
 
       if (!session || !adminEmail) {
         return NextResponse.json({ authenticated: false }, { status: 200 });
+      }
+
+      const localDevAdmin = getLocalDevAdmin(adminEmail);
+      if (localDevAdmin) {
+        return NextResponse.json({
+          authenticated: true,
+          email: localDevAdmin.email,
+          role: adminRole || localDevAdmin.role,
+        });
       }
 
       try {

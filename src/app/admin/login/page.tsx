@@ -8,7 +8,11 @@ import Image from 'next/image';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(
+    process.env.NODE_ENV === 'development'
+      ? process.env.NEXT_PUBLIC_DEV_ADMIN_EMAIL || ''
+      : ''
+  );
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

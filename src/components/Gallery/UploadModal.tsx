@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { EventData } from '@/lib/gallery-utils';
 import { supabase } from '@/lib/supabase';
 import { GALLERY_MAX_PHOTO_SIZE, GALLERY_MAX_VIDEO_SIZE } from '@/config/constants';
+import SendMyPhotos from '@/components/SendMyPhotos';
 
 export interface UploadModalProps {
   isOpen: boolean;
@@ -615,6 +616,8 @@ export default function UploadModal({
               files={completedFiles}
               onViewInGallery={handleViewInGallery}
               onUploadMore={handleUploadMore}
+              eventSlug={eventSlug}
+              eventId={eventId}
             />
           )}
         </div>
@@ -859,10 +862,14 @@ function ConfirmationStep({
   files,
   onViewInGallery,
   onUploadMore,
+  eventSlug,
+  eventId,
 }: {
   files: UploadFile[];
   onViewInGallery: () => void;
   onUploadMore: () => void;
+  eventSlug?: string;
+  eventId?: string;
 }) {
   const imageCount = files.filter((f) => f.file.type.startsWith('image/')).length;
   const videoCount = files.filter((f) => f.file.type.startsWith('video/')).length;
@@ -888,6 +895,10 @@ function ConfirmationStep({
           {imageCount > 0 && videoCount > 0 && ` (${imageCount} ${imageCount === 1 ? 'photo' : 'photos'}, ${videoCount} ${videoCount === 1 ? 'video' : 'videos'})`}
         </p>
       </div>
+
+      {eventSlug && (
+        <SendMyPhotos eventSlug={eventSlug} eventId={eventId} className="text-left" />
+      )}
 
       {/* Thumbnails */}
       {files.length > 0 && (
