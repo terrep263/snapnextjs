@@ -1,5 +1,6 @@
 import { getServiceRoleClient } from '@/lib/supabase';
 import { verifyAdminSession } from '@/lib/admin-auth';
+import { sendUnrestrictedAccountEmail } from '@/lib/email';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
@@ -203,9 +204,17 @@ export async function POST(req: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
   const claimUrl = `${baseUrl}/claim/${token}`;
 
+  // Email the claim link straight to the account owner.
+  const emailed = await sendUnrestrictedAccountEmail({
+    to: email,
+    claimUrl,
+    label,
+  });
+
   return NextResponse.json({
     success: true,
-    data: { account: accountRow, claimUrl },
+    data: { account: accountRow, claimUrl, emailed },
+    ...(emailed ? {} : { warning: 'Account added and link created, but the email could not be sent. Copy the link and share it manually.' }),
   });
 }
 

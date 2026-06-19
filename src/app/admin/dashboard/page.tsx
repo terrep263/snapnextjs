@@ -183,7 +183,11 @@ export default function AdminDashboardPage() {
         toast.error(data.error || 'Failed to add account');
         return;
       }
-      toast.success(`Unrestricted account added: ${newAccountEmail.trim()}`);
+      toast.success(
+        data.data?.emailed
+          ? `Account added — claim link emailed to ${newAccountEmail.trim()}`
+          : `Account added: ${newAccountEmail.trim()}${data.warning ? ' (email not sent — copy link below)' : ''}`
+      );
       setNewAccountEmail('');
       setNewAccountLabel('');
       if (data.data?.claimUrl) setLastAccountLink(data.data.claimUrl);
