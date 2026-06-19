@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Upload, Zap, Lock, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import PhotoUploadMinimalist from '@/components/PhotoUploadMinimalist';
+import SendMyPhotos from '@/components/SendMyPhotos';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function UploadPage() {
@@ -15,6 +16,7 @@ export default function UploadPage() {
   
   const [eventData, setEventData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSendPrompt, setShowSendPrompt] = useState(false);
 
   // Load real event from database
   useEffect(() => {
@@ -62,8 +64,8 @@ export default function UploadPage() {
   };
 
   const handleUploadComplete = () => {
-    console.log('✅ Upload completed, redirecting to gallery');
-    router.push(`/e/${slug}`);
+    console.log('✅ Upload completed, prompting for return link');
+    setShowSendPrompt(true);
   };
 
   if (loading || !eventData) {
@@ -222,6 +224,25 @@ export default function UploadPage() {
           </div>
         </div>
       </div>
+      {showSendPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="text-center mb-4">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Upload complete!</h3>
+            </div>
+            <SendMyPhotos
+              eventSlug={slug}
+              eventId={eventData?.id}
+              onDone={() => router.push(`/e/${slug}`)}
+            />
+          </div>
+        </div>
+      )}
     </ErrorBoundary>
   );
 }
