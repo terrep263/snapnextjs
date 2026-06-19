@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
           payment_type: 'magic_link',
           package: 'premium', // full features via getPackageType()
           feed_enabled: true,
-          watermark_enabled: false, // clean downloads
+          watermark_enabled: true, // keep SnapWorxx logo watermark (dlwatermark.png) on downloads
           max_photos: null, // no photo cap
           max_storage_bytes: null, // no storage cap
           expires_at: null, // never expires
