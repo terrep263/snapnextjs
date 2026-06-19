@@ -71,6 +71,13 @@ export default function AdminDashboardPage() {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [claimLinks, setClaimLinks] = useState<any[]>([]);
   const [claimLinksLoading, setClaimLinksLoading] = useState(false);
+  // Unrestricted (full-feature, no-limit) accounts — max 10
+  const [unrestrictedAccounts, setUnrestrictedAccounts] = useState<any[]>([]);
+  const [unrestrictedRemaining, setUnrestrictedRemaining] = useState<number>(10);
+  const [newAccountEmail, setNewAccountEmail] = useState('');
+  const [newAccountLabel, setNewAccountLabel] = useState('');
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [lastAccountLink, setLastAccountLink] = useState<string | null>(null);
   const [eventPageIndex, setEventPageIndex] = useState(0);
   const [eventSearch, setEventSearch] = useState('');
   const EVENTS_PER_PAGE = 20;
@@ -138,6 +145,83 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Load unrestricted accounts (allowlist of <=10 full-feature accounts)
+  const loadUnrestrictedAccounts = async () => {
+    try {
+      const res = await fetch('/api/admin/unrestricted-accounts', {
+        credentials: 'include',
+      });
+      const result = await res.json();
+      if (result.success) {
+        setUnrestrictedAccounts(result.data.accounts || []);
+        setUnrestrictedRemaining(result.data.remaining ?? 0);
+      }
+    } catch (err) {
+      console.error('Error loading unrestricted accounts:', err);
+    }
+  };
+
+  const handleAddUnrestrictedAccount = async () => {
+    if (!newAccountEmail.trim()) {
+      toast.error('Please enter an email');
+      return;
+    }
+    setIsAddingAccount(true);
+    setLastAccountLink(null);
+    try {
+      const res = await fetch('/api/admin/unrestricted-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: newAccountEmail.trim(),
+          label: newAccountLabel.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to add account');
+        return;
+      }
+      toast.success(
+        data.data?.emailed
+          ? `Account added — claim link emailed to ${newAccountEmail.trim()}`
+          : `Account added: ${newAccountEmail.trim()}${data.warning ? ' (email not sent — copy link below)' : ''}`
+      );
+      setNewAccountEmail('');
+      setNewAccountLabel('');
+      if (data.data?.claimUrl) setLastAccountLink(data.data.claimUrl);
+      loadUnrestrictedAccounts();
+    } catch (err) {
+      console.error('Error adding unrestricted account:', err);
+      toast.error('Server error');
+    } finally {
+      setIsAddingAccount(false);
+    }
+  };
+
+  const handleRevokeUnrestrictedAccount = async (email: string) => {
+    if (!window.confirm(`Revoke unrestricted access for ${email}? This frees a slot.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/admin/unrestricted-accounts?email=${encodeURIComponent(email)}`,
+        { method: 'DELETE', credentials: 'include' }
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to revoke account');
+        return;
+      }
+      toast.success(`Revoked ${email}`);
+      loadUnrestrictedAccounts();
+    } catch (err) {
+      console.error('Error revoking unrestricted account:', err);
+      toast.error('Server error');
+    }
+  };
+
   // Load data when authenticated
   useEffect(() => {
     if (authenticated) {
@@ -145,6 +229,7 @@ export default function AdminDashboardPage() {
       loadEvents().catch((err) => toast.error('Failed to load events'));
       loadBlockedEmails().catch((err) => toast.error('Failed to load blocked emails'));
       loadClaimLinks();
+      loadUnrestrictedAccounts();
     }
   }, [authenticated]);
 
@@ -459,6 +544,96 @@ export default function AdminDashboardPage() {
           </div>
         </div>
         
+        {/* Unrestricted Accounts Section */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <Users className="w-6 h-6 text-indigo-500" />
+            Unrestricted Accounts ({unrestrictedAccounts.length}/10)
+          </h2>
+          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl shadow-sm border-2 border-indigo-200 p-6">
+            <p className="text-gray-700 mb-1 font-medium">
+              Free, full-feature accounts with all limits lifted
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              {unrestrictedRemaining} of 10 slots remaining • Each account&apos;s events get premium features, no
+              watermark, and no photo/storage/expiry limits • Adding an account generates a claim link to share
+            </p>
+
+            <div className="flex flex-col md:flex-row gap-3 mb-4">
+              <TextInput
+                type="email"
+                value={newAccountEmail}
+                onChange={(e) => setNewAccountEmail(e.target.value)}
+                placeholder="owner@nonprofit.org"
+                className="flex-1"
+              />
+              <TextInput
+                type="text"
+                value={newAccountLabel}
+                onChange={(e) => setNewAccountLabel(e.target.value)}
+                placeholder="Label (optional, e.g. Acme Nonprofit)"
+                className="flex-1"
+              />
+              <Button
+                onClick={handleAddUnrestrictedAccount}
+                loading={isAddingAccount}
+                disabled={unrestrictedRemaining <= 0}
+                icon={<Gift className="w-4 h-4" />}
+              >
+                Add Account
+              </Button>
+            </div>
+
+            {unrestrictedRemaining <= 0 && (
+              <p className="text-sm text-amber-700 mb-4">
+                Hard cap reached (10/10). Revoke an account to free a slot.
+              </p>
+            )}
+
+            {lastAccountLink && (
+              <div className="mt-2 mb-4 p-4 bg-white rounded-lg border-2 border-indigo-300">
+                <p className="text-sm font-semibold text-gray-700 mb-2">✨ Claim link for the new account</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={lastAccountLink}
+                    readOnly
+                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm font-mono"
+                  />
+                  <Button onClick={() => handleCopyLink(lastAccountLink)} size="sm">
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {unrestrictedAccounts.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-indigo-200 space-y-2">
+                {unrestrictedAccounts.map((acct: any) => (
+                  <div
+                    key={acct.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-white border-indigo-100"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{acct.email}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {acct.label ? `${acct.label} • ` : ''}Added {new Date(acct.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => handleRevokeUnrestrictedAccount(acct.email)}
+                      variant="danger"
+                      size="sm"
+                    >
+                      Revoke
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Events Section */}
         <div id="event-log" className="mb-12 scroll-mt-24">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Event Log</h2>

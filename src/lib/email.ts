@@ -204,3 +204,93 @@ export async function sendGalleryLinkEmail(
     return { ok: false, error: 'Failed to send email' };
   }
 }
+
+export interface UnrestrictedAccountEmailParams {
+  to: string;
+  claimUrl: string;
+  label?: string | null;
+}
+
+function buildUnrestrictedAccountEmail(params: UnrestrictedAccountEmailParams): string {
+  const { claimUrl, label } = params;
+
+  return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;color:#333;">
+    <div style="max-width:600px;margin:0 auto;background:white;">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(to right,#4f46e5,#7C3AED);padding:30px;text-align:center;">
+        <img src="${BASE_URL}/purple%20logo/purplelogo.png" alt="SnapWorxx" width="80" style="margin-bottom:12px;display:block;margin-left:auto;margin-right:auto;">
+        <h1 style="margin:0;color:white;font-size:26px;font-weight:bold;">You've been given a SnapWorxx account</h1>
+        <p style="margin:8px 0 0 0;color:rgba(255,255,255,0.9);font-size:15px;">Full features, no limits${label ? ` — ${label}` : ''}</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding:32px 30px;">
+        <p style="font-size:16px;color:#1f2937;margin-top:0;">Hi there! You've been set up with a free, full-feature SnapWorxx account. Use the button below to create your event gallery — unlimited photos &amp; storage, bulk downloads, and no expiration date.</p>
+
+        <div style="border-left:4px solid #7C3AED;padding:16px 20px;margin:24px 0;background:#faf5ff;border-radius:0 8px 8px 0;">
+          <h3 style="margin:0 0 8px 0;color:#1f2937;font-size:17px;">🎟️ Create your event</h3>
+          <p style="margin:0 0 16px 0;color:#4b5563;font-size:14px;">Click to open your account and set up an event in under a minute.</p>
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="background:#7C3AED;border-radius:8px;">
+                <a href="${claimUrl}" style="display:inline-block;padding:14px 28px;color:white;text-decoration:none;font-weight:bold;font-size:16px;">Create My Event →</a>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:16px 0 0 0;color:#6b7280;font-size:13px;word-break:break-all;">Or paste this link into your browser:<br><a href="${claimUrl}" style="color:#7C3AED;">${claimUrl}</a></p>
+        </div>
+
+        <p style="margin:24px 0 0 0;color:#6b7280;font-size:13px;text-align:center;">Questions? Reply to this email and we'll help you out.</p>
+      </div>
+
+      <!-- Footer -->
+      <div style="text-align:center;padding:20px;background:#f9fafb;border-top:1px solid #e5e7eb;">
+        <p style="color:#6b7280;font-size:14px;margin:0;">© 2025 SnapWorxx. All rights reserved.</p>
+        <p style="color:#9ca3af;font-size:12px;margin:8px 0 0 0;">If you weren't expecting this, you can ignore this email.</p>
+      </div>
+
+    </div>
+  </body>
+</html>`;
+}
+
+/**
+ * Email an unrestricted-account claim link to the account owner.
+ * Returns true if the send succeeded, false otherwise (never throws).
+ */
+export async function sendUnrestrictedAccountEmail(
+  params: UnrestrictedAccountEmailParams
+): Promise<boolean> {
+  const { to, claimUrl } = params;
+
+  if (!to || !claimUrl) {
+    console.error('[Email] Missing recipient or claim link — skipping send');
+    return false;
+  }
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to,
+      subject: 'Your SnapWorxx account is ready',
+      html: buildUnrestrictedAccountEmail(params),
+    });
+
+    if (error) {
+      console.error('[Email] Resend error:', error);
+      return false;
+    }
+    console.log(`[Email] Unrestricted-account link sent to ${to} — ID: ${data?.id}`);
+    return true;
+  } catch (err) {
+    console.error('[Email] Failed to send:', err);
+    return false;
+  }
+}

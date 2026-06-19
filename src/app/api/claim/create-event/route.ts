@@ -104,7 +104,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Set event expiration to 30 days from creation
+    // Unlimited (unrestricted-account) links create full-feature, no-limit
+    // events owned by the account. For these we re-verify the account is still
+    // an active allowlist member before granting anything.
+    const isUnlimited = claimLink.unlimited === true;
+    const accountEmail: string | null = claimLink.account_email || null;
+
+    if (isUnlimited) {
+      if (!accountEmail) {
+        return NextResponse.json(
+          { success: false, error: 'Unlimited link is missing its account binding' },
+          { status: 400 }
+        );
+      }
+      const { data: account } = await supabase
+        .from('unrestricted_accounts')
+        .select('id, active')
+        .eq('email', accountEmail)
+        .maybeSingle();
+
+      if (!account?.active) {
+        return NextResponse.json(
+          { success: false, error: 'This unrestricted account is no longer active' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Set event expiration to 30 days from creation (restricted links only).
     const eventExpiresAt = new Date();
     eventExpiresAt.setDate(eventExpiresAt.getDate() + 30);
 
@@ -112,11 +139,29 @@ export async function POST(req: NextRequest) {
     const eventId = generateEventId();
     const eventSlug = generateSlug(eventName);
 
-    // Create free event with premium features
-    const { data: newEvent, error: createError } = await supabase
-      .from('events')
-      .insert([
-        {
+    // Build the event payload. Restricted claim links keep the historical
+    // freebie behaviour; unlimited links unlock everything and lift all caps
+    // via the existing gating (premium package + null limits + owner_email).
+    const eventInsert: Record<string, unknown> = isUnlimited
+      ? {
+          id: eventId,
+          name: eventName,
+          slug: eventSlug,
+          email: accountEmail,
+          owner_email: accountEmail, // real ownership -> owner gates (bulk download) pass
+          status: 'active',
+          is_free: true,
+          promo_type: 'UNLIMITED',
+          payment_type: 'magic_link',
+          package: 'premium', // full features via getPackageType()
+          feed_enabled: true,
+          watermark_enabled: true, // keep SnapWorxx logo watermark (dlwatermark.png) on downloads
+          max_photos: null, // no photo cap
+          max_storage_bytes: null, // no storage cap
+          expires_at: null, // never expires
+          created_at: new Date().toISOString(),
+        }
+      : {
           id: eventId,
           name: eventName,
           slug: eventSlug,
@@ -129,10 +174,12 @@ export async function POST(req: NextRequest) {
           feed_enabled: true, // Premium feature
           created_at: new Date().toISOString(),
           expires_at: eventExpiresAt.toISOString(), // Set event expiration
-          // Store event details in metadata if you have such columns
-          // Otherwise they'll be in the event name/slug
-        },
-      ])
+        };
+
+    // Create the event
+    const { data: newEvent, error: createError } = await supabase
+      .from('events')
+      .insert([eventInsert])
       .select()
       .single();
 
@@ -180,16 +227,18 @@ export async function POST(req: NextRequest) {
       // verified .com domain (NOT .app, which is unverified in Resend).
       const fromAddress =
         process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
-      const expirationDate = eventExpiresAt.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      const expirationDate = isUnlimited
+        ? 'No expiration'
+        : eventExpiresAt.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
 
       const { error: emailError } = await resend.emails.send({
         from: fromAddress,
-        to: emailAddress,
+        to: (isUnlimited && accountEmail) ? accountEmail : emailAddress,
         subject: `Your SnapWorxx Event: ${eventName}`,
         html: `
           <!DOCTYPE html>
@@ -267,12 +316,12 @@ export async function POST(req: NextRequest) {
                       <li>Beautiful gallery display</li>
                       <li>Download all photos as ZIP</li>
                       <li>QR code sharing</li>
-                      <li>30-day event duration</li>
+                      <li>${isUnlimited ? 'No expiration — your event stays active' : '30-day event duration'}</li>
                     </ul>
                   </div>
 
                   <p style="color: #6b7280; font-size: 14px; margin-top: 25px; padding: 15px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <strong>⏰ Note:</strong> Your event will remain active until ${expirationDate}. Make sure to download your photos before then!
+                    <strong>⏰ Note:</strong> ${isUnlimited ? 'Your event has no expiration date.' : `Your event will remain active until ${expirationDate}. Make sure to download your photos before then!`}
                   </p>
                 </div>
 

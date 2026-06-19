@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceRoleClient } from '@/lib/supabase';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -83,6 +83,7 @@ function getAffiliateWelcomeEmail(affiliate: any) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceRoleClient();
     const { name, email } = await request.json();
 
     if (!name || !email) {
