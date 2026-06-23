@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
   const [showCoverPhotoPicker, setShowCoverPhotoPicker] = useState(false);
+  const [showCustomization, setShowCustomization] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingEventName, setEditingEventName] = useState(false);
@@ -743,18 +744,7 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <div 
-            className="relative h-64 w-full bg-gradient-to-r from-purple-100 to-blue-100 border-2 border-dashed border-purple-300 hover:border-purple-400 transition-colors cursor-pointer group"
-            onClick={() => handleImageUpload('header')}
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-purple-600">
-              <svg className="w-16 h-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p className="text-lg font-semibold mb-2">Add Header Image</p>
-              <p className="text-sm text-purple-500">1920 x 256px recommended • Click to upload</p>
-            </div>
-          </div>
+          <div className="relative h-20 w-full bg-gradient-to-r from-purple-200 via-purple-100 to-blue-200" />
         )}
 
         {/* Navigation Bar */}
@@ -919,6 +909,24 @@ export default function Dashboard() {
           </div>
 
           <main className="space-y-8">
+            {/* QR Code & Link — the hero: the one thing a host needs to share */}
+            <div className="rounded-lg bg-white p-6 shadow-lg border-2 border-purple-200">
+              <h2 className="mb-2 flex items-center gap-2 text-xl font-bold text-gray-900">
+                <QrCode className="h-5 w-5 text-purple-600" />
+                Share this QR code
+              </h2>
+              <p className="mb-6 text-sm text-gray-600">
+                Guests scan it with their phone camera and upload photos — no app, no sign-up. That&apos;s the whole setup.
+              </p>
+              {eventUrl && (
+                <QRCodeGenerator
+                  url={eventUrl}
+                  eventName={eventData?.name}
+                  size={256}
+                />
+              )}
+            </div>
+
             {/* Event Details Section */}
             <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
               <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900">
@@ -1006,14 +1014,32 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Event Customization Section */}
+            {/* Event Customization Section — collapsed by default (optional branding) */}
             <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
-              <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              <button
+                type="button"
+                onClick={() => setShowCustomization((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Customize gallery
+                  <span className="text-sm font-normal text-gray-400">(optional)</span>
+                </span>
+                <svg
+                  className={`h-5 w-5 text-gray-400 transition-transform ${showCustomization ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
-                Event Customization
-              </h2>
+              </button>
+
+              {showCustomization && (
+              <div className="mt-6">
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Header Image Management */}
@@ -1211,19 +1237,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
-              <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-gray-900">
-                <QrCode className="h-5 w-5 text-purple-600" />
-                Event QR Code & Link
-              </h2>
-              {eventUrl && (
-                <QRCodeGenerator 
-                  url={eventUrl}
-                  eventName={eventData?.name}
-                  size={256}
-                />
+              </div>
               )}
             </div>
 
