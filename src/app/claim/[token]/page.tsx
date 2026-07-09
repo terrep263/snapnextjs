@@ -237,7 +237,7 @@ export default function ClaimEventPage() {
             </li>
             <li className="flex items-start gap-2">
               <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-              <span>30-day event duration</span>
+              <span>Gallery stays open 30 days after your event</span>
             </li>
           </ul>
         </div>

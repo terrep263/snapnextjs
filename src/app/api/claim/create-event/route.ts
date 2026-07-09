@@ -131,8 +131,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Set event expiration to 30 days from creation (restricted links only).
-    const eventExpiresAt = new Date();
+    // Event expiration: 30 days AFTER the event date (restricted links only).
+    // Guard against past/invalid dates so a stale date cannot create an
+    // already-expired gallery.
+    const parsedEventDate = new Date(eventDate);
+    const expiryBase =
+      !isNaN(parsedEventDate.getTime()) && parsedEventDate.getTime() > Date.now()
+        ? parsedEventDate
+        : new Date();
+    const eventExpiresAt = new Date(expiryBase);
     eventExpiresAt.setDate(eventExpiresAt.getDate() + 30);
 
     // Generate event details
@@ -170,7 +177,7 @@ export async function POST(req: NextRequest) {
           is_free: true, // Mark as free
           payment_type: 'magic_link', // Special payment type for magic link claims
           max_photos: 999999, // Unlimited
-          max_storage_bytes: 999999999, // ~1GB (unlimited for practical purposes)
+          max_storage_bytes: null, // no storage cap — matches the "Unlimited storage" promise
           feed_enabled: true, // Premium feature
           created_at: new Date().toISOString(),
           expires_at: eventExpiresAt.toISOString(), // Set event expiration
@@ -316,7 +323,7 @@ export async function POST(req: NextRequest) {
                       <li>Beautiful gallery display</li>
                       <li>Download all photos as ZIP</li>
                       <li>QR code sharing</li>
-                      <li>${isUnlimited ? 'No expiration — your event stays active' : '30-day event duration'}</li>
+                      <li>${isUnlimited ? 'No expiration — your event stays active' : 'Gallery stays open 30 days after your event'}</li>
                     </ul>
                   </div>
 
