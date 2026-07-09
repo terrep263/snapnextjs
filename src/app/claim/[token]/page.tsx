@@ -204,7 +204,7 @@ export default function ClaimEventPage() {
         {/* Subtitle */}
         <div className="text-center mb-8">
           <p className="text-lg text-gray-600 mb-2">
-            Create your event gallery with unlimited uploads and storage
+            Create your event gallery with unlimited uploads and 5 GB of storage
           </p>
           <p className="text-sm text-gray-500">
             All premium features included • No credit card required
