@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
           is_free: true, // Mark as free
           payment_type: 'magic_link', // Special payment type for magic link claims
           max_photos: 999999, // Unlimited
-          max_storage_bytes: null, // no storage cap — matches the "Unlimited storage" promise
+          max_storage_bytes: 5000000000, // 5 GB — fits a full season of photos + video
           feed_enabled: true, // Premium feature
           created_at: new Date().toISOString(),
           expires_at: eventExpiresAt.toISOString(), // Set event expiration
@@ -319,7 +319,7 @@ export async function POST(req: NextRequest) {
                     <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 16px;">✨ What's Included</h3>
                     <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 1.8;">
                       <li>Unlimited photo & video uploads</li>
-                      <li>Unlimited storage space</li>
+                      <li>5 GB of photo & video storage</li>
                       <li>Beautiful gallery display</li>
                       <li>Download all photos as ZIP</li>
                       <li>QR code sharing</li>

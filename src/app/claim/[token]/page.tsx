@@ -221,7 +221,7 @@ export default function ClaimEventPage() {
             </li>
             <li className="flex items-start gap-2">
               <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-              <span>Unlimited storage space</span>
+              <span>5 GB of photo & video storage</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
