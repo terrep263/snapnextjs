@@ -1,7 +1,5 @@
-import { Resend } from 'resend';
+import { sendMail } from './mailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
 
 export interface EventEmailParams {
@@ -100,7 +98,6 @@ function buildEventEmail(params: EventEmailParams): string {
 
 /**
  * Send event confirmation email.
- * Call this ONCE after payment is confirmed — from the webhook handler only.
  */
 export async function sendEventConfirmationEmail(params: EventEmailParams): Promise<void> {
   const { to, eventName } = params;
@@ -110,21 +107,16 @@ export async function sendEventConfirmationEmail(params: EventEmailParams): Prom
     return;
   }
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to,
-      subject: `Your SnapWorxx Event is Ready: ${eventName}`,
-      html: buildEventEmail(params),
-    });
+  const result = await sendMail({
+    to,
+    subject: `Your SnapWorxx Event is Ready: ${eventName}`,
+    html: buildEventEmail(params),
+  });
 
-    if (error) {
-      console.error('[Email] Resend error:', error);
-    } else {
-      console.log(`[Email] Sent successfully to ${to} — ID: ${data?.id}`);
-    }
-  } catch (err) {
-    console.error('[Email] Failed to send:', err);
+  if (!result.ok) {
+    console.error('[Email] Failed to send:', result.error);
+  } else {
+    console.log(`[Email] Sent successfully to ${to}`);
   }
 }
 
@@ -173,9 +165,7 @@ function buildGalleryLinkEmail(params: GalleryLinkEmailParams): string {
 }
 
 /**
- * Send a guest the gallery return link ("Where should we send your photos?").
- * Guest-facing — links only to the public gallery, never the owner dashboard.
- * Returns a result so callers can surface success/failure to the user.
+ * Send a guest the gallery return link.
  */
 export async function sendGalleryLinkEmail(
   params: GalleryLinkEmailParams
@@ -184,25 +174,19 @@ export async function sendGalleryLinkEmail(
 
   if (!to) return { ok: false, error: 'No recipient address' };
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to,
-      subject: `Your photos from ${eventName}`,
-      html: buildGalleryLinkEmail(params),
-    });
+  const result = await sendMail({
+    to,
+    subject: `Your photos from ${eventName}`,
+    html: buildGalleryLinkEmail(params),
+  });
 
-    if (error) {
-      console.error('[Email] Gallery-link Resend error:', error);
-      return { ok: false, error: 'Email provider rejected the request' };
-    }
-
-    console.log(`[Email] Gallery link sent to ${to} — ID: ${data?.id}`);
-    return { ok: true };
-  } catch (err) {
-    console.error('[Email] Gallery-link send failed:', err);
-    return { ok: false, error: 'Failed to send email' };
+  if (!result.ok) {
+    console.error('[Email] Gallery-link send error:', result.error);
+    return { ok: false, error: result.error || 'Failed to send email' };
   }
+
+  console.log(`[Email] Gallery link sent to ${to}`);
+  return { ok: true };
 }
 
 export interface UnrestrictedAccountEmailParams {
@@ -263,7 +247,6 @@ function buildUnrestrictedAccountEmail(params: UnrestrictedAccountEmailParams): 
 
 /**
  * Email an unrestricted-account claim link to the account owner.
- * Returns true if the send succeeded, false otherwise (never throws).
  */
 export async function sendUnrestrictedAccountEmail(
   params: UnrestrictedAccountEmailParams
@@ -275,22 +258,16 @@ export async function sendUnrestrictedAccountEmail(
     return false;
   }
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: FROM,
-      to,
-      subject: 'Your SnapWorxx account is ready',
-      html: buildUnrestrictedAccountEmail(params),
-    });
+  const result = await sendMail({
+    to,
+    subject: 'Your SnapWorxx account is ready',
+    html: buildUnrestrictedAccountEmail(params),
+  });
 
-    if (error) {
-      console.error('[Email] Resend error:', error);
-      return false;
-    }
-    console.log(`[Email] Unrestricted-account link sent to ${to} — ID: ${data?.id}`);
-    return true;
-  } catch (err) {
-    console.error('[Email] Failed to send:', err);
+  if (!result.ok) {
+    console.error('[Email] Unrestricted-account send failed:', result.error);
     return false;
   }
+  console.log(`[Email] Unrestricted-account link sent to ${to}`);
+  return true;
 }
