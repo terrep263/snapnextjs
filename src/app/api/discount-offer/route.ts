@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendMail } from '@/lib/mailer';
 
 // Generate a random discount code
 function generateDiscountCode(): string {
@@ -59,23 +56,6 @@ function getDiscountEmailTemplate(discountCode: string, percentOff: number) {
         </ol>
       </div>
 
-      <!-- Features -->
-      <div style="margin-bottom: 30px;">
-        <h3 style="color: #1f2937; margin-bottom: 20px; font-size: 18px;">What Makes SnapWorxx Special?</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 15px;">
-          <div style="flex: 1; min-width: 250px; background-color: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
-            <div style="font-size: 24px; margin-bottom: 10px;">📱</div>
-            <h4 style="color: #1f2937; margin: 0 0 8px 0; font-size: 16px;">Mobile Optimized</h4>
-            <p style="color: #6b7280; margin: 0; font-size: 14px;">Perfect for smartphone videos and photos</p>
-          </div>
-          <div style="flex: 1; min-width: 250px; background-color: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
-            <div style="font-size: 24px; margin-bottom: 10px;">⚡</div>
-            <h4 style="color: #1f2937; margin: 0 0 8px 0; font-size: 16px;">Lightning Fast</h4>
-            <p style="color: #6b7280; margin: 0; font-size: 14px;">Quick uploads with smart compression</p>
-          </div>
-        </div>
-      </div>
-
       <!-- CTA Button -->
       <div style="text-align: center; margin-bottom: 30px;">
         <a href="https://snapworxx.com/create" 
@@ -120,10 +100,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // For now, use a simplified approach until database tables are set up
-    // In production, this would check against the discount_requests table
     console.log(`Discount request from: ${email}`);
-    
+
     // Use hardcoded discount offer for now
     const discountOffer = {
       percent_off: 30,
@@ -132,11 +110,8 @@ export async function POST(request: Request) {
 
     // Generate a unique discount code for this user
     let discountCode = generateDiscountCode();
-    let codeExists = false;
     let attempts = 0;
 
-    // For now, just generate a unique code without database checking
-    // In production, this would check against the discount_requests table
     while (attempts < 5) {
       // For email-generated codes, use WELCOME prefix
       discountCode = 'WELCOME' + Math.floor(Math.random() * 9000 + 1000);
@@ -144,19 +119,21 @@ export async function POST(request: Request) {
       break; // For now, assume it's unique
     }
 
-    // Log the request (for now just console log, later save to database)
     console.log(`Generated discount code ${discountCode} for ${email}`);
 
     // Send email with discount code
     try {
       const emailContent = getDiscountEmailTemplate(discountCode, discountOffer.percent_off);
 
-      await resend.emails.send({
-        from: 'SnapWorxx <noreply@snapworxx.com>',
-        to: [email],
+      const emailResult = await sendMail({
+        to: email,
         subject: `🎉 Your ${discountOffer.percent_off}% SnapWorxx Discount Code: ${discountCode}`,
         html: emailContent,
       });
+
+      if (!emailResult.ok) {
+        throw new Error(emailResult.error || 'MailerCloud send failed');
+      }
 
       return NextResponse.json({
         success: true,
@@ -167,7 +144,7 @@ export async function POST(request: Request) {
 
     } catch (emailError) {
       console.error('Error sending discount email:', emailError);
-      
+
       // Even if email fails, we've logged the request, so let user know
       return NextResponse.json(
         { error: 'Your discount code was generated but there was an issue sending the email. Please contact support with this code: ' + discountCode },

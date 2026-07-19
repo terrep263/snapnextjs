@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import { sendMail } from '@/lib/mailer';
 
 // Email validation helper
 function isValidEmail(email: string): boolean {
@@ -83,13 +83,10 @@ export async function POST(request: NextRequest) {
     console.log('📧 Sending email to:', to);
     console.log('📧 Event name:', sanitizedEventName);
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    // Send email with retry logic
-    const { data, error } = await retryOperation(
+    // Send email with retry logic (via MailerCloud)
+    await retryOperation(
       async () => {
-        return await resend.emails.send({
-          from: 'SnapWorxx <noreply@snapworxx.com>',
+        const result = await sendMail({
           to,
           subject: `Your SnapWorxx Event: ${sanitizedEventName}`,
           html: `
@@ -141,21 +138,17 @@ export async function POST(request: NextRequest) {
             </html>
           `,
         });
+        if (!result.ok) {
+          throw new Error(result.error || 'MailerCloud send failed');
+        }
+        return result;
       },
       3, // Max 3 retries
       1000 // 1 second base delay
     );
 
-    if (error) {
-      console.error('❌ Resend error:', error.message || error);
-      return NextResponse.json({
-        error: 'Failed to send email',
-        details: error.message || 'Unknown Resend error'
-      }, { status: 500 });
-    }
-
-    console.log('✅ Email sent successfully, message ID:', data?.id);
-    return NextResponse.json({ success: true, messageId: data?.id });
+    console.log('✅ Email sent successfully via MailerCloud');
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error('❌ Error sending email:', error instanceof Error ? error.message : error);

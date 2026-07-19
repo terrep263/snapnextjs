@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendMail } from '@/lib/mailer';
 
 // Generate unique affiliate code
 function generateAffiliateCode(name: string): string {
@@ -153,9 +151,9 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      await resend.emails.send({
-        from: 'SnapWorxx Affiliates <affiliates@snapworxx.com>',
+      await sendMail({
         to: email,
+        fromName: 'SnapWorxx Affiliates',
         subject: `🎉 Welcome to SnapWorxx Affiliates - Your code: ${referralCode}`,
         html: getAffiliateWelcomeEmail(affiliate),
       });

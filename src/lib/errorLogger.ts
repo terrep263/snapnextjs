@@ -3,12 +3,12 @@
  * Centralized error logging system for Sprint 1
  *
  * In addition to persisting errors to the error_logs table, high-severity
- * events trigger an admin notification email via Resend so that silent route
- * failures surface to the operator instead of disappearing into the logs.
+ * events trigger an admin notification email via MailerCloud so that silent
+ * route failures surface to the operator instead of disappearing into the logs.
  */
 
 import { getServiceRoleClient } from './supabase';
-import { Resend } from 'resend';
+import { sendMail } from './mailer';
 
 interface ErrorLogParams {
   errorType: string;
@@ -34,17 +34,14 @@ const lastAlertAt = new Map<string, number>();
  */
 async function sendAdminAlert(params: ErrorLogParams): Promise<void> {
   try {
-    const apiKey = process.env.RESEND_API_KEY;
     // Recipient is configurable; falls back to the operator address.
     const to =
       process.env.SNAPWORXX_ALERT_EMAIL ||
       process.env.ADMIN_ALERT_EMAIL ||
       'terre@dplkfactory.com';
-    const from =
-      process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
 
-    if (!apiKey) {
-      console.warn('Admin alert skipped: RESEND_API_KEY not configured');
+    if (!process.env.MAILERCLOUD_API_KEY) {
+      console.warn('Admin alert skipped: MAILERCLOUD_API_KEY not configured');
       return;
     }
 
@@ -56,7 +53,6 @@ async function sendAdminAlert(params: ErrorLogParams): Promise<void> {
     }
     lastAlertAt.set(params.errorType, now);
 
-    const resend = new Resend(apiKey);
     const env = process.env.NODE_ENV || 'unknown';
     const when = new Date().toISOString();
 
@@ -73,8 +69,7 @@ async function sendAdminAlert(params: ErrorLogParams): Promise<void> {
       ? safe(params.stackTrace.slice(0, 1500))
       : '(none)';
 
-    await resend.emails.send({
-      from,
+    await sendMail({
       to,
       subject: `🚨 SnapWorxx ${params.severity?.toUpperCase()} error: ${params.errorType}`,
       html: `
