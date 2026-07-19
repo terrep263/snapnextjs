@@ -1,7 +1,7 @@
 import { getServiceRoleClient } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { Resend } from 'resend';
+import { sendMail } from '@/lib/mailer';
 
 /**
  * Generates event ID
@@ -26,25 +26,6 @@ function generateSlug(eventName: string): string {
 /**
  * Public endpoint to create a free event from a claimed token
  * POST /api/claim/create-event
- *
- * Request body:
- * {
- *   token: string,
- *   eventName: string,
- *   eventDate: string,
- *   location?: string,
- *   yourName: string,
- *   emailAddress: string
- * }
- *
- * Response:
- * {
- *   success: true,
- *   eventId: string,
- *   eventSlug: string,
- *   dashboardUrl: string,
- *   galleryUrl: string
- * }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -219,14 +200,8 @@ export async function POST(req: NextRequest) {
     const galleryUrl = `${baseUrl}/e/${eventSlug}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(galleryUrl)}`;
 
-    // Send confirmation email with QR code
+    // Send confirmation email with QR code via MailerCloud
     try {
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      // Use the verified sending domain. RESEND_FROM_EMAIL is set to
-      // noreply@snapworxx.com in production; the fallback also uses the
-      // verified .com domain (NOT .app, which is unverified in Resend).
-      const fromAddress =
-        process.env.RESEND_FROM_EMAIL || 'SnapWorxx <noreply@snapworxx.com>';
       const expirationDate = isUnlimited
         ? 'No expiration'
         : eventExpiresAt.toLocaleDateString('en-US', {
@@ -236,8 +211,7 @@ export async function POST(req: NextRequest) {
             day: 'numeric'
           });
 
-      const { error: emailError } = await resend.emails.send({
-        from: fromAddress,
+      const emailResult = await sendMail({
         to: (isUnlimited && accountEmail) ? accountEmail : emailAddress,
         subject: `Your SnapWorxx Event: ${eventName}`,
         html: `
@@ -337,8 +311,8 @@ export async function POST(req: NextRequest) {
         `,
       });
 
-      if (emailError) {
-        console.error('❌ Failed to send confirmation email:', emailError);
+      if (!emailResult.ok) {
+        console.error('❌ Failed to send confirmation email:', emailResult.error);
       } else {
         console.log(`📧 Confirmation email sent to ${emailAddress}`);
       }
