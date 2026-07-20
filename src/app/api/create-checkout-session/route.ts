@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
       emailAddress,
       yourName,
       package: selectedPackage,
-      price,
       promoCodeId,
       affiliateId,
     } = await request.json();
@@ -61,7 +60,8 @@ export async function POST(request: NextRequest) {
     // Prices sourced from environment variables — never hardcoded
     const premiumPriceCents = parseInt(process.env.STRIPE_PRICE_PREMIUM || '4900', 10);
     const basicPriceCents = parseInt(process.env.STRIPE_PRICE_BASIC || '2900', 10);
-    const packagePrice = price || (selectedPackage === 'premium' ? premiumPriceCents : basicPriceCents);
+    // Price is derived server-side from the selected package only — never trust a client-supplied amount.
+    const packagePrice = selectedPackage === 'premium' ? premiumPriceCents : basicPriceCents;
 
     // Stripe metadata MUST include event_id — both on session and on payment_intent
     const eventMetadata = {
