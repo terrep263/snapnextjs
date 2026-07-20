@@ -3,8 +3,6 @@
  * Helper functions for moderation actions and permissions
  */
 
-import { NextRequest } from 'next/server';
-
 export type ModerationAction = 
   | 'remove' 
   | 'flag' 
@@ -20,23 +18,6 @@ export interface ModerationPermission {
   canDownloadOriginal: boolean;
   canHide: boolean;
   canUnhide: boolean;
-}
-
-/**
- * Get user email from request (for event owners)
- */
-export function getUserEmail(request: NextRequest): string | null {
-  const cookieHeader = request.headers.get('cookie');
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ').reduce((acc, cookie) => {
-      const [key, value] = cookie.split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-    
-    return cookies.userEmail || null;
-  }
-  return null;
 }
 
 /**
