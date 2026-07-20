@@ -2,6 +2,7 @@ import { getServiceRoleClient } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sendMail } from '@/lib/mailer';
+import { setHostCookie } from '@/lib/host-auth';
 
 /**
  * Generates event ID
@@ -220,6 +221,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Token was already claimed atomically above (before event creation).
+
+    // Mint a signed host session so the creator is a verified owner going forward.
+    try {
+      await setHostCookie(
+        (isUnlimited && accountEmail) ? accountEmail : emailAddress,
+        process.env.NODE_ENV === 'production'
+      );
+    } catch (e) {
+      console.error('Failed to set host session:', e);
+    }
 
     console.log(`✅ Free event created from magic link: ${eventId} (${eventSlug}) for ${emailAddress}`);
 
