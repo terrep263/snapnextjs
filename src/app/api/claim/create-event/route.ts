@@ -85,6 +85,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Enforce link expiry (safety net; admin links default to a 60-day expiry).
+    if (claimLink.expires_at && new Date(claimLink.expires_at) <= new Date()) {
+      return NextResponse.json(
+        { success: false, error: 'This claim link has expired' },
+        { status: 410 }
+      );
+    }
+
     // Unlimited (unrestricted-account) links create full-feature, no-limit
     // events owned by the account. For these we re-verify the account is still
     // an active allowlist member before granting anything.
@@ -119,6 +127,35 @@ export async function POST(req: NextRequest) {
     // Generate event details
     const eventId = generateEventId();
     const eventSlug = generateSlug(eventName);
+
+    // Atomically claim the token BEFORE creating the event. The conditional
+    // update (claimed=false guard) guarantees two concurrent requests can never
+    // both succeed — the loser gets zero affected rows and a 409.
+    const { data: claimedRows, error: claimLockError } = await supabase
+      .from('free_event_claims')
+      .update({
+        claimed: true,
+        claimed_at: new Date().toISOString(),
+        event_id: eventId,
+      })
+      .eq('token', token)
+      .eq('claimed', false)
+      .select('token');
+
+    if (claimLockError) {
+      console.error('Error claiming token:', claimLockError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to claim token' },
+        { status: 500 }
+      );
+    }
+
+    if (!claimedRows || claimedRows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Token already claimed' },
+        { status: 409 }
+      );
+    }
 
     // Build the event payload. Restricted claim links keep the historical
     // freebie behaviour; unlimited links unlock everything and lift all caps
@@ -166,6 +203,11 @@ export async function POST(req: NextRequest) {
 
     if (createError) {
       console.error('Error creating free event:', createError);
+      // Roll back the claim so a genuine failure doesn't permanently burn the token.
+      await supabase
+        .from('free_event_claims')
+        .update({ claimed: false, claimed_at: null, event_id: null })
+        .eq('token', token);
       return NextResponse.json(
         {
           success: false,
@@ -177,20 +219,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Mark token as claimed
-    const { error: claimError } = await supabase
-      .from('free_event_claims')
-      .update({
-        claimed: true,
-        claimed_at: new Date().toISOString(),
-        event_id: eventId,
-      })
-      .eq('token', token);
-
-    if (claimError) {
-      console.error('Error marking token as claimed:', claimError);
-      // Don't fail - event is created, just log the error
-    }
+    // Token was already claimed atomically above (before event creation).
 
     console.log(`✅ Free event created from magic link: ${eventId} (${eventSlug}) for ${emailAddress}`);
 
