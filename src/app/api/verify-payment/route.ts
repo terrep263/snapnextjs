@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getServiceRoleClient } from '@/lib/supabase';
+import { setHostCookie } from '@/lib/host-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +66,15 @@ export async function POST(request: NextRequest) {
       }
 
       event.status = 'active';
+    }
+
+    // Mint a signed host session for the verified buyer.
+    if (event.owner_email) {
+      try {
+        await setHostCookie(event.owner_email, process.env.NODE_ENV === 'production');
+      } catch (e) {
+        console.error('Failed to set host session:', e);
+      }
     }
 
     return NextResponse.json({
