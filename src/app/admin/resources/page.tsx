@@ -59,7 +59,7 @@ export default function AdminResourcesPage() {
         {
           url: '/admin/dashboard#event-log',
           label: 'Event Log (All Events)',
-          description: 'Browse and search every event. Click Manage on a row to open that event\u2019s dashboard as the owner \u2014 use this for customer support (QR re-issue, photo recovery, etc.).',
+          description: 'Browse and search every event. Click Manage on a row to open that event’s dashboard as the owner — use this for customer support (QR re-issue, photo recovery, etc.).',
         },
       ],
     },
@@ -77,11 +77,6 @@ export default function AdminResourcesPage() {
           url: '/affiliate/dashboard',
           label: 'Affiliate Dashboard',
           description: 'View affiliate earnings and referrals',
-        },
-        {
-          url: '/promo/free-basic',
-          label: 'Free Promo Event',
-          description: 'Create free promotional event',
         },
       ],
     },
