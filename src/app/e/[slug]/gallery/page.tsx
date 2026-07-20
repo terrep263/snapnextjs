@@ -23,6 +23,9 @@ export default function GalleryPage() {
   const [totalPhotos, setTotalPhotos] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  // When an owner/admin turns this on, the gallery is fetched without the
+  // owner flag so it shows exactly what a guest sees (hidden photos removed).
+  const [viewAsGuest, setViewAsGuest] = useState(false);
 
   // Load event data
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function GalleryPage() {
       loadPhotos();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id, currentPage, isAdmin, isOwner]);
+  }, [event?.id, currentPage, isAdmin, isOwner, viewAsGuest]);
 
   // Load all photos for lightbox on first page load
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function GalleryPage() {
       loadAllPhotosForLightbox();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event?.id, currentPage, totalPhotos, isAdmin, isOwner]);
+  }, [event?.id, currentPage, totalPhotos, isAdmin, isOwner, viewAsGuest]);
 
   const loadAllPhotosForLightbox = async () => {
     if (!event?.id) return;
@@ -56,7 +59,7 @@ export default function GalleryPage() {
       // Fetch all photos (no pagination) for lightbox navigation.
       // Only owners/admins may include unapproved (hidden) photos; guests
       // must never receive them, so hiding a photo actually hides it.
-      const includeUnapproved = isOwner || isAdmin;
+      const includeUnapproved = (isOwner || isAdmin) && !viewAsGuest;
       const response = await fetch(
         `/api/events/${event.id}/gallery?limit=1000&page=1${includeUnapproved ? '&includeUnapproved=true' : ''}`
       );
@@ -245,7 +248,7 @@ export default function GalleryPage() {
       // Use the existing gallery API endpoint with pagination.
       // Only owners/admins may include unapproved (hidden) photos; guests
       // must never receive them, so hiding a photo actually hides it.
-      const includeUnapproved = isOwner || isAdmin;
+      const includeUnapproved = (isOwner || isAdmin) && !viewAsGuest;
       const response = await fetch(
         `/api/events/${event.id}/gallery?page=${currentPage}&limit=50${includeUnapproved ? '&includeUnapproved=true' : ''}`
       );
@@ -316,18 +319,47 @@ export default function GalleryPage() {
     );
   }
 
+  const canPreview = isOwner || isAdmin;
+
   return (
-    <GalleryContainer
-      event={event}
-      photos={photos}
-      allPhotos={allPhotos.length > 0 ? allPhotos : photos} // Use all photos for lightbox
-      loading={loading}
-      error={error}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      onPageChange={setCurrentPage}
-      isAdmin={isAdmin}
-      isOwner={isOwner}
-    />
+    <>
+      {canPreview && (
+        <div className="sticky top-0 z-40 border-b border-purple-100 bg-purple-50/95 backdrop-blur-sm">
+          <div className="container mx-auto flex items-center justify-between gap-3 px-4 py-2.5">
+            <span className="text-sm text-gray-700">
+              {viewAsGuest
+                ? 'Previewing the public view — hidden photos are not shown.'
+                : 'You are viewing as the host (you can see hidden photos).'}
+            </span>
+            <button
+              onClick={() => setViewAsGuest((v) => !v)}
+              className={`inline-flex flex-shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                viewAsGuest
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'border border-purple-300 text-purple-700 hover:bg-purple-100'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {viewAsGuest ? 'Exit guest preview' : 'View as guest'}
+            </button>
+          </div>
+        </div>
+      )}
+      <GalleryContainer
+        event={event}
+        photos={photos}
+        allPhotos={allPhotos.length > 0 ? allPhotos : photos} // Use all photos for lightbox
+        loading={loading}
+        error={error}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        isAdmin={isAdmin}
+        isOwner={isOwner}
+      />
+    </>
   );
 }
