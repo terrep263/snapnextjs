@@ -81,11 +81,18 @@ export default function PhotoManager() {
       const isOwner =
         !!userEmail && ownerEmails.includes(userEmail.toLowerCase());
 
-      // Mirror userEmail into a cookie for the API permission checks.
-      if (userEmail && typeof document !== 'undefined') {
-        document.cookie = `userEmail=${encodeURIComponent(
-          userEmail
-        )}; path=/; max-age=86400; SameSite=Lax`;
+      // Owner recognised locally -> mint a signed host session so the
+      // moderation/delete APIs (which now require it) authorize this browser.
+      if (isOwner && userEmail) {
+        try {
+          await fetch('/api/host/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ eventId: eventData?.id || eventId, email: userEmail }),
+          });
+        } catch {
+          /* non-fatal */
+        }
       }
 
       // Admins get support access to ANY event, verified server-side via the
@@ -168,10 +175,16 @@ export default function PhotoManager() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('userEmail', confirmEmail.trim());
       }
-      if (typeof document !== 'undefined') {
-        document.cookie = `userEmail=${encodeURIComponent(
-          confirmEmail.trim()
-        )}; path=/; max-age=86400; SameSite=Lax`;
+      // Mint the signed, server-verified host session (the identity the
+      // moderation/delete APIs now require).
+      try {
+        await fetch('/api/host/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: event?.id || eventId, email: confirmEmail.trim() }),
+        });
+      } catch {
+        /* non-fatal */
       }
       setAuthorized(true);
       await fetchPhotos(event?.id || eventId);

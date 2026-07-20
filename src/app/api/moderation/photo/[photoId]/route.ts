@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { getUserEmail, ModerationAction } from '@/lib/moderation-utils';
+import { ModerationAction } from '@/lib/moderation-utils';
 import { verifyAdminSession } from '@/lib/admin-auth';
 import { verifyHostSession } from '@/lib/host-auth';
 import ErrorLogger from '@/lib/errorLogger';
@@ -68,16 +68,12 @@ export async function POST(
       );
     }
 
-    // Check permissions
+    // Permissions: admin via signed admin session, owner via signed host session.
     const session = await verifyAdminSession();
     const isAdmin = !!session?.authenticated;
     const adminEmail = session?.email || null;
     const host = await verifyHostSession(event.id);
-    const userEmail = getUserEmail(request);
-    const isOwner = !!host || (userEmail && (
-      event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
-      event.owner_id === userEmail
-    ));
+    const isOwner = !!host;
 
     // Verify permissions based on action
     if (action === 'remove' || action === 'flag' || action === 'restore' || action === 'download_original') {
@@ -143,7 +139,7 @@ export async function POST(
     }
 
     // Log moderation action
-    const actorEmail = isAdmin ? adminEmail : userEmail;
+    const actorEmail = isAdmin ? adminEmail : (host?.email || null);
     const actorType = isAdmin ? 'admin' : 'owner';
 
     await ErrorLogger.log({

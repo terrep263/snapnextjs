@@ -3,6 +3,8 @@ import { getServiceRoleClient } from '@/lib/supabase';
 import { createBulkDownloadJob, processBulkDownloadJob } from '@/lib/bulk-download-job';
 import ErrorLogger from '@/lib/errorLogger';
 import { getPackageType } from '@/lib/gallery-utils';
+import { verifyHostSession } from '@/lib/host-auth';
+import { verifyAdminSession } from '@/lib/admin-auth';
 
 // Force Node.js runtime for archiver compatibility
 export const runtime = 'nodejs';
@@ -23,16 +25,6 @@ export async function POST(request: NextRequest) {
     if (!eventId) {
       return NextResponse.json(
         { success: false, error: 'Event ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Get user email from request body or header
-    const userEmail = body.userEmail || request.headers.get('x-user-email');
-    
-    if (!userEmail) {
-      return NextResponse.json(
-        { success: false, error: 'User email is required' },
         { status: 400 }
       );
     }
@@ -64,20 +56,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user is the owner
-    const isOwner = 
-      event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
-      event.owner_id === userEmail;
+    // Authorize via the signed host (owner) session for this event, or an admin.
+    const host = await verifyHostSession(eventId);
+    const adminSession = await verifyAdminSession();
+    const isAdmin = !!adminSession?.authenticated;
 
-    if (!isOwner) {
+    if (!host && !isAdmin) {
       return NextResponse.json(
-        { success: false, error: 'Only the event owner can download all photos' },
+        { success: false, error: 'Only the event owner or an admin can download all photos' },
         { status: 403 }
       );
     }
 
+    const jobEmail = host?.email || adminSession?.email || event.owner_email || 'owner';
+
     // Create bulk download job
-    const job = createBulkDownloadJob(eventId, userEmail, userEmail);
+    const job = createBulkDownloadJob(eventId, jobEmail, jobEmail);
 
     // Log audit action
     await ErrorLogger.log({
@@ -86,7 +80,7 @@ export async function POST(request: NextRequest) {
       requestData: {
         eventId,
         eventName: event.name,
-        userEmail,
+        userEmail: jobEmail,
         jobId: job.id,
       },
       severity: 'info',
@@ -137,4 +131,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
