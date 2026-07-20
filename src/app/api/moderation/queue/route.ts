@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { isAdminRequest } from '@/lib/moderation-utils';
+import { verifyAdminSession } from '@/lib/admin-auth';
 
 /**
  * GET /api/moderation/queue
@@ -11,7 +11,8 @@ import { isAdminRequest } from '@/lib/moderation-utils';
 export async function GET(request: NextRequest) {
   try {
     // Verify admin access
-    if (!isAdminRequest(request)) {
+    const session = await verifyAdminSession();
+    if (!session?.authenticated) {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -101,4 +102,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

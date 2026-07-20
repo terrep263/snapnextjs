@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { isAdminRequest, getUserEmail } from '@/lib/moderation-utils';
+import { getUserEmail } from '@/lib/moderation-utils';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -179,7 +180,8 @@ export async function DELETE(
 
     // Permission check: admin OR the event owner (cookie-based identity,
     // consistent with the moderation route).
-    const isAdmin = isAdminRequest(request);
+    const session = await verifyAdminSession();
+    const isAdmin = !!session?.authenticated;
     const userEmail = getUserEmail(request);
     const isOwner =
       !!userEmail &&
