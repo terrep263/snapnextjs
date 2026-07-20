@@ -1,4 +1,6 @@
 import { getServiceRoleClient } from '@/lib/supabase';
+import { verifyAdminSession } from '@/lib/admin-auth';
+import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 function hashPassword(password: string): string {
@@ -7,24 +9,30 @@ function hashPassword(password: string): string {
 
 export async function POST(req: Request) {
   try {
+    // Only an authenticated super_admin may create admin accounts.
+    const session = await verifyAdminSession();
+    if (!session?.authenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (session.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { email, password, fullName, role } = body;
 
     if (!email || !password || !fullName || !role) {
       return new Response(JSON.stringify({ error: 'All fields required' }), { status: 400 });
     }
-
     if (password.length < 12) {
       return new Response(JSON.stringify({ error: 'Password must be at least 12 characters' }), { status: 400 });
     }
-
     if (!['admin', 'super_admin'].includes(role)) {
       return new Response(JSON.stringify({ error: 'Invalid role' }), { status: 400 });
     }
 
     const supabase = getServiceRoleClient();
 
-    // Check if email already exists
     const { data: existingEmail } = await supabase
       .from('admin_accounts')
       .select('id')
@@ -34,21 +42,11 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Email already in use' }), { status: 409 });
     }
 
-    // Hash password
     const passwordHash = hashPassword(password);
 
-    // Create admin account
     const { data: newAdmin, error: createError } = await supabase
       .from('admin_accounts')
-      .insert([
-        {
-          email,
-          password_hash: passwordHash,
-          full_name: fullName,
-          role,
-          is_active: true,
-        },
-      ])
+      .insert([{ email, password_hash: passwordHash, full_name: fullName, role, is_active: true }])
       .select()
       .single();
 
@@ -57,16 +55,13 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: 'Failed to create admin account' }), { status: 500 });
     }
 
-    // Log the action
-    await supabase.from('admin_audit_logs').insert([
-      {
-        admin_id: newAdmin.id,
-        action: 'admin_account_created',
-        resource_type: 'admin_account',
-        resource_id: newAdmin.id,
-        details: { email, full_name: fullName, role },
-      },
-    ]);
+    await supabase.from('admin_audit_logs').insert([{
+      admin_id: session.adminId,
+      action: 'admin_account_created',
+      resource_type: 'admin_account',
+      resource_id: newAdmin.id,
+      details: { email, full_name: fullName, role },
+    }]);
 
     return new Response(JSON.stringify({ success: true, admin: newAdmin }), { status: 200 });
   } catch (err) {
