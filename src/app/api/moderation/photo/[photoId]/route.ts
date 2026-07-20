@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { getUserEmail, ModerationAction } from '@/lib/moderation-utils';
 import { verifyAdminSession } from '@/lib/admin-auth';
+import { verifyHostSession } from '@/lib/host-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -71,11 +72,12 @@ export async function POST(
     const session = await verifyAdminSession();
     const isAdmin = !!session?.authenticated;
     const adminEmail = session?.email || null;
+    const host = await verifyHostSession(event.id);
     const userEmail = getUserEmail(request);
-    const isOwner = userEmail && (
+    const isOwner = !!host || (userEmail && (
       event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
       event.owner_id === userEmail
-    );
+    ));
 
     // Verify permissions based on action
     if (action === 'remove' || action === 'flag' || action === 'restore' || action === 'download_original') {
