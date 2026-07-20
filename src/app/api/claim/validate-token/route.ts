@@ -59,13 +59,25 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Token is valid (no expiration check)
+    // Check expiration
+    if (claimLink.expires_at && new Date(claimLink.expires_at) <= new Date()) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          valid: false,
+          reason: 'expired',
+          expiresAt: claimLink.expires_at,
+        },
+      });
+    }
+
+    // Token is valid
     return NextResponse.json({
       success: true,
       data: {
         valid: true,
         token: claimLink.token,
-        expiresAt: null,
+        expiresAt: claimLink.expires_at || null,
       },
     });
   } catch (err) {
@@ -137,8 +149,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Mark as claimed
-    const { error: updateError } = await supabase
+    // Mark as claimed (atomic: only if still unclaimed)
+    const { data: updatedRows, error: updateError } = await supabase
       .from('free_event_claims')
       .update({
         claimed: true,
@@ -146,13 +158,22 @@ export async function POST(req: NextRequest) {
         claimed_by_user_id: userId || null,
         event_id: eventId,
       })
-      .eq('token', token);
+      .eq('token', token)
+      .eq('claimed', false)
+      .select('token');
 
     if (updateError) {
       console.error('Error marking token as claimed:', updateError);
       return NextResponse.json(
         { success: false, error: 'Failed to mark token as claimed' },
         { status: 500 }
+      );
+    }
+
+    if (!updatedRows || updatedRows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Token already claimed' },
+        { status: 409 }
       );
     }
 

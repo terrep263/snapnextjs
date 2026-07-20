@@ -1,22 +1,6 @@
 import { getServiceRoleClient } from '@/lib/supabase';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import { NextRequest, NextResponse } from 'next/server';
-
-/**
- * Check if request is from authenticated admin
- */
-function isAdminRequest(request: Request | NextRequest): boolean {
-  const cookieHeader = request.headers.get('cookie');
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ');
-    const adminSessionCookie = cookies.find(c => c.startsWith('admin_session='));
-    if (adminSessionCookie) return true;
-  }
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer admin_')) return true;
-
-  return false;
-}
 
 /**
  * Admin endpoint to list all claim links
@@ -44,8 +28,9 @@ function isAdminRequest(request: Request | NextRequest): boolean {
  */
 export async function GET(req: NextRequest) {
   try {
-    // Verify admin access
-    if (!isAdminRequest(req)) {
+    // Verify admin access (signed session — not a forgeable header).
+    const session = await verifyAdminSession();
+    if (!session?.authenticated) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Admin access required' },
         { status: 401 }

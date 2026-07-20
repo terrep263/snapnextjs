@@ -1,13 +1,13 @@
 import { getServiceRoleClient } from '@/lib/supabase';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 /**
- * Generates a secure random token for claim links
- * Uses crypto.randomBytes for cryptographic security
+ * Generates a secure random token for claim links.
+ * Uses crypto.randomBytes for cryptographic security.
  */
 function generateSecureToken(): string {
-  // Generate 32 random bytes and convert to URL-safe base64
   const bytes = crypto.randomBytes(32);
   return bytes
     .toString('base64')
@@ -16,74 +16,43 @@ function generateSecureToken(): string {
     .replace(/=/g, '');
 }
 
-/**
- * Check if request is from authenticated admin
- */
-function isAdminRequest(request: Request | NextRequest): boolean {
-  const cookieHeader = request.headers.get('cookie');
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ');
-    const adminSessionCookie = cookies.find(c => c.startsWith('admin_session='));
-    if (adminSessionCookie) return true;
-  }
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer admin_')) return true;
-
-  return false;
-}
+// Safety-net expiry: admin links default to 60 days. Callers may override with
+// expiresInDays (a positive number), or pass expiresInDays: null for a
+// non-expiring link.
+const DEFAULT_EXPIRES_IN_DAYS = 60;
 
 /**
- * Admin endpoint to generate magic claim links
+ * Admin endpoint to generate magic claim links.
  * POST /api/admin/generate-claim-link
  *
- * Request body (optional):
- * {
- *   expiresInDays?: number (default 30)
- * }
- *
- * Response:
- * {
- *   success: true,
- *   data: {
- *     token: string,
- *     claimUrl: string,
- *     expiresAt: string | null,
- *     createdAt: string
- *   }
- * }
+ * Request body (optional): { expiresInDays?: number | null }
  */
 export async function POST(req: NextRequest) {
   try {
-    // Verify admin access
-    if (!isAdminRequest(req)) {
+    // Verify admin access (signed session — not a forgeable header).
+    const session = await verifyAdminSession();
+    if (!session?.authenticated) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: Admin access required' },
         { status: 401 }
       );
     }
+    const adminEmail = session.email || 'unknown';
 
-    // Get admin email from cookies for tracking
-    const cookieHeader = req.headers.get('cookie');
-    let adminEmail = 'unknown';
-    if (cookieHeader) {
-      const cookies = cookieHeader.split('; ');
-      const emailCookie = cookies.find(c => c.startsWith('admin_email='));
-      if (emailCookie) {
-        adminEmail = decodeURIComponent(emailCookie.split('=')[1]);
-      }
-    }
-
-    // Parse request body (optional parameters)
     const body = await req.json().catch(() => ({}));
 
-    // Generate secure token
-    const token = generateSecureToken();
+    let expiresAt: string | null;
+    if (body.expiresInDays === null) {
+      expiresAt = null;
+    } else {
+      const requested = Number(body.expiresInDays);
+      const days = Number.isFinite(requested) && requested > 0 ? requested : DEFAULT_EXPIRES_IN_DAYS;
+      expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    }
 
-    // Get Supabase client
+    const token = generateSecureToken();
     const supabase = getServiceRoleClient();
 
-    // Insert claim link into database (no expiration)
     const { data: claimLink, error: insertError } = await supabase
       .from('free_event_claims')
       .insert([
@@ -91,7 +60,7 @@ export async function POST(req: NextRequest) {
           token,
           claimed: false,
           created_by_admin_email: adminEmail,
-          expires_at: null, // No expiration
+          expires_at: expiresAt,
         },
       ])
       .select()
@@ -105,7 +74,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate claim URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
     const claimUrl = `${baseUrl}/claim/${token}`;
 
@@ -117,7 +85,7 @@ export async function POST(req: NextRequest) {
         id: claimLink.id,
         token: claimLink.token,
         claimUrl,
-        expiresAt: null,
+        expiresAt,
         createdAt: claimLink.created_at,
       },
     });
