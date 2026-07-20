@@ -23,40 +23,6 @@ export interface ModerationPermission {
 }
 
 /**
- * Check if request is from authenticated admin
- */
-export function isAdminRequest(request: NextRequest): boolean {
-  const cookieHeader = request.headers.get('cookie');
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ');
-    const adminSessionCookie = cookies.find(c => c.startsWith('admin_session='));
-    if (adminSessionCookie) return true;
-  }
-
-  const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer admin_')) return true;
-
-  return false;
-}
-
-/**
- * Get admin email from request
- */
-export function getAdminEmail(request: NextRequest): string | null {
-  const cookieHeader = request.headers.get('cookie');
-  if (cookieHeader) {
-    const cookies = cookieHeader.split('; ').reduce((acc, cookie) => {
-      const [key, value] = cookie.split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-    
-    return cookies.admin_email || null;
-  }
-  return null;
-}
-
-/**
  * Get user email from request (for event owners)
  */
 export function getUserEmail(request: NextRequest): string | null {
@@ -116,4 +82,3 @@ export function getModerationPermissions(
     canUnhide: false,
   };
 }
-

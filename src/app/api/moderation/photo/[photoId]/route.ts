@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { isAdminRequest, getAdminEmail, getUserEmail, ModerationAction } from '@/lib/moderation-utils';
+import { getUserEmail, ModerationAction } from '@/lib/moderation-utils';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -67,8 +68,9 @@ export async function POST(
     }
 
     // Check permissions
-    const isAdmin = isAdminRequest(request);
-    const adminEmail = isAdmin ? getAdminEmail(request) : null;
+    const session = await verifyAdminSession();
+    const isAdmin = !!session?.authenticated;
+    const adminEmail = session?.email || null;
     const userEmail = getUserEmail(request);
     const isOwner = userEmail && (
       event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
@@ -207,4 +209,3 @@ export async function POST(
     );
   }
 }
-
