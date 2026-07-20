@@ -68,34 +68,40 @@ export default function PhotoManager() {
 
       setEvent(eventData);
 
-      // Determine owner authorization. Identity today is the userEmail kept in
-      // the browser; we also write it to a cookie so the server-side checks on
-      // the moderation/delete APIs succeed. (A stronger magic-link host session
-      // is a planned follow-up.)
+      // Owner identity is the userEmail kept in the browser, matched against the
+      // event's owner_email OR email (freebie events only set `email`). We mirror
+      // it to a cookie so server-side owner checks on the moderation/delete APIs
+      // succeed.
       const userEmail =
         typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
-      const adminSession =
-        typeof window !== 'undefined' ? localStorage.getItem('adminSession') : null;
 
-      let isAdmin = false;
-      if (adminSession) {
-        try {
-          isAdmin = JSON.parse(adminSession).isAuthenticated === true;
-        } catch {
-          isAdmin = false;
-        }
-      }
-
+      const ownerEmails = [eventData?.owner_email, eventData?.email]
+        .filter(Boolean)
+        .map((e: string) => e.toLowerCase());
       const isOwner =
-        !!userEmail &&
-        !!eventData?.owner_email &&
-        userEmail.toLowerCase() === eventData.owner_email.toLowerCase();
+        !!userEmail && ownerEmails.includes(userEmail.toLowerCase());
 
       // Mirror userEmail into a cookie for the API permission checks.
       if (userEmail && typeof document !== 'undefined') {
         document.cookie = `userEmail=${encodeURIComponent(
           userEmail
         )}; path=/; max-age=86400; SameSite=Lax`;
+      }
+
+      // Admins get support access to ANY event, verified server-side via the
+      // signed admin session (not a client-set flag). Only checked when the
+      // viewer isn't the owner, so owners/guests incur no extra request.
+      let isAdmin = false;
+      if (!isOwner) {
+        try {
+          const res = await fetch('/api/admin/whoami');
+          if (res.ok) {
+            const j = await res.json();
+            isAdmin = j?.isAdmin === true;
+          }
+        } catch {
+          isAdmin = false;
+        }
       }
 
       setAuthorized(isOwner || isAdmin);
@@ -137,20 +143,22 @@ export default function PhotoManager() {
   };
 
   // Owner email-confirm fallback. Matches the entered email against the
-  // event's owner_email; on success, establishes identity (localStorage +
-  // cookie, same as the rest of the app) and unlocks the manager.
+  // event's owner_email or email; on success, establishes identity
+  // (localStorage + cookie, same as the rest of the app) and unlocks the manager.
   const handleConfirmOwner = async (e: React.FormEvent) => {
     e.preventDefault();
     setConfirmError(null);
 
     const entered = confirmEmail.trim().toLowerCase();
-    const owner = (event?.owner_email || '').toLowerCase();
+    const ownerEmails = [event?.owner_email, event?.email]
+      .filter(Boolean)
+      .map((e: string) => e.toLowerCase());
 
     if (!entered) {
       setConfirmError('Please enter your email.');
       return;
     }
-    if (!owner || entered !== owner) {
+    if (!ownerEmails.includes(entered)) {
       setConfirmError("That email doesn't match this event's owner.");
       return;
     }
