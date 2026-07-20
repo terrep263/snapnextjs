@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-10-29.clover',
@@ -12,6 +13,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 export async function GET(request: NextRequest) {
   try {
+    const denied = await requireAdminAuth();
+    if (denied) return denied;
     // List all coupons in your Stripe account
     const coupons = await stripe.coupons.list({
       limit: 100,
@@ -41,6 +44,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const denied = await requireAdminAuth();
+    if (denied) return denied;
+
     const { couponId, percentOff, amountOff, duration, durationInMonths, maxRedemptions, redeemByDays } = await request.json();
 
     // Validate input

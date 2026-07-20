@@ -1,54 +1,29 @@
-import { cookies } from 'next/headers';
 import { getServiceRoleClient } from '@/lib/supabase';
-
-function isAuthenticated(request: Request): boolean {
-  const cookieHeader = request.headers.get('cookie');
-  if (!cookieHeader) return false;
-  const cookies_array = cookieHeader.split('; ');
-  const sessionCookie = cookies_array.find(c => c.startsWith('admin_session='));
-  return !!sessionCookie;
-}
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export async function GET(req: Request) {
   try {
-    if (!isAuthenticated(req)) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+    const denied = await requireAdminAuth();
+    if (denied) return denied;
 
     const supabase = getServiceRoleClient();
 
-    // Get ALL events with their types
     const { data: allEvents, error: allEventsError } = await supabase
       .from('events')
       .select('id, email, is_free, is_freebie, promo_type, status');
-
     if (allEventsError) throw allEventsError;
 
-    // Count event types
-    let totalEvents = 0;
-    let freeBasicCount = 0;
-    let freebieCount = 0;
-    let paidCount = 0;
-
+    let totalEvents = 0, freeBasicCount = 0, freebieCount = 0, paidCount = 0;
     (allEvents || []).forEach((event: any) => {
       totalEvents++;
-      if (event.is_freebie) {
-        freebieCount++;
-      } else if (event.is_free && event.promo_type === 'FREE_BASIC') {
-        freeBasicCount++;
-      } else if (!event.is_free) {
-        paidCount++;
-      }
+      if (event.is_freebie) freebieCount++;
+      else if (event.is_free && event.promo_type === 'FREE_BASIC') freeBasicCount++;
+      else if (!event.is_free) paidCount++;
     });
 
-    // Get unique emails
     const uniqueEmails = new Set((allEvents || []).map(e => e.email));
 
-    // Get blocked emails
-    const { data: blockedData } = await supabase
-      .from('admin_blocked_emails')
-      .select('email');
-
+    const { data: blockedData } = await supabase.from('admin_blocked_emails').select('email');
     const blockedEmails = (blockedData || []).map(b => b.email);
 
     return new Response(JSON.stringify({
