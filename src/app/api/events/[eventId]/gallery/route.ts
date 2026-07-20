@@ -125,6 +125,13 @@ export async function GET(
             { count: 'exact' }
           )
           .eq('event_id', eventId);
+
+        // Fail-safe: the fallback must NOT expose hidden/removed photos. Keep the
+        // is_approved filter unless the caller is explicitly authorized to see
+        // unapproved items (same rule as the primary query above).
+        if (!includeUnapproved) {
+          retryQuery = retryQuery.eq('is_approved', true);
+        }
         
         // Re-apply other filters (search, user, sorting, pagination)
         if (search) {
@@ -312,4 +319,3 @@ export async function GET(
     );
   }
 }
-
