@@ -4,15 +4,7 @@ import bcrypt from 'bcryptjs';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
-
-function generateSessionToken(email: string, secret: string): string {
-  const timestamp = Date.now();
-  const random = crypto.randomBytes(16).toString('hex');
-  return crypto
-    .createHash('sha256')
-    .update(`${email}:${timestamp}:${random}:${secret}`)
-    .digest('hex');
-}
+import { signAdminSession, verifyAdminSession } from '@/lib/admin-auth';
 
 function getLocalDevAdmin(email?: string) {
   if (process.env.NODE_ENV === 'production') return null;
@@ -148,7 +140,7 @@ export async function POST(req: Request) {
           );
         }
 
-        const sessionToken = generateSessionToken(localDevAdmin.email, sessionSecret!);
+        const sessionToken = signAdminSession(localDevAdmin.email, localDevAdmin.role, sessionSecret!);
         await setAdminCookies(localDevAdmin.email, localDevAdmin.role, sessionToken, isProduction);
 
         return NextResponse.json({
@@ -247,7 +239,7 @@ export async function POST(req: Request) {
         console.error('Failed to log audit entry:', auditError);
       }
 
-      const sessionToken = generateSessionToken(adminAccount.email, sessionSecret!);
+      const sessionToken = signAdminSession(adminAccount.email, adminAccount.role, sessionSecret!);
       await setAdminCookies(adminAccount.email, adminAccount.role, sessionToken, isProduction);
 
       return NextResponse.json({
@@ -294,46 +286,15 @@ export async function POST(req: Request) {
 
     // ===== VERIFY =====
     if (action === 'verify') {
-      const cookieStore = await cookies();
-      const session = cookieStore.get('admin_session')?.value;
-      const adminEmail = cookieStore.get('admin_email')?.value;
-      const adminRole = cookieStore.get('admin_role')?.value;
-
-      if (!session || !adminEmail) {
+      const adminSession = await verifyAdminSession();
+      if (!adminSession?.authenticated) {
         return NextResponse.json({ authenticated: false }, { status: 200 });
       }
-
-      const localDevAdmin = getLocalDevAdmin(adminEmail);
-      if (localDevAdmin) {
-        return NextResponse.json({
-          authenticated: true,
-          email: localDevAdmin.email,
-          role: adminRole || localDevAdmin.role,
-        });
-      }
-
-      try {
-        const { data: adminAccount } = await supabase
-          .from('admin_accounts')
-          .select('id, email, role, is_active')
-          .eq('email', adminEmail)
-          .single();
-
-        if (!adminAccount || !adminAccount.is_active) {
-          await clearAdminCookies();
-          return NextResponse.json({ authenticated: false }, { status: 200 });
-        }
-
-        return NextResponse.json({
-          authenticated: true,
-          email: adminEmail,
-          role: adminRole || adminAccount.role,
-        });
-      } catch (verifyError) {
-        console.error('Session verification error:', verifyError);
-        await clearAdminCookies();
-        return NextResponse.json({ authenticated: false }, { status: 200 });
-      }
+      return NextResponse.json({
+        authenticated: true,
+        email: adminSession.email,
+        role: adminSession.role,
+      });
     }
 
     return NextResponse.json(
