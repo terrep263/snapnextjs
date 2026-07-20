@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { getUserEmail } from '@/lib/moderation-utils';
 import { verifyAdminSession } from '@/lib/admin-auth';
+import { verifyHostSession } from '@/lib/host-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -178,15 +179,18 @@ export async function DELETE(
       );
     }
 
-    // Permission check: admin OR the event owner (cookie-based identity,
-    // consistent with the moderation route).
+    // Permission check: admin OR the event owner.
     const session = await verifyAdminSession();
     const isAdmin = !!session?.authenticated;
+    // Prefer the signed host session; fall back to the legacy unsigned cookie
+    // (removed in the Phase 1 consumer sweep once minting is everywhere).
+    const host = await verifyHostSession(event.id);
     const userEmail = getUserEmail(request);
     const isOwner =
-      !!userEmail &&
-      (event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
-        event.owner_id === userEmail);
+      !!host ||
+      (!!userEmail &&
+        (event.owner_email?.toLowerCase() === userEmail.toLowerCase() ||
+          event.owner_id === userEmail));
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
