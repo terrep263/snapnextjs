@@ -217,12 +217,10 @@ export default function GalleryPage() {
           }
         }
 
-        // Check owner status
+        // Check owner status (owner_email is the canonical owner key)
         const userEmail = localStorage.getItem('userEmail');
         if (userEmail && eventData.owner_email) {
           ownerStatus = userEmail.toLowerCase() === eventData.owner_email.toLowerCase();
-        } else if (userEmail && eventData.owner_id) {
-          ownerStatus = userEmail === eventData.owner_id;
         }
 
         setIsAdmin(adminStatus);
