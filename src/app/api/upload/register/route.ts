@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
+
+const REGISTER_RATE_LIMIT = 300; // photo registrations per hour per IP
 
 /**
  * POST /api/upload/register
@@ -14,6 +17,17 @@ import { getServiceRoleClient } from '@/lib/supabase';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate-limit per IP so this unauthenticated endpoint can't be used to
+    // spam photo rows / stub events.
+    const clientId = getClientIdentifier(request);
+    const rlKey = `register:${clientId}`;
+    if (!checkRateLimit(rlKey, REGISTER_RATE_LIMIT).allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many uploads. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { eventId, filename, url, filePath, size, type, isVideo } = body || {};
 
@@ -23,6 +37,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    incrementRateLimit(rlKey);
 
     const supabase = getServiceRoleClient();
 

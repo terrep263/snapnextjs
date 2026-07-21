@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient, transformToCustomDomain } from '@/lib/supabase';
+import { verifyHostSession } from '@/lib/host-auth';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -21,7 +23,17 @@ export async function GET(
     const order = searchParams.get('order') || 'DESC';
     const search = searchParams.get('search') || '';
     const userId = searchParams.get('userId') || null;
-    const includeUnapproved = searchParams.get('includeUnapproved') === 'true';
+
+    // Hidden/unapproved photos are owner/admin-only. The request may ASK for
+    // them, but we only honor it after verifying a signed host session for this
+    // event or an admin session — never on the query param alone. This closes
+    // the bypass where any caller could add ?includeUnapproved=true.
+    let includeUnapproved = false;
+    if (searchParams.get('includeUnapproved') === 'true') {
+      const host = await verifyHostSession(eventId);
+      const admin = await verifyAdminSession();
+      includeUnapproved = !!host || !!admin?.authenticated;
+    }
 
     const offset = (page - 1) * limit;
 
