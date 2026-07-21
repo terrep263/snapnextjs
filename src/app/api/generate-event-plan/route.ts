@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 
 /**
  * Event Plan Generator API
@@ -9,6 +10,11 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
 
 export async function POST(request: NextRequest) {
+  const _rlKey = `generate-plan:${getClientIdentifier(request)}`;
+  if (!checkRateLimit(_rlKey, 15).allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+  incrementRateLimit(_rlKey);
   try {
     const { formData, eventType } = await request.json();
 

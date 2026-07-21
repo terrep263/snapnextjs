@@ -48,6 +48,7 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
@@ -57,14 +58,18 @@ export default function AffiliateDashboard() {
     setError('');
 
     try {
-      // For now, we'll use email-based lookup
-      // In production, you'd want proper authentication
+      // Lightweight auth: email + the affiliate's own referral code must match
+      // the record (the code is the affiliate's private credential from their
+      // welcome email). This stops looking up any affiliate by email alone.
       const response = await fetch('/api/affiliate/dashboard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: email.toLowerCase() }),
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          referralCode: referralCode.trim(),
+        }),
       });
 
       const result = await response.json();
@@ -159,6 +164,20 @@ export default function AffiliateDashboard() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Referral Code
+                  </label>
+                  <input
+                    type="text"
+                    value={referralCode}
+                    onChange={(e) => setReferralCode(e.target.value)}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Your referral code (from your welcome email)"
+                  />
+                </div>
+
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                     {error}
@@ -167,7 +186,7 @@ export default function AffiliateDashboard() {
 
                 <button
                   type="submit"
-                  disabled={loginLoading || !email.trim()}
+                  disabled={loginLoading || !email.trim() || !referralCode.trim()}
                   className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                 >
                   {loginLoading ? 'Accessing Dashboard...' : 'Access Dashboard'}

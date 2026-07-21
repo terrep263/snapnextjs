@@ -1,3 +1,4 @@
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 import { NextResponse } from 'next/server';
 import { sendMail } from '@/lib/mailer';
 
@@ -90,6 +91,11 @@ function getDiscountEmailTemplate(discountCode: string, percentOff: number) {
 }
 
 export async function POST(request: Request) {
+  const _rlKey = `discount-offer:${getClientIdentifier(request as any)}`;
+  if (!checkRateLimit(_rlKey, 20).allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+  incrementRateLimit(_rlKey);
   try {
     const { email } = await request.json();
 
