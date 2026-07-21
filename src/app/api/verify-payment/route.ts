@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { setHostCookie } from '@/lib/host-auth';
+import { expiresAtForPackage } from '@/lib/event-lifecycle';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,9 +56,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Read the purchased tier from the Stripe session metadata (same source
+      // the webhook uses) so a webhook that never fires can't leave a premium
+      // purchase resolving to basic. Also set the tier-based expiry here. The
+      // `status='inactive'` guard makes this idempotent vs the webhook — only
+      // whichever path flips the row first writes these values.
+      const packageType =
+        session.metadata?.package === 'premium' ? 'premium' : 'basic';
+      const nowIso = new Date().toISOString();
+
       const { error: updateError } = await supabase
         .from('events')
-        .update({ status: 'active' })
+        .update({
+          status: 'active',
+          package: packageType,
+          expires_at: expiresAtForPackage(packageType, nowIso),
+        })
         .eq('id', event.id)
         .eq('status', 'inactive');
 

@@ -36,9 +36,12 @@ export function getPackageType(event: EventData): PackageType {
   if (event.package === 'freebie') return 'freebie';
   if (event.package === 'basic') return 'basic';
 
-  // Fallback for legacy events without package column
+  // Fallback for legacy events without a package column. `feed_enabled` is NOT
+  // treated as a premium signal here: free/promo events set feed_enabled=true
+  // but are BASIC tier, and every real premium event (paid or comp) sets
+  // package='premium' explicitly above. Password protection remains premium.
   if (event.is_freebie === true || event.payment_type === 'freebie') return 'freebie';
-  if (event.feed_enabled === true || event.password_hash) return 'premium';
+  if (event.password_hash) return 'premium';
 
   return 'basic';
 }
@@ -125,4 +128,3 @@ export function requiresPassword(event: EventData): boolean {
 export function hasPremiumFeatures(event: EventData): boolean {
   return event.feed_enabled === true || !!event.password_hash;
 }
-
