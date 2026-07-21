@@ -27,14 +27,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   let ogImage = `${APP_URL}/og-image.png`;
   if (photo?.storage_url || photo?.url) {
-    const rawUrl = photo.storage_url || photo.url;
-    // Use direct Supabase URL — Facebook crawler needs direct access, no proxy
-    const supabaseMatch = rawUrl.match(/supabase\.co\/storage\/v1\/object\/public\/photos\/(.*)/);
-    if (supabaseMatch) {
-      ogImage = `${SUPABASE_URL}/storage/v1/render/image/public/photos/${supabaseMatch[1]}?width=1200&height=630&resize=cover`;
-    } else {
-      ogImage = rawUrl;
-    }
+    const rawUrl: string = photo.storage_url || photo.url;
+    // Route the OG image through the snapworxx.com image proxy. The proxy serves
+    // bytes via the service role, so it keeps working after the photos bucket is
+    // flipped to private (a direct /public/ URL would 403 for the crawler).
+    const proxyMatch = rawUrl.match(/\/api\/img\/(.*)$/);
+    const supabaseMatch = rawUrl.match(/\/storage\/v1\/(?:object|render\/image)\/public\/photos\/(.*)$/);
+    const storagePath = proxyMatch
+      ? proxyMatch[1].split('?')[0]
+      : supabaseMatch
+      ? supabaseMatch[1].split('?')[0]
+      : null;
+    ogImage = storagePath
+      ? `${APP_URL}/api/img/${storagePath}?width=1200&height=630&resize=cover`
+      : rawUrl;
   }
 
   const title = `Photo from ${eventName} | SnapWorxx`;

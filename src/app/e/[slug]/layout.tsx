@@ -1,33 +1,32 @@
 import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
-// Use direct Supabase URL for storage
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ofmzpgbuawtwtzgrtiwr.supabase.co';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
 
-// Transform any storage URL to direct Supabase URL
-const transformToDirectUrl = (url: string): string => {
-  if (!url) return url;
-  // Already direct Supabase URL
-  if (url.includes('supabase.co')) return url;
-  // Convert legacy custom domain
-  if (url.includes('sharedfrom.snapworxx.com')) {
-    const match = url.match(/sharedfrom\.snapworxx\.com\/storage\/v1\/object\/public\/photos\/(.*)/);
-    if (match) return `${SUPABASE_URL}/storage/v1/object/public/photos/${match[1]}`;
-  }
-  return url;
+// Extract the storage-relative path from any URL form we might have stored:
+// image proxy (/api/img/<path>), direct Supabase (/object/public/photos/<path>),
+// or legacy custom-domain URLs.
+const extractStoragePath = (url: string): string | null => {
+  if (!url) return null;
+  const proxyMatch = url.match(/\/api\/img\/(.*)$/);
+  if (proxyMatch) return proxyMatch[1].split('?')[0];
+  const supabaseMatch = url.match(/\/storage\/v1\/(?:object|render\/image)\/public\/photos\/(.*)$/);
+  if (supabaseMatch) return supabaseMatch[1].split('?')[0];
+  const legacyMatch = url.match(/sharedfrom\.snapworxx\.com\/storage\/v1\/object\/public\/photos\/(.*)$/);
+  if (legacyMatch) return legacyMatch[1].split('?')[0];
+  return null;
 };
 
-// Transform URL to use Supabase Image Transformations for OG image (1200x630)
+// Build a 1200x630 OG image URL routed through the snapworxx.com image proxy.
+// The proxy serves bytes via the service role, so it keeps working after the
+// photos bucket is flipped to private (a direct /public/ URL would 403).
 const transformToOgImage = (url: string): string => {
   if (!url) return url;
-  const directUrl = transformToDirectUrl(url);
-  const storagePattern = /(.*)(\/storage\/v1\/object\/public\/photos\/)(.*)$/;
-  const match = directUrl.match(storagePattern);
-  if (match) {
-    return `${match[1]}/storage/v1/render/image/public/photos/${match[3]}?width=1200&height=630&resize=cover`;
+  const storagePath = extractStoragePath(url);
+  if (storagePath) {
+    return `${APP_URL}/api/img/${storagePath}?width=1200&height=630&resize=cover`;
   }
-  return directUrl;
+  return url;
 };
 
 type Props = {
@@ -92,7 +91,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       };
     }
 
-    // Find a photo for OG image - use direct Supabase URL (Facebook crawler needs this)
+    // Find a photo for OG image (routed through the image proxy below)
     let previewImage = `${APP_URL}/og-default.png`;
     
     // Try to find a LANDSCAPE photo (crops better with cover mode)
@@ -115,15 +114,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       if (selectedPhoto) {
         const rawUrl = selectedPhoto.url || selectedPhoto.thumbnail_url || '';
         if (rawUrl) {
-          // Use direct Supabase URL for OG images — Facebook crawler needs direct access
-          const directUrl = transformToDirectUrl(rawUrl);
-          previewImage = transformToOgImage(directUrl);
+          // Route OG image through the snapworxx.com proxy (private-bucket safe).
+          previewImage = transformToOgImage(rawUrl);
         }
       }
     } else if (event.header_image) {
-      // Use direct Supabase URL for header image OG
-      const directUrl = transformToDirectUrl(event.header_image);
-      previewImage = transformToOgImage(directUrl);
+      // Route header-image OG through the snapworxx.com proxy (private-bucket safe).
+      previewImage = transformToOgImage(event.header_image);
     }
 
     const title = `${event.name} | Snapworxx`;
