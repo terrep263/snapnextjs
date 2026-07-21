@@ -60,16 +60,22 @@ export default function EventSettingsPage() {
     setMessage('');
 
     try {
-      const { supabase } = await import('@/lib/supabase');
-
-      // Update event name in database
-      const { error } = await supabase
-        .from('events')
-        .update({ name: eventName })
-        .eq('id', eventData.id);
-
-      if (error) {
-        throw error;
+      // Update via the authenticated server endpoint (owner/admin only).
+      // Anon table writes are blocked by RLS; the host session established when
+      // the event was claimed authorises this update.
+      const res = await fetch(`/api/events/${eventData.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: eventName }),
+      });
+      let json: any = { success: false };
+      try {
+        json = await res.json();
+      } catch {
+        /* non-JSON */
+      }
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Update failed');
       }
 
       setMessage('Event settings updated successfully!');

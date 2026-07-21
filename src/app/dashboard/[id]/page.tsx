@@ -17,6 +17,8 @@ export default function Dashboard() {
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [coverPhotoUrl, setCoverPhotoUrl] = useState<string | null>(null);
+  const [sharingEnabled, setSharingEnabled] = useState(true);
+  const [savingSharing, setSavingSharing] = useState(false);
   const [showCoverPhotoPicker, setShowCoverPhotoPicker] = useState(false);
   const [showCustomization, setShowCustomization] = useState(false);
   const [editingHeader, setEditingHeader] = useState(false);
@@ -44,7 +46,71 @@ export default function Dashboard() {
     if (eventData?.name) {
       setEventName(eventData.name);
     }
+    // Reflect the saved sharing setting (defaults to on when the column/value
+    // is absent).
+    if (eventData) {
+      setSharingEnabled(eventData.sharing_enabled !== false);
+    }
   }, [eventData]);
+
+  // When the viewer is recognised locally as the owner, mint the signed host
+  // session so the owner-only APIs (event settings, bulk download) authorise
+  // this browser. Server re-verifies the email against the event owner.
+  useEffect(() => {
+    if (!eventData?.id) return;
+    const userEmail =
+      typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
+    if (!userEmail) return;
+    const owners = [eventData.owner_email, eventData.email]
+      .filter(Boolean)
+      .map((e: string) => e.toLowerCase());
+    if (owners.includes(userEmail.toLowerCase())) {
+      fetch('/api/host/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: eventData.id, email: userEmail }),
+      }).catch(() => {});
+    }
+  }, [eventData]);
+
+  // Update event settings via the authenticated server endpoint (service role +
+  // signed host/admin session). Replaces the old anon `events` writes, which
+  // table RLS now blocks.
+  const patchEvent = async (fields: Record<string, unknown>) => {
+    const id = eventData?.id || eventId;
+    const res = await fetch(`/api/events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
+    });
+    let json: any = { success: false };
+    try {
+      json = await res.json();
+    } catch {
+      /* non-JSON */
+    }
+    if (!res.ok || !json.success) {
+      throw new Error(json.error || 'Failed to save changes');
+    }
+    return json;
+  };
+
+  // Host control: turn guest sharing/downloading of this event's photos on/off.
+  // Enforced server-side on the download endpoints, not just hidden here.
+  const toggleSharing = async () => {
+    const next = !sharingEnabled;
+    setSavingSharing(true);
+    setSharingEnabled(next); // optimistic
+    try {
+      await patchEvent({ sharing_enabled: next });
+      setEventData((prev: any) => (prev ? { ...prev, sharing_enabled: next } : prev));
+    } catch (e) {
+      setSharingEnabled(!next); // revert on failure
+      alert(e instanceof Error ? e.message : 'Failed to update sharing');
+    } finally {
+      setSavingSharing(false);
+    }
+  };
 
   const loadEventData = async () => {
     try {
@@ -312,15 +378,8 @@ export default function Dashboard() {
     if (!newName.trim()) return;
     
     try {
-      // Try to update in database first
-      const { error } = await supabase
-        .from('events')
-        .update({ name: newName.trim() })
-        .eq('id', eventId);
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Database update failed:', error);
-      }
+      // Save via the authenticated server endpoint (owner/admin only).
+      await patchEvent({ name: newName.trim() });
 
       // Update local state regardless
       setEventData((prev: any) => prev ? { ...prev, name: newName.trim() } : null);
@@ -420,86 +479,19 @@ export default function Dashboard() {
           }
           localStorageKeys.forEach((key) => localStorage.setItem(key, publicUrl));
           
-          // Save URL to database
-          const updateData = type === 'header' 
-            ? { header_image: publicUrl }
-            : { profile_image: publicUrl };
-
-          let updateSucceeded = false;
-          let lastError: any = null;
-
-          // For sample-event-id, always try to update by slug first (sample-event-slug)
-          if (eventId === 'sample-event-id' && finalSlug) {
-            const { data: updatedBySlug, error: slugError } = await supabase
-              .from('events')
-              .update(updateData)
-              .eq('slug', finalSlug)
-              .select('id, slug');
-
-            if (slugError) {
-              lastError = slugError;
-              if (slugError.code !== 'PGRST116') {
-                console.error('Database update by slug failed:', slugError);
-              }
-            } else {
-              updateSucceeded = !!updatedBySlug?.length;
-              if (updateSucceeded) {
-                console.log(`✅ ${type} image saved by slug (${finalSlug}):`, publicUrl);
-              }
-            }
-          }
-
-          // Try by ID if slug update didn't work
-          if (!updateSucceeded && targetEventId) {
-            const { data: updatedById, error: dbError } = await supabase
-              .from('events')
-              .update(updateData)
-              .eq('id', targetEventId)
-              .select('id');
-
-            if (dbError) {
-              lastError = dbError;
-              if (dbError.code !== 'PGRST116') {
-                console.error('Database update by ID failed:', dbError);
-              }
-            } else {
-              updateSucceeded = !!updatedById?.length;
-              if (updateSucceeded) {
-                console.log(`✅ ${type} image saved by ID (${targetEventId}):`, publicUrl);
-              }
-            }
-          }
-
-          // Try by slug as final fallback
-          if (!updateSucceeded && finalSlug && eventId !== 'sample-event-id') {
-            const { data: updatedBySlug, error: slugError } = await supabase
-              .from('events')
-              .update(updateData)
-              .eq('slug', finalSlug)
-              .select('id');
-
-            if (slugError) {
-              lastError = slugError;
-              if (slugError.code !== 'PGRST116') {
-                console.error('Database update by slug failed:', slugError);
-              }
-            } else {
-              updateSucceeded = !!updatedBySlug?.length;
-              if (updateSucceeded) {
-                console.log(`✅ ${type} image saved by slug (${finalSlug}):`, publicUrl);
-              }
-            }
-          }
-
-          if (updateSucceeded) {
-            console.log(`✅ ${type} image saved successfully to database:`, publicUrl);
-            // Reload event data to get updated images
+          // Save URL via the authenticated server endpoint (owner/admin only).
+          try {
+            await patchEvent(
+              type === 'header'
+                ? { header_image: publicUrl }
+                : { profile_image: publicUrl }
+            );
+            console.log(`✅ ${type} image saved:`, publicUrl);
             await loadEventData();
-          } else if (!lastError || lastError.code === 'PGRST116') {
-            console.warn(`⚠️ No matching event row found when saving ${type} image.`);
-            console.warn('Tried:', { targetEventId, finalSlug, eventId });
+          } catch (saveErr) {
+            console.error(`Failed to save ${type} image:`, saveErr);
           }
-          
+
         } catch (error) {
           console.error('Error uploading image:', error);
         }
@@ -531,80 +523,13 @@ export default function Dashboard() {
       setEditingProfile(false);
     }
     
-    // Remove from database
+    // Remove via the authenticated server endpoint (owner/admin only).
     try {
-      const updateData = type === 'header' 
-        ? { header_image: null }
-        : { profile_image: null };
-
-      let updateSucceeded = false;
-      let lastError: any = null;
-
-      // For sample-event-id, always try to update by slug first (sample-event-slug)
-      if (eventId === 'sample-event-id' && finalSlug) {
-        const { data: updatedBySlug, error: slugError } = await supabase
-          .from('events')
-          .update(updateData)
-          .eq('slug', finalSlug)
-          .select('id');
-
-        if (slugError) {
-          lastError = slugError;
-          if (slugError.code !== 'PGRST116') {
-            console.error('Database remove by slug failed:', slugError);
-          }
-        } else {
-          updateSucceeded = !!updatedBySlug?.length;
-        }
-      }
-
-      // Try by ID if slug update didn't work
-      if (!updateSucceeded && targetEventId) {
-        const { data: updatedById, error } = await supabase
-          .from('events')
-          .update(updateData)
-          .eq('id', targetEventId)
-          .select('id');
-
-        if (error) {
-          lastError = error;
-          if (error.code !== 'PGRST116') {
-            console.error('Database remove by ID failed:', error);
-          }
-        } else {
-          updateSucceeded = !!updatedById?.length;
-        }
-      }
-
-      // Try by slug as final fallback
-      if (!updateSucceeded && finalSlug && eventId !== 'sample-event-id') {
-        const { data: updatedBySlug, error: slugError } = await supabase
-          .from('events')
-          .update(updateData)
-          .eq('slug', finalSlug)
-          .select('id');
-
-        if (slugError) {
-          lastError = slugError;
-          if (slugError.code !== 'PGRST116') {
-            console.error('Database remove by slug failed:', slugError);
-          }
-        } else {
-          updateSucceeded = !!updatedBySlug?.length;
-        }
-      }
-
-      if (updateSucceeded) {
-        console.log(`✅ ${type} image removed successfully`);
-        // Reload event data to reflect changes
-        await loadEventData();
-      } else if (!lastError || lastError.code === 'PGRST116') {
-        console.warn(`⚠️ No matching event row found when removing ${type} image.`);
-      }
-
-      if (!updateSucceeded && (!lastError || lastError.code === 'PGRST116')) {
-        console.warn(`No matching event row found when removing ${type} image.`);
-      }
+      await patchEvent(
+        type === 'header' ? { header_image: null } : { profile_image: null }
+      );
+      console.log(`✅ ${type} image removed`);
+      await loadEventData();
     } catch (error) {
       console.error('Error removing image:', error);
     }
@@ -628,16 +553,9 @@ export default function Dashboard() {
   const selectCoverPhoto = async (photoUrl: string) => {
     setCoverPhotoUrl(photoUrl);
     setShowCoverPhotoPicker(false);
-    
+
     try {
-      const { error } = await supabase
-        .from('events')
-        .update({ cover_photo_url: photoUrl })
-        .eq('id', eventId);
-        
-      if (error && error.code !== 'PGRST116') {
-        console.error('Database update failed:', error);
-      }
+      await patchEvent({ cover_photo_url: photoUrl });
     } catch (error) {
       console.error('Error updating cover photo:', error);
     }
@@ -645,16 +563,9 @@ export default function Dashboard() {
 
   const removeCoverPhoto = async () => {
     setCoverPhotoUrl(null);
-    
+
     try {
-      const { error } = await supabase
-        .from('events')
-        .update({ cover_photo_url: null })
-        .eq('id', eventId);
-        
-      if (error && error.code !== 'PGRST116') {
-        console.error('Database update failed:', error);
-      }
+      await patchEvent({ cover_photo_url: null });
     } catch (error) {
       console.error('Error removing cover photo:', error);
     }
@@ -1011,6 +922,40 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Guest sharing control */}
+            <div className="rounded-lg bg-white p-6 shadow-lg border border-gray-100">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                    <Share2 className="h-5 w-5 text-purple-600" />
+                    Guest Sharing
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {sharingEnabled
+                      ? 'Guests can share and download photos from this event.'
+                      : 'Sharing and downloading are turned off for guests.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleSharing}
+                  disabled={savingSharing}
+                  role="switch"
+                  aria-checked={sharingEnabled}
+                  title={sharingEnabled ? 'Turn sharing off' : 'Turn sharing on'}
+                  className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                    sharingEnabled ? 'bg-purple-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      sharingEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
 

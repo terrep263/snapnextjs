@@ -8,6 +8,8 @@ import {
 } from '@/lib/download-utils';
 import { getPackageType } from '@/lib/gallery-utils';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
+import { verifyHostSession } from '@/lib/host-auth';
+import { verifyAdminSession } from '@/lib/admin-auth';
 import ErrorLogger from '@/lib/errorLogger';
 
 const DOWNLOAD_RATE_LIMIT = 100; // 100 downloads per hour per IP
@@ -50,7 +52,10 @@ export async function POST(request: NextRequest) {
     // Load event and photo (select fields needed for package detection)
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, slug, is_freebie, is_free, watermark_enabled, feed_enabled, password_hash, payment_type')
+      // Select all columns so this keeps working whether or not the optional
+      // `sharing_enabled` column has been added yet (a missing column read as
+      // undefined is treated as "sharing on").
+      .select('*')
       .eq('id', eventId)
       .single();
 
@@ -59,6 +64,20 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Event not found' },
         { status: 404 }
       );
+    }
+
+    // Host share control: when the owner has turned sharing off, guests cannot
+    // download. The owner and admins bypass this (they always access originals).
+    // Defaults to enabled when the column/value is absent.
+    if (event.sharing_enabled === false) {
+      const host = await verifyHostSession(eventId);
+      const admin = await verifyAdminSession();
+      if (!host && !admin?.authenticated) {
+        return NextResponse.json(
+          { success: false, error: 'The host has turned off sharing for this event.' },
+          { status: 403 }
+        );
+      }
     }
 
     const { data: photo, error: photoError } = await supabase
