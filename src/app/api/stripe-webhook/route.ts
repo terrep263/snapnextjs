@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { getServiceRoleClient } from '@/lib/supabase';
 import ErrorLogger from '@/lib/errorLogger';
 import { sendEventConfirmationEmail } from '@/lib/email';
+import { expiresAtForPackage } from '@/lib/event-lifecycle';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -131,14 +132,19 @@ async function handleCheckoutComplete(
   // Determine package from Stripe metadata
   const packageType = metadata?.package === 'premium' ? 'premium' : 'basic';
 
-  // Update event payment status and package
+  // Tier-based active lifespan: Basic 30 days, Premium 90 days (from now).
+  const nowIso = new Date().toISOString();
+  const expiresAt = expiresAtForPackage(packageType, nowIso);
+
+  // Update event payment status, package, and expiry
   const { error } = await supabase
     .from('events')
     .update({
       status: 'active',
       stripe_session_id: session.id,
-      last_webhook_received: new Date().toISOString(),
+      last_webhook_received: nowIso,
       package: packageType,
+      expires_at: expiresAt,
     })
     .eq('id', eventId);
 
