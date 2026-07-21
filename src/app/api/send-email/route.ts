@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendMail } from '@/lib/mailer';
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 
 // Email validation helper
 function isValidEmail(email: string): boolean {
@@ -48,6 +49,11 @@ async function retryOperation<T>(
 }
 
 export async function POST(request: NextRequest) {
+  const _rlKey = `send-email:${getClientIdentifier(request)}`;
+  if (!checkRateLimit(_rlKey, 30).allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+  incrementRateLimit(_rlKey);
   try {
     const { to, eventName, dashboardUrl, eventUrl } = await request.json();
 

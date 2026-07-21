@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { sendGalleryLinkEmail } from '@/lib/email';
+import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 
 /**
  * Gallery Return-Link API
@@ -14,6 +15,11 @@ import { sendGalleryLinkEmail } from '@/lib/email';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest) {
+  const _rlKey = `send-link:${getClientIdentifier(request)}`;
+  if (!checkRateLimit(_rlKey, 30).allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+  }
+  incrementRateLimit(_rlKey);
   try {
     const body = await request.json();
     const email: string = (body?.email || '').trim();

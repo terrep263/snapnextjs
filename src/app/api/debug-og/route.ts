@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 export async function GET(request: NextRequest) {
+  const _authDenied = await requireAdminAuth();
+  if (_authDenied) return _authDenied;
   const slug = request.nextUrl.searchParams.get('slug') || 'test-terre-wcrx66';
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
