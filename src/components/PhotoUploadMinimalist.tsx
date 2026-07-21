@@ -12,12 +12,12 @@ import { MediaBackupManager } from '@/lib/mediaBackupManager';
 import { getPhotoPublicUrl } from '@/lib/supabase';
 import { GALLERY_MAX_PHOTO_SIZE, GALLERY_MAX_VIDEO_SIZE } from '@/config/constants';
 
-// ─── Mobile upload safety constants ──────────────────────────────────────────
+// ─── Mobile upload safety constants ────────────────────────────────────
 const MAX_BATCH_SIZE = 20;
 const MAX_VIDEO_BYTES = GALLERY_MAX_VIDEO_SIZE; // 1 GB per video
 const MAX_PHOTO_BYTES = GALLERY_MAX_PHOTO_SIZE; // 700 MB per photo
 
-// ─── Extension → MIME mapping (authoritative source) ─────────────────────────
+// ─── Extension → MIME mapping (authoritative source) ──────────────────────
 const EXT_MIME: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -385,40 +385,40 @@ export default function PhotoUpload({ eventData, onUploadComplete, disabled = fa
         progress[key] = 80;
         setUploadProgress({ ...progress });
 
-        // Ensure event row exists
-        const { data: existingEvent } = await supabase
-          .from('events')
-          .select('id')
-          .eq('id', eventData.id)
-          .single();
-
-        if (!existingEvent) {
-          await supabase.from('events').insert([{
-            id: eventData.id,
-            name: eventData.name || 'Event Gallery',
-            slug: eventData.slug || eventData.id,
-            status: 'active',
-          }]);
-        }
-
-        // Save photo metadata with normalized MIME
+        // Save photo metadata with normalized MIME via the server-side
+        // registration route (service role). Moving the events/photos writes
+        // off the anon key removes the app's dependency on anonymous INSERT
+        // policies — the prerequisite for locking down table RLS. The storage
+        // upload above is unchanged.
         const mimeType = mimeFor(processedFile);
-        console.log(`💾 Saving to database with MIME: ${mimeType}`);
+        console.log(`💾 Registering photo (server-side) with MIME: ${mimeType}`);
 
-        const { error: insertError } = await supabase.from('photos').insert([{
-          event_id: eventData.id,
-          filename: file.name,
-          url: filePublicUrl,
-          file_path: filePath,
-          size: processedFile.size,
-          type: mimeType,
-          is_video: isVideo,
-          created_at: new Date().toISOString(),
-        }]);
+        const registerRes = await fetch('/api/upload/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: eventData.id,
+            eventName: eventData.name || 'Event Gallery',
+            eventSlug: eventData.slug || eventData.id,
+            filename: file.name,
+            url: filePublicUrl,
+            filePath,
+            size: processedFile.size,
+            type: mimeType,
+            isVideo,
+          }),
+        });
 
-        if (insertError) {
-          console.error(`❌ Database insert error for ${file.name}:`, insertError);
-          throw insertError;
+        if (!registerRes.ok) {
+          let msg = 'Failed to save photo';
+          try {
+            const j = await registerRes.json();
+            msg = j?.error || msg;
+          } catch {
+            /* non-JSON error body */
+          }
+          console.error(`❌ Register error for ${file.name}:`, msg);
+          throw new Error(msg);
         }
 
         console.log(`✅ Upload successful: ${file.name}`);
