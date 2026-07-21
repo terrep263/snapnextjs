@@ -18,7 +18,6 @@ export interface EventData {
   feed_enabled?: boolean;
   password_hash?: string | null;
   owner_email?: string | null;
-  owner_id?: string | null;
   stripe_session_id?: string | null;
   promo_type?: string | null;
   watermark_enabled?: boolean;
