@@ -1,11 +1,14 @@
 import { getServiceRoleClient } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 /**
  * Diagnostic endpoint to test token validity
  * GET /api/claim/test-token?token=xxx
  */
 export async function GET(req: NextRequest) {
+  const _authDenied = await requireAdminAuth();
+  if (_authDenied) return _authDenied;
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get('token');

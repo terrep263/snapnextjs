@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { requireAdminAuth } from '@/lib/admin-auth';
 
 /**
  * Debug endpoint to check watermark and FFmpeg status
  * GET /api/debug/watermark-status
  */
 export async function GET() {
+  const _authDenied = await requireAdminAuth();
+  if (_authDenied) return _authDenied;
   try {
     const checks: Record<string, any> = {
       timestamp: new Date().toISOString(),
@@ -90,4 +93,3 @@ export async function GET() {
     );
   }
 }
-
