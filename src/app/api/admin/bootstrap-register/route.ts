@@ -8,7 +8,29 @@ function hashPassword(password: string): string {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { email, password, fullName } = body;
+    const { email, password, fullName, bootstrapCode } = body;
+
+    // Gate: require the server-configured bootstrap secret. Fail closed if no
+    // code is configured, and use a timing-safe compare. This stops anyone from
+    // creating the first super-admin just because the admin table is empty.
+    const expectedCode = process.env.ADMIN_BOOTSTRAP_CODE;
+    if (!expectedCode) {
+      return new Response(
+        JSON.stringify({ error: 'Bootstrap is disabled.' }),
+        { status: 403 }
+      );
+    }
+    const provided = Buffer.from(String(bootstrapCode || ''));
+    const expected = Buffer.from(expectedCode);
+    if (
+      provided.length !== expected.length ||
+      !crypto.timingSafeEqual(provided, expected)
+    ) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid bootstrap code.' }),
+        { status: 403 }
+      );
+    }
 
     if (!email || !password || !fullName) {
       return new Response(JSON.stringify({ error: 'All fields required' }), { status: 400 });

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getJob } from '@/lib/bulk-download-job';
+import { verifyHostSession } from '@/lib/host-auth';
+import { verifyAdminSession } from '@/lib/admin-auth';
 
 /**
  * GET /api/download/bulk/status/[jobId]
@@ -30,6 +32,18 @@ export async function GET(
       );
     }
 
+    // The job (and its signed download URLs) belongs to one event's owner.
+    // Only the verified host for that event or an admin may read its status —
+    // otherwise a guessed jobId would leak original-download URLs.
+    const host = await verifyHostSession(job.eventId);
+    const admin = await verifyAdminSession();
+    if (!host && !admin?.authenticated) {
+      return NextResponse.json(
+        { success: false, error: 'Not authorized to view this download.' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -55,4 +69,3 @@ export async function GET(
     );
   }
 }
-
