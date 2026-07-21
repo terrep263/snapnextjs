@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Load event and verify it's Premium
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, slug, is_free, is_freebie, owner_email, owner_id, feed_enabled, password_hash, payment_type, created_at, expires_at')
+      .select('id, name, slug, is_free, is_freebie, owner_email, feed_enabled, password_hash, payment_type, created_at, expires_at')
       .eq('id', eventId)
       .single();
 

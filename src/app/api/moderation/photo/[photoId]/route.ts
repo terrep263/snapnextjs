@@ -57,7 +57,7 @@ export async function POST(
 
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, owner_email, owner_id')
+      .select('id, owner_email')
       .eq('id', photo.event_id)
       .single();
 
