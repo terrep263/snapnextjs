@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient, transformToCustomDomain } from '@/lib/supabase';
 import { verifyHostSession } from '@/lib/host-auth';
 import { verifyAdminSession } from '@/lib/admin-auth';
+import { galleryClosed } from '@/lib/event-lifecycle';
 import ErrorLogger from '@/lib/errorLogger';
 
 /**
@@ -38,6 +39,25 @@ export async function GET(
     const offset = (page - 1) * limit;
 
     const supabase = getServiceRoleClient();
+
+    // Lifecycle: once the post-expiry grace has elapsed the gallery is closed.
+    // Return an empty, flagged result so the page can show an "event ended"
+    // state. Grandfathered events and events with no expiry are unaffected.
+    const { data: lifecycleEvent } = await supabase
+      .from('events')
+      .select('created_at, expires_at')
+      .eq('id', eventId)
+      .single();
+    if (galleryClosed(lifecycleEvent)) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          photos: [],
+          pagination: { page, limit, totalPhotos: 0, totalPages: 0, hasMore: false },
+          closed: true,
+        },
+      });
+    }
 
     // Validate sort column - use created_at as default since uploaded_at may not exist
     const validSortColumns = ['uploaded_at', 'created_at', 'filename', 'size'];

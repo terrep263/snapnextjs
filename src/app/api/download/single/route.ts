@@ -10,6 +10,7 @@ import { getPackageType } from '@/lib/gallery-utils';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
 import { verifyHostSession } from '@/lib/host-auth';
 import { verifyAdminSession } from '@/lib/admin-auth';
+import { galleryClosed } from '@/lib/event-lifecycle';
 import ErrorLogger from '@/lib/errorLogger';
 
 const DOWNLOAD_RATE_LIMIT = 100; // 100 downloads per hour per IP
@@ -63,6 +64,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Event not found' },
         { status: 404 }
+      );
+    }
+
+    // Lifecycle: once the post-expiry grace has elapsed, the gallery (and its
+    // downloads) is closed. Grandfathered events and events without an expiry
+    // are unaffected.
+    if (galleryClosed(event)) {
+      return NextResponse.json(
+        { success: false, error: 'This event has ended.' },
+        { status: 403 }
       );
     }
 

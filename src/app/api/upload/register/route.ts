@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceRoleClient } from '@/lib/supabase';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
+import { uploadsClosed } from '@/lib/event-lifecycle';
 
 const REGISTER_RATE_LIMIT = 300; // photo registrations per hour per IP
 
@@ -48,9 +49,18 @@ export async function POST(request: NextRequest) {
     // to preserve the historical client behavior for freshly-claimed events.
     const { data: event } = await supabase
       .from('events')
-      .select('id, name, slug, is_free, max_photos')
+      .select('id, name, slug, is_free, max_photos, created_at, expires_at')
       .eq('id', eventId)
       .single();
+
+    // Uploads close when the event's active window ends (grandfathered events
+    // and events with no expiry are unaffected).
+    if (event && uploadsClosed(event)) {
+      return NextResponse.json(
+        { success: false, error: 'This event has ended and is no longer accepting uploads.' },
+        { status: 403 }
+      );
+    }
 
     if (!event) {
       // Safety-net: create a minimal event row so the photo has a parent.

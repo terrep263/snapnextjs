@@ -7,6 +7,7 @@ import {
   getImageDimensions,
 } from '@/lib/upload-utils';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
+import { uploadsClosed } from '@/lib/event-lifecycle';
 import ErrorLogger from '@/lib/errorLogger';
 import sharp from 'sharp';
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Verify event exists and check storage limits
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, max_storage_bytes, max_photos')
+      .select('id, max_storage_bytes, max_photos, created_at, expires_at')
       .eq('id', eventId)
       .single();
 
@@ -72,6 +73,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Event not found' },
         { status: 404 }
+      );
+    }
+
+    // Uploads close when the event's active window ends (grandfathered events
+    // and events with no expiry are unaffected).
+    if (uploadsClosed(event)) {
+      return NextResponse.json(
+        { success: false, error: 'This event has ended and is no longer accepting uploads.' },
+        { status: 403 }
       );
     }
 
@@ -277,4 +287,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

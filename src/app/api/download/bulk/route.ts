@@ -4,6 +4,7 @@ import { createBulkDownloadJob, processBulkDownloadJob } from '@/lib/bulk-downlo
 import ErrorLogger from '@/lib/errorLogger';
 import { getPackageType } from '@/lib/gallery-utils';
 import { verifyHostSession } from '@/lib/host-auth';
+import { galleryClosed } from '@/lib/event-lifecycle';
 import { verifyAdminSession } from '@/lib/admin-auth';
 
 // Force Node.js runtime for archiver compatibility
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Load event and verify it's Premium
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, name, slug, is_free, is_freebie, owner_email, owner_id, feed_enabled, password_hash, payment_type')
+      .select('id, name, slug, is_free, is_freebie, owner_email, owner_id, feed_enabled, password_hash, payment_type, created_at, expires_at')
       .eq('id', eventId)
       .single();
 
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Event not found' },
         { status: 404 }
+      );
+    }
+
+    // Lifecycle: closed once the post-expiry grace has elapsed (grandfathered
+    // events and events without an expiry are unaffected).
+    if (galleryClosed(event)) {
+      return NextResponse.json(
+        { success: false, error: 'This event has ended.' },
+        { status: 403 }
       );
     }
 
