@@ -143,7 +143,7 @@ export default function GalleryInstallPrompt({
                 {showIosTip && (
                   <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm text-gray-700">
                     Tap the <span className="font-semibold">Share</span> icon{' '}
-                    <span aria-hidden>⌘</span> at the bottom of Safari, then choose{' '}
+                    <span aria-hidden>⎋</span> at the bottom of Safari, then choose{' '}
                     <span className="font-semibold">“Add to Home Screen.”</span> The gallery
                     icon will appear on your home screen.
                   </p>
