@@ -27,7 +27,7 @@ type UploadFile = {
   uploadedId?: string;
 };
 
-// ─── Mobile upload safety constants (ported from PhotoUploadMinimalist) ────────
+// ─── Mobile upload safety constants (ported from PhotoUploadMinimalist) ────
 const MAX_BATCH_SIZE = 20;
 const MAX_PHOTO_SIZE = GALLERY_MAX_PHOTO_SIZE; // 700 MB
 // Matches the dedicated upload page so both surfaces behave identically.
@@ -43,7 +43,7 @@ const ACCEPTED_VIDEO_TYPES = [
   'video/x-msvideo',
 ];
 
-// ─── Extension → MIME mapping (authoritative source) ─────────────────────────
+// ─── Extension → MIME mapping (authoritative source) ─────────────────
 const EXT_MIME: Record<string, string> = {
   jpg: 'image/jpeg',
   jpeg: 'image/jpeg',
@@ -99,7 +99,7 @@ function filterLivePhotoSidecars(files: File[]): File[] {
     if (/\.mov$/i.test(f.name)) {
       const base = f.name.replace(/\.mov$/i, '').toLowerCase();
       if (heicBases.has(base)) {
-        console.log(`🗑️ Skipping iPhone Live Photo sidecar: ${f.name}`);
+        console.log(`Skipping iPhone Live Photo sidecar: ${f.name}`);
         return false;
       }
     }
@@ -119,7 +119,7 @@ async function convertHeicIfNeeded(file: File): Promise<File> {
   if (!isHeic) return file;
 
   try {
-    console.log(`🔄 Converting HEIC → JPEG: ${file.name}`);
+    console.log(`Converting HEIC to JPEG: ${file.name}`);
     const mod: any = await import('heic2any');
     const convert = mod.default || mod;
     const result = await convert({
@@ -134,7 +134,7 @@ async function convertHeicIfNeeded(file: File): Promise<File> {
       lastModified: file.lastModified,
     });
   } catch (err) {
-    console.warn(`⚠️ HEIC conversion failed for ${file.name}, uploading original:`, err);
+    console.warn(`HEIC conversion failed for ${file.name}, uploading original:`, err);
     return file;
   }
 }
@@ -151,7 +151,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, label = ''): Prom
       lastErr = err;
       if (attempt < retries - 1) {
         const delay = 500 * Math.pow(2, attempt);
-        console.warn(`⏳ Retry ${attempt + 1}/${retries - 1} for ${label} after ${delay}ms:`, err);
+        console.warn(`Retry ${attempt + 1}/${retries - 1} for ${label} after ${delay}ms:`, err);
         await new Promise((r) => setTimeout(r, delay));
       }
     }
@@ -161,7 +161,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, label = ''): Prom
 
 /**
  * UploadModal Component
- * 
+ *
  * Three-step upload flow:
  * 1. Selection - drag & drop, file browser, camera capture
  * 2. Upload Progress - per-file progress with cancel
@@ -397,9 +397,14 @@ export default function UploadModal({
     const queuedFiles = files.filter((f) => f.status === 'queued');
     if (queuedFiles.length === 0) return;
 
-    // Upload files sequentially to avoid overwhelming the server
-    for (const uploadFile of queuedFiles) {
-      if (uploadFile.status === 'cancelled') continue;
+    // Upload with bounded concurrency. This was strictly sequential (one file
+    // fully finished before the next started), which made multi-file batches on
+    // mobile feel broken — total time was the SUM of every file. A small pool
+    // keeps big batches fast without exhausting phone memory or the server.
+    const CONCURRENCY = 3;
+
+    const uploadOne = async (uploadFile: UploadFile) => {
+      if (uploadFile.status === 'cancelled') return;
 
       const abortController = new AbortController();
       uploadAbortControllers.current.set(uploadFile.id, abortController);
@@ -424,7 +429,20 @@ export default function UploadModal({
       } finally {
         uploadAbortControllers.current.delete(uploadFile.id);
       }
-    }
+    };
+
+    // A shared cursor hands each worker the next queued file; up to CONCURRENCY
+    // uploads run at once. Per-file cancel/retry/abort behaviour is unchanged.
+    let cursor = 0;
+    const runWorker = async () => {
+      while (cursor < queuedFiles.length) {
+        const next = queuedFiles[cursor++];
+        await uploadOne(next);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, queuedFiles.length) }, () => runWorker())
+    );
   }, [files]);
 
   // Upload single file using the chunked upload API
