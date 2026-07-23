@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase, transformToCustomDomain } from '@/lib/supabase';
 import GalleryContainer from '@/components/Gallery/GalleryContainer';
+import GalleryInstallPrompt from '@/components/GalleryInstallPrompt';
 import { EventData, getPackageType } from '@/lib/gallery-utils';
 import { GalleryItem } from '@/components/Gallery/types';
 // Feature flags removed - new gallery is now the default and only gallery
@@ -346,6 +347,7 @@ export default function GalleryPage() {
           </div>
         </div>
       )}
+      <GalleryInstallPrompt slug={slug} eventName={event.name} />
       <GalleryContainer
         event={event}
         photos={photos}
@@ -358,6 +360,16 @@ export default function GalleryPage() {
         isAdmin={isAdmin}
         isOwner={isOwner}
       />
+      <footer className="mt-10 border-t border-gray-200 py-6 text-center">
+        <a
+          href="https://snapworxx.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-gray-500 transition-colors hover:text-purple-600"
+        >
+          Powered by <span className="font-semibold text-purple-600">SnapWorxx</span>
+        </a>
+      </footer>
     </>
   );
 }
