@@ -131,6 +131,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title,
       description,
+      manifest: `/e/${slug}/manifest`,
+      appleWebApp: {
+        capable: true,
+        title: event.name,
+        statusBarStyle: 'default',
+      },
+      icons: {
+        apple: '/snapworxx%20logo%20(1).png',
+      },
       openGraph: {
         title,
         description,
