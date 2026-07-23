@@ -132,12 +132,16 @@ export async function POST(req: NextRequest) {
     // Atomically claim the token BEFORE creating the event. The conditional
     // update (claimed=false guard) guarantees two concurrent requests can never
     // both succeed — the loser gets zero affected rows and a 409.
+    //
+    // NOTE: event_id is intentionally NOT set here. free_event_claims.event_id
+    // has a non-deferrable FK to events(id); the event row does not exist yet,
+    // so writing event_id at this point fails with a 23503 FK violation. We
+    // stamp event_id AFTER the event is inserted (see below).
     const { data: claimedRows, error: claimLockError } = await supabase
       .from('free_event_claims')
       .update({
         claimed: true,
         claimed_at: new Date().toISOString(),
-        event_id: eventId,
       })
       .eq('token', token)
       .eq('claimed', false)
@@ -220,7 +224,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Token was already claimed atomically above (before event creation).
+    // The event row now exists, so it is safe to stamp the claim with its
+    // event_id (satisfies fk_free_event_claims_event). Non-fatal: the event is
+    // already created and the token is already claimed, so a failure here only
+    // affects the admin-side claim<->event link, not the user's event.
+    const { error: linkError } = await supabase
+      .from('free_event_claims')
+      .update({ event_id: eventId })
+      .eq('token', token);
+    if (linkError) {
+      console.error('Failed to link claim to event (non-fatal):', linkError);
+    }
 
     // Mint a signed host session so the creator is a verified owner going forward.
     try {
