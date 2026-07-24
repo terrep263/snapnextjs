@@ -36,12 +36,11 @@ export async function GET(
 
   const startUrl = `/e/${slug}/gallery`;
   const scope = `/e/${slug}/`;
-  const shortName = eventName.length > 12 ? eventName.slice(0, 12) : eventName;
 
   const manifest = {
     id: scope,
-    name: `${eventName} — SnapWorxx`,
-    short_name: shortName,
+    name: 'snapworxx.com',
+    short_name: 'snapworxx.com',
     description: `Photos for ${eventName}. Upload and view every guest's photos in one place.`,
     start_url: startUrl,
     scope,
