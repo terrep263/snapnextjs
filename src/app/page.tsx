@@ -55,13 +55,15 @@ export default function Home() {
           </div>
           
           <h1 className="mb-6 text-5xl md:text-7xl font-bold leading-tight">
-            Every Moment Captured.<br />
-            Every Memory<br />
-            Preserved.
+            Never Miss<br />
+            The Moments
           </h1>
-          <p className="mb-10 text-lg md:text-xl max-w-3xl mx-auto font-light">
-            Use a simple QR code to collect all photos and videos taken by guests at<br />
-            your event, so you never miss a single memory.
+          <p className="mb-6 text-lg md:text-xl max-w-3xl mx-auto font-light">
+            SnapWorxx helps you capture every moment &mdash; in the moment. Not after.<br />
+            Not when somebody finally gets around to sending it. While it&rsquo;s happening.
+          </p>
+          <p className="text-sm md:text-base tracking-wide opacity-80">
+            Live in minutes &middot; Nothing to download &middot; Everyone gets the photos
           </p>
         </div>
       </section>
@@ -71,10 +73,12 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              How It Works
+              In The Moment. Not After.
             </h2>
-            <p className="text-lg text-gray-600">
-              Get your event photo sharing set up in minutes
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              The candle goes out. The ball clears the fence. Two seconds, and it&rsquo;s over.
+              Everyone in the room is already holding a phone &mdash; SnapWorxx puts what they
+              catch in one place while it&rsquo;s still happening.
             </p>
           </div>
 
@@ -91,9 +95,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Choose Your Package</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Set Up Your Event</h3>
               <p className="text-gray-600">
-                Select Basic or Premium based on your event needs
+                Basic or Premium. One payment, one event.
               </p>
             </div>
 
@@ -109,9 +113,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Instant Setup</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Get Your Code</h3>
               <p className="text-gray-600">
-                Get your custom QR code and upload link immediately after payment
+                Your QR code and gallery link are live the moment you pay.
               </p>
             </div>
 
@@ -127,9 +131,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Share with Guests</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Put It Where People Are</h3>
               <p className="text-gray-600">
-                Display the QR code at your event or share the link
+                On the table, in the program, in the group text. Guests point their phone and they&rsquo;re in.
               </p>
             </div>
 
@@ -145,9 +149,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Collect & Download</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Everyone Gets Them</h3>
               <p className="text-gray-600">
-                All photos upload automatically. Download everything when ready
+                Photos land as they&rsquo;re taken. Keep them all &mdash; and share them back with everyone who was there.
               </p>
             </div>
           </div>
@@ -159,10 +163,11 @@ export default function Home() {
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Everything You Need
+              What You Get
             </h2>
-            <p className="text-lg text-gray-600">
-              Powerful features to make photo sharing effortless
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Everyone who was there. Every angle. Everything they saw &mdash; not just the
+              handful that made it to the group chat.
             </p>
           </div>
 
@@ -172,9 +177,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <QrCode className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">QR Code Access</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">No App. No Signup.</h3>
               <p className="text-gray-600">
-                Guests scan and upload photos instantly without downloading any apps
+                Guests point their phone at the code and start adding. Nothing to download, nothing to remember later.
               </p>
             </div>
 
@@ -183,9 +188,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <Upload className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Unlimited Uploads</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Every Angle</h3>
               <p className="text-gray-600">
-                No limits on the number of photos and videos your guests can share
+                No limits. Every photo and video, from every person in the room.
               </p>
             </div>
 
@@ -194,9 +199,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <Download className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Download</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Yours To Keep</h3>
               <p className="text-gray-600">
-                Download all photos at once in full resolution when your event ends
+                Download the whole gallery in full resolution. One click, and it&rsquo;s permanent.
               </p>
             </div>
 
@@ -205,9 +210,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <Shield className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Password Protection</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Only Your People</h3>
               <p className="text-gray-600">
-                Premium events include optional password protection for privacy
+                Premium galleries lock behind a password, so what happened stays with the people it belongs to.
               </p>
             </div>
 
@@ -216,9 +221,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <Clock className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Extended Storage</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Room To Breathe</h3>
               <p className="text-gray-600">
-                Keep your memories safe with 30-90 days of secure cloud storage
+                30 to 90 days of secure storage, so you don&rsquo;t have to sort through anything the next morning.
               </p>
             </div>
 
@@ -227,9 +232,9 @@ export default function Home() {
               <div className="h-16 w-16 rounded-xl bg-purple-100 flex items-center justify-center mb-6">
                 <Zap className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">Live Photo Feed</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Watch It Happen</h3>
               <p className="text-gray-600">
-                Premium includes live feed so you can see uploads in real-time
+                Premium shows photos appearing live, while the event is still going.
               </p>
             </div>
           </div>
@@ -244,7 +249,7 @@ export default function Home() {
               Simple Pricing
             </h2>
             <p className="text-lg text-gray-600">
-              One-time payment. No subscriptions.
+              You get one shot at the moment. One event, one price. No subscriptions.
             </p>
           </div>
 
@@ -356,7 +361,7 @@ export default function Home() {
             <Camera className="h-8 w-8" />
             <div>
               <div className="text-lg font-bold">SNAPWORXX</div>
-              <div className="text-xs tracking-widest opacity-80">PHOTOGRAPHY</div>
+              <div className="text-xs tracking-widest opacity-80">NEVER MISS THE MOMENTS</div>
             </div>
           </div>
           <p className="text-purple-200 text-sm">
