@@ -641,12 +641,14 @@ export default function UploadModal({
         </div>
 
         {/* Hidden file input */}
+        {/* NOTE: do NOT add a `capture` attribute here. On iOS Safari it forces
+            the camera open and suppresses the Photo Library / Choose File sheet,
+            and it silently disables `multiple` selection on iPhone. */}
         <input
           ref={fileInputRef}
           type="file"
           multiple
           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif,image/webp,image/gif,video/mp4,video/quicktime,video/mov,video/hevc,video/webm,video/x-matroska,video/3gpp,video/3gpp2,.jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.mp4,.mov,.hevc,.webm,.mkv,.3gp,.3g2"
-          capture="environment"
           onChange={(e) => {
             if (e.target.files) {
               handleFiles(e.target.files);
