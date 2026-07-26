@@ -4,6 +4,12 @@ import QRCode from 'qrcode';
 /**
  * Generate a branded PDF flyer for magic link distribution
  * Matches the SnapWorxx Free Trial template design
+ *
+ * IMPORTANT: this document is HOST-FACING. The QR and link both point at the
+ * claim/registration flow, not at a gallery. Copy must never instruct the
+ * recipient to hand this to guests - guests scanning it land on registration
+ * with nothing to upload to. The guest-facing QR is generated separately from
+ * the event dashboard and points at the gallery URL.
  */
 export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   // Create PDF in portrait, using mm units
@@ -47,7 +53,7 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   // Title
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('SNAPWORXX FREE TRIAL', 47.5, 78, { align: 'center' });
+  doc.text('YOUR FREE EVENT', 47.5, 78, { align: 'center' });
 
   // Decorative line
   doc.setDrawColor(255, 255, 255);
@@ -107,13 +113,16 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   
+  // Host-facing only. Do NOT reintroduce any instruction to share this link or
+  // this page with guests - it resolves to registration, not a gallery.
   const moreLines = [
-    "Share the link with your",
-    "guests. They upload photos.",
-    "You get a live gallery instantly.",
+    "This link is yours. Use it to",
+    "claim your free event.",
     "",
-    "This free trial link is good for",
-    "one event only.",
+    "Guests get a different QR code",
+    "after your event is set up.",
+    "",
+    "Good for one event only.",
     "",
     "If you didn't SnapWorxx it...",
     "did it really happen?",
@@ -185,11 +194,11 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
   doc.setFillColor(124, 58, 237);
   doc.circle(phoneX + phoneWidth / 2, phoneY + 45, 4, 'F');
 
-  // Text under phone
+  // Text under phone - host actions, not guest actions.
   doc.setTextColor(124, 58, 237);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Scan • Upload • Share', phoneX + phoneWidth / 2, phoneY + phoneHeight + 10, { align: 'center' });
+  doc.text('Claim • Set Up • Invite', phoneX + phoneWidth / 2, phoneY + phoneHeight + 10, { align: 'center' });
 
   // QR code linking to the claim/magic link.
   // The qrcode library produces a PNG data URL that jsPDF embeds as an image.
@@ -231,9 +240,11 @@ export async function generateMagicLinkPDF(magicLink: string): Promise<Blob> {
     doc.text('QR unavailable', qrX + qrSize / 2, qrY + qrSize / 2 + 2, { align: 'center' });
   }
 
+  // Names the destination so this code is never mistaken for the guest
+  // upload QR generated from the event dashboard.
   doc.setTextColor(124, 58, 237);
   doc.setFontSize(9);
-  doc.text('Scan to get started', qrX + qrSize / 2, qrY + qrSize + 8, { align: 'center' });
+  doc.text('Scan to claim your free event', qrX + qrSize / 2, qrY + qrSize + 8, { align: 'center' });
 
   // Footer on right side
   doc.setTextColor(107, 114, 128);
