@@ -25,18 +25,11 @@ export const metadata: Metadata = {
     url: "https://snapworxx.com",
     siteName: "SnapWorxx",
     type: "website",
-    images: [
-      {
-        url: "/purple%20logo/purplelogo.png",
-        alt: "SnapWorxx",
-      },
-    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Never Miss The Moments | SnapWorxx",
     description: "SnapWorxx helps you capture every moment — in the moment, while it's happening. Live in minutes. Nothing to download. Everyone gets the photos.",
-    images: ["/purple%20logo/purplelogo.png"],
   },
   icons: {
     icon: [
