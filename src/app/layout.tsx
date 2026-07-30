@@ -16,8 +16,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SnapWorxx - Event Photo Sharing Made Easy",
-  description: "Create custom photo sharing links for your events. Guests scan a QR code, upload photos, and everyone can view and download the gallery.",
+  metadataBase: new URL("https://snapworxx.com"),
+  title: "Never Miss The Moments | SnapWorxx",
+  description: "SnapWorxx helps you capture every moment — in the moment, while it's happening. Live in minutes. Nothing to download. Everyone gets the photos.",
+  openGraph: {
+    title: "Never Miss The Moments | SnapWorxx",
+    description: "SnapWorxx helps you capture every moment — in the moment, while it's happening. Live in minutes. Nothing to download. Everyone gets the photos.",
+    url: "https://snapworxx.com",
+    siteName: "SnapWorxx",
+    type: "website",
+    images: [
+      {
+        url: "/purple%20logo/purplelogo.png",
+        alt: "SnapWorxx",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Never Miss The Moments | SnapWorxx",
+    description: "SnapWorxx helps you capture every moment — in the moment, while it's happening. Live in minutes. Nothing to download. Everyone gets the photos.",
+    images: ["/purple%20logo/purplelogo.png"],
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
