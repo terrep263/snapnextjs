@@ -70,7 +70,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // so Facebook crawler can read OG tags before the JS redirect fires
 export default async function PhotoSharePage({ params }: Props) {
   const { slug } = await params;
-  const galleryUrl = `/e/${slug}/gallery`;
+  // slug is an attacker-controllable path segment and is interpolated into an
+  // inline <script> below. encodeURIComponent removes < and / (so the script
+  // tag cannot be closed early); JSON.stringify quotes/escapes the result (so
+  // the JS string literal cannot be broken out of). Both are required -
+  // encodeURIComponent alone leaves ' unescaped.
+  const galleryUrl = `/e/${encodeURIComponent(slug)}/gallery`;
 
   return (
     <>
@@ -84,7 +89,7 @@ export default async function PhotoSharePage({ params }: Props) {
             <p style={{ fontSize: '18px' }}>Taking you to the gallery...</p>
             <a href={galleryUrl} style={{ color: '#7C3AED', fontSize: '14px' }}>Click here if not redirected</a>
           </div>
-          <script dangerouslySetInnerHTML={{ __html: `window.location.href = '${galleryUrl}';` }} />
+          <script dangerouslySetInnerHTML={{ __html: `window.location.href = ${JSON.stringify(galleryUrl)};` }} />
         </body>
       </html>
     </>

@@ -124,9 +124,31 @@ export default function EventPlanPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="prose prose-sm max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: plan }} />
-            </div>
+            {/* `plan` is HTML produced by an LLM whose prompt embeds untrusted
+                user input, so it is rendered inside a sandboxed iframe rather
+                than injected into this document. The sandbox attribute omits
+                allow-scripts, which blocks inline scripts, event-handler
+                attributes and javascript: URLs. allow-same-origin is present
+                only so the parent can read scrollHeight to size the frame. */}
+            <iframe
+              title="Your event plan"
+              sandbox="allow-same-origin"
+              srcDoc={`<!doctype html><html><head><meta charset="utf-8"><base target="_blank"><style>
+                body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.6;color:#374151}
+                h1,h2,h3{color:#111827;margin:1.2em 0 .5em;line-height:1.3}
+                h1{font-size:1.5em}h2{font-size:1.25em}h3{font-size:1.1em}
+                ul,ol{padding-left:1.4em}li{margin:.25em 0}
+                table{border-collapse:collapse;width:100%}td,th{border:1px solid #e5e7eb;padding:6px 8px;text-align:left}
+                a{color:#7C3AED}
+              </style></head><body>${plan}</body></html>`}
+              onLoad={(e) => {
+                const f = e.currentTarget;
+                const h = f.contentDocument?.body?.scrollHeight;
+                if (h) f.style.height = `${h + 24}px`;
+              }}
+              className="w-full border-0 block"
+              style={{ height: '600px' }}
+            />
             
             <button
               onClick={() => {
