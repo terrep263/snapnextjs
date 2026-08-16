@@ -29,9 +29,9 @@ export const FOUNDER = {
   location: `${SITE.company} · ${SITE.companyLocation}`,
   photo: '/founder.jpg' as string | null,
   story: [
-    'I built SnapWorxx after watching the same thing happen at every event I went to: the host ends up begging the group chat for the good shots, and half of them never arrive.',
-    'Every guest is already holding a camera. The only thing missing is one place for the photos to land — no app to download, no account to make, no "who has the video of the toast?" three weeks later.',
-    'That is the whole product. One QR code on the table, one gallery, and the full-resolution set is yours to keep.',
+    'I didn’t set out to build this. I went looking for something that already did it, and I tried what was out there. Everything I found was close but not quite — one was missing a feature I actually needed, another had bugs I kept hitting, and when I reported them I’d wait weeks for a fix that sometimes never came.',
+    'That’s a bad place to be when the event is on Saturday. A gallery that half works is worse than no gallery at all, because by then you’ve already told your guests to scan the code.',
+    'So I built SnapWorxx as the version I wanted: one QR code, nothing for guests to download, the full-resolution set yours to keep, and a real person who answers when something goes wrong. That last part is most of why it exists.',
   ],
 } as const;
 
