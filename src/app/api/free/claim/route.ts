@@ -4,6 +4,9 @@ import crypto from 'crypto';
 import { sendMail } from '@/lib/mailer';
 import { setHostCookie } from '@/lib/host-auth';
 import { buildFreeEventEmail } from '@/lib/freeEventEmail';
+import { FREE_GALLERY_DAYS, FREE_MAX_PHOTOS } from '@/config/free-tier';
+import { getEmailDomain, normalizeEmail } from '@/lib/email-normalization';
+import { isDisposableEmailDomain } from '@/lib/disposable-email-domains';
 
 /**
  * Self-serve free event creation from the public /free landing page.
@@ -14,18 +17,22 @@ import { buildFreeEventEmail } from '@/lib/freeEventEmail';
  * untouched.
  *
  * Guarantees:
- *  - One free self-serve event per email address, enforced by a partial unique
- *    index on lower(claim_email) so concurrent submits cannot both win.
+ *  - One free self-serve event per normalized email address, enforced by a
+ *    unique index on claim_email_normalized so concurrent submits cannot both win.
  *  - Never issues an `unlimited` claim. That lane is reserved for whitelabel /
  *    unrestricted accounts and must not be reachable from a public endpoint.
  *
  * POST /api/free/claim
  */
 
-const EVENT_LIFETIME_DAYS = 30;
-
 function generateEventId(): string {
   return `evt_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+}
+
+function freeEventExpiresAt(eventDate: string, createdAt: Date): Date {
+  const parsed = Date.parse(`${eventDate}T00:00:00Z`);
+  const basis = Number.isNaN(parsed) ? createdAt.getTime() : parsed;
+  return new Date(basis + FREE_GALLERY_DAYS * 24 * 60 * 60 * 1000);
 }
 
 function generateSlug(eventName: string): string {
@@ -71,8 +78,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Stored lowercase so the unique index and all lookups agree.
-    const normalizedEmail = String(emailAddress).trim().toLowerCase();
+    const emailForMail = String(emailAddress).trim();
+    const normalizedEmail = normalizeEmail(emailForMail);
+    const emailDomain = getEmailDomain(emailForMail);
+    if (isDisposableEmailDomain(emailDomain)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Please use an email address you can receive mail at, so we can send your QR code.',
+        },
+        { status: 400 }
+      );
+    }
+
     const normalizedSource = normalizeSource(source);
     const supabase = getServiceRoleClient();
 
@@ -81,7 +99,7 @@ export async function POST(req: NextRequest) {
     const { data: existingClaim } = await supabase
       .from('free_event_claims')
       .select('token, event_id')
-      .eq('claim_email', normalizedEmail)
+      .eq('claim_email_normalized', normalizedEmail)
       .maybeSingle();
 
     if (existingClaim) {
@@ -99,8 +117,8 @@ export async function POST(req: NextRequest) {
     const eventSlug = generateSlug(eventName);
     const token = generateToken();
 
-    const eventExpiresAt = new Date();
-    eventExpiresAt.setDate(eventExpiresAt.getDate() + EVENT_LIFETIME_DAYS);
+    const createdAt = new Date();
+    const eventExpiresAt = freeEventExpiresAt(eventDate, createdAt);
 
     // Claim row first, already marked consumed. If the unique index rejects it
     // (23505), another request for this email won the race - report it cleanly
@@ -115,8 +133,9 @@ export async function POST(req: NextRequest) {
         {
           token,
           claimed: true,
-          claimed_at: new Date().toISOString(),
-          claim_email: normalizedEmail,
+          claimed_at: createdAt.toISOString(),
+          claim_email: emailForMail,
+          claim_email_normalized: normalizedEmail,
           source: normalizedSource,
           event_date: eventDate,
           unlimited: false, // never grant the whitelabel lane from a public route
@@ -141,9 +160,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Matches the restricted branch of /api/claim/create-event: free, uncapped
-    // in practice, feed on, 30-day lifetime. owner_email is set so the owner
-    // gates (bulk download) pass for the person who created it.
+    // Self-serve free events start inactive until the emailed activation link
+    // is clicked. owner_email is set so the owner gates pass for the creator.
     const { data: newEvent, error: createError } = await supabase
       .from('events')
       .insert([
@@ -151,17 +169,20 @@ export async function POST(req: NextRequest) {
           id: eventId,
           name: eventName,
           slug: eventSlug,
-          email: normalizedEmail,
-          owner_email: normalizedEmail,
+          email: emailForMail,
+          owner_email: emailForMail,
           owner_name: hostName,
           status: 'active',
           is_free: true,
           promo_type: 'FREE_SELF_SERVE',
           payment_type: 'self_serve',
-          max_photos: 999999,
+          watermark_enabled: true,
+          max_photos: FREE_MAX_PHOTOS,
           max_storage_bytes: 999999999,
           feed_enabled: true,
-          created_at: new Date().toISOString(),
+          event_date: eventDate,
+          activated_at: null,
+          created_at: createdAt.toISOString(),
           expires_at: eventExpiresAt.toISOString(),
         },
       ])
@@ -189,7 +210,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await setHostCookie(normalizedEmail, process.env.NODE_ENV === 'production');
+      await setHostCookie(emailForMail, process.env.NODE_ENV === 'production');
     } catch (e) {
       console.error('Failed to set host session (non-fatal):', e);
     }
@@ -197,6 +218,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
     const dashboardUrl = `${baseUrl}/dashboard/${eventId}`;
     const galleryUrl = `${baseUrl}/e/${eventSlug}`;
+    const activationUrl = `${baseUrl}/api/free/activate?token=${encodeURIComponent(token)}`;
 
     try {
       const { subject, html } = buildFreeEventEmail({
@@ -205,6 +227,7 @@ export async function POST(req: NextRequest) {
         eventDate,
         galleryUrl,
         dashboardUrl,
+        activationUrl,
         expiresOn: eventExpiresAt.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
@@ -213,7 +236,7 @@ export async function POST(req: NextRequest) {
         }),
       });
 
-      const emailResult = await sendMail({ to: normalizedEmail, subject, html });
+      const emailResult = await sendMail({ to: emailForMail, subject, html });
       if (!emailResult.ok) {
         console.error('Failed to send free-event confirmation:', emailResult.error);
       }
@@ -232,6 +255,7 @@ export async function POST(req: NextRequest) {
       eventSlug: newEvent.slug,
       dashboardUrl,
       galleryUrl,
+      activationUrl,
     });
   } catch (err) {
     console.error('Unhandled error in /api/free/claim:', err);

@@ -18,7 +18,7 @@ Built and run by ATLV Solutions in Orlando, Florida. Contact: hello@snapworxx.co
 
 - Basic Event — $29, one time, per event: unlimited uploads, QR code + upload link, 30-day storage, instant setup.
 - Premium Event — $49, one time, per event: everything in Basic, plus live feed, password protection, 90-day storage, bulk full-resolution download.
-- Free option: one free event per email at https://snapworxx.com/free — unlimited uploads, 30-day gallery, no card required.
+- Free option: one free event per email at https://snapworxx.com/free — 25 uploads, 7-day event window, no card required.
 - Payments are processed by Stripe. No recurring charge and no card kept on file.
 
 ## Who it is for

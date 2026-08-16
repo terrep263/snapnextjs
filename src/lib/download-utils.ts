@@ -27,11 +27,15 @@ export function detectPackageType(event: EventData): PackageType {
 /**
  * Determine if watermark should be applied
  * Rules:
+ * - Self-serve free: Always watermark
  * - Freebie: Always watermark (watermark_enabled is always true for freebie)
  * - Basic: No watermark (watermark_enabled is false)
  * - Premium: Watermark only if watermark_enabled is explicitly true
  */
 export function shouldApplyWatermark(event: EventData, packageType: PackageType): boolean {
+  if (event.promo_type === 'FREE_SELF_SERVE' || event.payment_type === 'self_serve') {
+    return true;
+  }
   if (packageType === 'freebie') {
     return true; // Freebie always has watermark_enabled
   }

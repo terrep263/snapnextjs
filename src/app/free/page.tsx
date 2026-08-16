@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { FREE_GALLERY_DAYS, FREE_MAX_PHOTOS } from '@/config/free-tier';
 
 /**
  * Public self-serve free event landing page.
@@ -25,6 +26,7 @@ function FreeEventForm() {
   const [result, setResult] = useState<{
     galleryUrl: string;
     dashboardUrl: string;
+    activationUrl: string;
   } | null>(null);
 
   const handleSubmit = async () => {
@@ -56,7 +58,11 @@ function FreeEventForm() {
         return;
       }
 
-      setResult({ galleryUrl: data.galleryUrl, dashboardUrl: data.dashboardUrl });
+      setResult({
+        galleryUrl: data.galleryUrl,
+        dashboardUrl: data.dashboardUrl,
+        activationUrl: data.activationUrl,
+      });
     } catch {
       setError('Could not reach the server. Please try again.');
     } finally {
@@ -73,13 +79,19 @@ function FreeEventForm() {
           </svg>
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Your gallery is live.</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Your gallery is ready.</h2>
         <p className="text-gray-600 mb-6">
-          We emailed your QR code to <strong>{emailAddress}</strong>. Print it, put it where
-          people are, and photos start landing here.
+          We emailed your QR code to <strong>{emailAddress}</strong>. Activate guest uploads
+          before you print it or share it.
         </p>
 
         <div className="space-y-3">
+          <a
+            href={result.activationUrl}
+            className="block w-full text-center rounded-full bg-green-600 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-green-700"
+          >
+            Activate guest uploads
+          </a>
           <a
             href={result.dashboardUrl}
             className="block w-full text-center rounded-full bg-purple-600 px-6 py-4 text-lg font-semibold text-white transition-colors hover:bg-purple-700"
@@ -95,7 +107,7 @@ function FreeEventForm() {
         </div>
 
         <p className="text-sm text-gray-500 mt-6">
-          Didn&rsquo;t get the email? Check spam, or just bookmark the links above.
+          Didn&rsquo;t get the email? Check spam, or use the activation link above.
         </p>
       </div>
     );
@@ -180,7 +192,7 @@ function FreeEventForm() {
         </button>
 
         <p className="text-xs text-gray-500 text-center">
-          One free event per email. Your gallery stays up for 30 days.
+          One free event per email. Free events include {FREE_MAX_PHOTOS} uploads and stay open for {FREE_GALLERY_DAYS} days after the event date.
         </p>
       </div>
     </div>
@@ -220,7 +232,7 @@ export default function FreeEventPage() {
             <ul className="space-y-4">
               {[
                 ['No app, no signup', 'Guests point their phone at a QR code. That\u2019s it.'],
-                ['Every angle', 'Every photo and video, from everyone in the room.'],
+              ['Every angle', `${FREE_MAX_PHOTOS} photos or videos from everyone in the room.`],
                 ['Everyone gets them', 'Not just you \u2014 the whole gallery goes back out.'],
                 ['Free means free', 'No card, no trial that bills you later.'],
               ].map(([title, body]) => (

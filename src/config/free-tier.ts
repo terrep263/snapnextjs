@@ -1,0 +1,5 @@
+export const FREE_MAX_PHOTOS = 25;
+export const FREE_GALLERY_DAYS = 7;
+
+export const FREE_UPLOADS_OPEN_DAYS_BEFORE_EVENT = 1;
+export const FREE_TIER_HARDENING_START_ISO = '2026-08-16T00:00:00Z';
