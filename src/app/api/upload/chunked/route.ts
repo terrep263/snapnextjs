@@ -7,7 +7,7 @@ import {
   getImageDimensions,
 } from '@/lib/upload-utils';
 import { checkRateLimit, incrementRateLimit, getClientIdentifier } from '@/lib/rate-limiter';
-import { uploadsClosed } from '@/lib/event-lifecycle';
+import { uploadBlockedReason } from '@/lib/event-lifecycle';
 import ErrorLogger from '@/lib/errorLogger';
 import sharp from 'sharp';
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Verify event exists and check storage limits
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, max_storage_bytes, max_photos, created_at, expires_at')
+      .select('id, is_free, promo_type, payment_type, max_storage_bytes, max_photos, created_at, expires_at, activated_at, event_date')
       .eq('id', eventId)
       .single();
 
@@ -78,9 +78,16 @@ export async function POST(request: NextRequest) {
 
     // Uploads close when the event's active window ends (grandfathered events
     // and events with no expiry are unaffected).
-    if (uploadsClosed(event)) {
+    const blockedReason = uploadBlockedReason(event);
+    if (blockedReason) {
+      const error =
+        blockedReason === 'inactive'
+          ? 'Please activate this free event from the link we emailed before guests upload photos.'
+          : blockedReason === 'not_open'
+            ? 'Uploads open one day before the event.'
+            : 'This event has ended and is no longer accepting uploads.';
       return NextResponse.json(
-        { success: false, error: 'This event has ended and is no longer accepting uploads.' },
+        { success: false, error },
         { status: 403 }
       );
     }

@@ -15,7 +15,7 @@ const content: VsContent = {
   intro:
     'Both collect guest photos through a QR code with nothing for guests to download. Pix Wedding is built for couples and only couples. SnapWorxx is built for any one-off event — weddings included, but also birthdays, graduations, banquets and church days — at a flat one-time price, with one free event to start on.',
   whenUsBetter: [
-    'You want to try the real thing free. SnapWorxx gives you one complete free event — unlimited uploads, 30-day gallery, no card.',
+    'You want to try the real thing free. SnapWorxx gives you one free event with 25 uploads, a 7-day event window, and no card.',
     'Your event is not a wedding. Birthdays, graduations, pastoral appreciations, banquets and community days all get the same product and the same price.',
     'You want the lowest one-time entry price. SnapWorxx starts at $29 against a $49 entry tier.',
     'You want the full-resolution set in one download and permanently yours, with no ongoing account.',
@@ -30,7 +30,7 @@ const content: VsContent = {
     { label: 'Entry price', us: '$29 one-time', them: 'Around $49 one-time (Starter)' },
     { label: 'Top tier', us: '$49 one-time (Premium)', them: 'Around $89 one-time (Pro)' },
     { label: 'Pricing model', us: 'One-time, per event', them: 'One-time, per event' },
-    { label: 'Free option', us: 'One full free event per email, 30-day gallery, no card', them: 'Free trial, around 20 uploads, no card' },
+    { label: 'Free option', us: 'One free event per email, 25 uploads, 7-day event window, no card', them: 'Free trial, around 20 uploads, no card' },
     { label: 'Guest app or signup', us: 'None', them: 'None' },
     { label: 'Occasions covered', us: 'Weddings, birthdays, graduations, church & community', them: 'Weddings' },
     { label: 'Guest uploads', us: 'Unlimited on both tiers', them: 'Capped by tier' },
@@ -46,7 +46,7 @@ const content: VsContent = {
     },
     {
       q: 'Can I try either one for free?',
-      a: 'Both. Pix offers a trial of roughly 20 uploads with no card. SnapWorxx gives you one complete free event per email — unlimited uploads, a 30-day gallery, no card — at snapworxx.com/free. Theirs lets you test repeatedly at small volume; ours lets you run one real event end to end.',
+      a: 'Both. Pix offers a trial of roughly 20 uploads with no card. SnapWorxx gives you one free event per email — 25 uploads, a 7-day event window, no card — at snapworxx.com/free. Theirs lets you test repeatedly at small volume; ours lets you try the real guest flow for one event.',
     },
     {
       q: 'Can I use Pix Wedding for a birthday or a church event?',

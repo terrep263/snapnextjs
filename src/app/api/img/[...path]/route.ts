@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const SUPABASE_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+function hasConfiguredValue(value: string | undefined): value is string {
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return !(
+    normalized.includes('your_') ||
+    normalized.includes('placeholder') ||
+    normalized.includes('your-key') ||
+    normalized.includes('your_key') ||
+    normalized.includes('here')
+  );
+}
+
 /**
  * GET /api/img/[...path]
  * Proxies Supabase storage images through snapworxx.com domain.
@@ -31,8 +43,16 @@ export async function GET(
     const qs = searchParams.toString();
     const hasTransform = searchParams.has('width') || searchParams.has('height');
 
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    if (!hasConfiguredValue(SUPABASE_BASE)) {
+      return new NextResponse('Supabase URL is not configured', { status: 503 });
+    }
+
+    const serviceKey = hasConfiguredValue(process.env.SUPABASE_SERVICE_ROLE_KEY)
+      ? process.env.SUPABASE_SERVICE_ROLE_KEY
+      : undefined;
+    const anonKey = hasConfiguredValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      : undefined;
 
     // Prefer the authenticated endpoint with the service-role key (works for
     // public AND private buckets). Fall back to the public endpoint + anon key.
@@ -48,7 +68,9 @@ export async function GET(
 
     const headers: Record<string, string> = useServiceRole
       ? { apikey: serviceKey as string, Authorization: `Bearer ${serviceKey}` }
-      : { apikey: anonKey };
+      : anonKey
+        ? { apikey: anonKey }
+        : {};
 
     const res = await fetch(upstream, { headers });
 

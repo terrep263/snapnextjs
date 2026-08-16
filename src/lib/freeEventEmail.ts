@@ -13,6 +13,7 @@ export interface FreeEventEmailParams {
   eventDate: string;
   galleryUrl: string;
   dashboardUrl: string;
+  activationUrl: string;
   expiresOn: string;
 }
 
@@ -22,6 +23,7 @@ export function buildFreeEventEmail({
   eventDate,
   galleryUrl,
   dashboardUrl,
+  activationUrl,
   expiresOn,
 }: FreeEventEmailParams): { subject: string; html: string } {
   // Rendered server-side by a third party so it survives email clients that
@@ -50,7 +52,18 @@ export function buildFreeEventEmail({
       <div style="padding:30px 24px;">
         <p style="font-size:16px;color:#1f2937;margin-top:0;">Hi <strong>${hostName}</strong>,</p>
         <p style="font-size:16px;color:#4b5563;">
-          Your gallery for <strong>${eventName}</strong> is live. Everything below is ready to use right now.
+          Your gallery for <strong>${eventName}</strong> is ready. Click the activation link below before guests start uploading.
+        </p>
+
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:22px 0;">
+          <tr>
+            <td style="background:#16a34a;border-radius:8px;">
+              <a href="${activationUrl}" style="display:inline-block;padding:14px 28px;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;">Activate guest uploads</a>
+            </td>
+          </tr>
+        </table>
+        <p style="color:#6b7280;font-size:13px;margin-top:-10px;">
+          This confirms the inbox works and turns on guest uploads for your free event.
         </p>
 
         <div style="background:#f3e8ff;border-left:4px solid #7C3AED;border-radius:10px;padding:18px 20px;margin:24px 0;">

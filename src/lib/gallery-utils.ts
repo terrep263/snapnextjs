@@ -23,6 +23,8 @@ export interface EventData {
   watermark_enabled?: boolean;
   max_storage_bytes?: number | null;
   max_photos?: number | null;
+  activated_at?: string | null;
+  event_date?: string | null;
 }
 
 /**

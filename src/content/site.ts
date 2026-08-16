@@ -41,13 +41,13 @@ export const FOUNDER = {
  *
  * This is the existing self-serve free event funnel shipped in PR #61. It was
  * already built and simply never surfaced from the homepage: one free event per
- * email, 30-day gallery, no card.
+ * email, 25 uploads, 7-day event window, no card.
  */
 export const FREE_EVENT_PATH = '/free'
 
 /** Plain-language description of the free offer, used wherever it is mentioned. */
 export const FREE_OFFER_SUMMARY =
-  'One free event per email. 30-day gallery, no card, nothing to install.'
+  'One free event per email. 25 uploads, 7-day event window, no card, nothing to install.'
 
 /**
  * Link to a real, viewable gallery.
@@ -141,7 +141,7 @@ export const FAQS = [
   },
   {
     q: 'Can I try it before I pay?',
-    a: 'Yes. You can set up one free event per email at snapworxx.com/free — no card, nothing to install, and the gallery stays up for 30 days. It is the same product your guests would use, not a demo.',
+    a: 'Yes. You can set up one free event per email at snapworxx.com/free — no card, nothing to install. Free events include 25 uploads and stay open for 7 days after the event date. It is the same guest upload flow your paid event would use, not a demo.',
   },
 ] as const;
 
