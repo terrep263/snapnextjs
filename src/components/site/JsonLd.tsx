@@ -1,4 +1,4 @@
-import { SITE, PLANS, FAQS } from '@/content/site'
+import { SITE, PLANS, FAQS, FOUNDER } from '@/content/site'
 
 /**
  * Structured data (audit D5.5 — Organization, Product/Offer and FAQ schema
@@ -24,6 +24,12 @@ export function OrganizationJsonLd() {
         '@type': 'Organization',
         name: SITE.name,
         legalName: SITE.company,
+        founder: {
+          '@type': 'Person',
+          name: FOUNDER.name,
+          jobTitle: FOUNDER.title,
+          ...(FOUNDER.photo ? { image: `${SITE.url}${FOUNDER.photo}` } : {}),
+        },
         url: SITE.url,
         logo: `${SITE.url}/purple logo/purplelogo.png`,
         email: SITE.supportEmail,

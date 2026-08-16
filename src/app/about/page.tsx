@@ -8,7 +8,7 @@ import { FOUNDER, SITE, SCOPE_HONESTY } from '@/content/site'
 export const metadata: Metadata = {
   title: 'About — who builds SnapWorxx',
   description:
-    'SnapWorxx is built and run by a named founder in Orlando, Florida. Who we are, why we built a QR guest photo gallery, and how to reach a human.',
+    'SnapWorxx is built and run by Terre Polite in Orlando, Florida. Who we are, why we built a QR guest photo gallery for weddings and events, and how to reach a human.',
   alternates: { canonical: '/about' },
 }
 

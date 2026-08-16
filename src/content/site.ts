@@ -16,16 +16,18 @@ export const SITE = {
 /**
  * Founder block shown on /about and in the footer (audit D3.3).
  *
- * TODO (Vincent): replace `photo` with a real headshot at
- * /public/founder.jpg, confirm `name`, and add your LinkedIn/X URL.
- * If `photo` is left null the page renders an initials avatar instead —
- * it will never show a broken image or a stock face.
+ * `photo` points at /public/founder.jpg. If it is ever set back to null the
+ * page renders an initials avatar instead — it will never show a broken image
+ * or a stock face.
+ *
+ * TODO (Terre): add your LinkedIn / X URLs below and they appear on /about
+ * automatically.
  */
 export const FOUNDER = {
-  name: 'Vincent',
+  name: 'Terre Polite',
   title: 'Founder, SnapWorxx',
   location: `${SITE.company} · ${SITE.companyLocation}`,
-  photo: null as string | null, // e.g. '/founder.jpg'
+  photo: '/founder.jpg' as string | null,
   linkedin: null as string | null,
   x: null as string | null,
   story: [
@@ -52,7 +54,7 @@ export const FREE_OFFER_SUMMARY =
 /**
  * Link to a real, viewable gallery.
  *
- * TODO (Vincent): confirm this slug matches the sample freebie event created by
+ * TODO (Terre): confirm this slug matches the sample freebie event created by
  * setup_sample_freebie_event.sql. If the slug differs, change it here only.
  * This is currently referenced only from the pricing section as a secondary
  * "see it before you sign up" link — the primary free path is FREE_EVENT_PATH.
