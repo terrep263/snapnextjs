@@ -1,0 +1,51 @@
+# SnapWorxx
+
+> A QR code guest photo gallery for a single event. One free event per email to start. Guests scan one code and upload photos and video straight from their phone browser — no app download, no account, no login. The host downloads the whole set in full resolution and keeps it. One-time price per event: $29 Basic or $49 Premium. No subscription, no auto-renewal.
+
+Built and run by ATLV Solutions in Orlando, Florida. Contact: hello@snapworxx.com
+
+## What it does
+
+- One QR code (printable) plus a shareable link per event.
+- Guests scan and upload photos and video from a phone browser. No app, no signup, no account.
+- Unlimited guest uploads on both tiers.
+- Live feed of uploads during the event (Premium).
+- Password protection on the gallery (Premium).
+- Gallery stays live 30 days (Basic) or 90 days (Premium); the host is emailed before it closes.
+- Bulk download of the full-resolution set (Premium). Downloaded files are permanent and unwatermarked.
+
+## Pricing
+
+- Basic Event — $29, one time, per event: unlimited uploads, QR code + upload link, 30-day storage, instant setup.
+- Premium Event — $49, one time, per event: everything in Basic, plus live feed, password protection, 90-day storage, bulk full-resolution download.
+- Free option: one free event per email at https://snapworxx.com/free — unlimited uploads, 30-day gallery, no card required.
+- Payments are processed by Stripe. No recurring charge and no card kept on file.
+
+## Who it is for
+
+- Weddings — the candids the photographer did not get.
+- Birthdays, graduations, anniversaries and milestone parties.
+- Church and community events — pastoral appreciations, homecomings, banquets, youth days.
+
+## Who it is not for
+
+SnapWorxx is built for one-off events. It is not a subscription, not a business media library, and not a replacement for a professional photographer.
+
+## Privacy
+
+Event galleries live at their own links with no public directory. SnapWorxx does not sell photos, license them, or use them to train AI models. Hosts can request deletion of an event at any time.
+
+## Key pages
+
+- Homepage: https://snapworxx.com/
+- Pricing: https://snapworxx.com/pricing
+- How it works: https://snapworxx.com/features
+- About the founder: https://snapworxx.com/about
+- Free event: https://snapworxx.com/free
+- Contact: https://snapworxx.com/contact
+- Privacy: https://snapworxx.com/privacy
+- SnapWorxx vs Pix Wedding: https://snapworxx.com/vs/snapworxx-vs-pix-wedding
+- SnapWorxx vs GuestPix: https://snapworxx.com/vs/snapworxx-vs-guestpix
+- Weddings: https://snapworxx.com/occasions/weddings
+- Birthdays & milestones: https://snapworxx.com/occasions/birthdays
+- Church & community: https://snapworxx.com/occasions/church-and-community

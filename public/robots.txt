@@ -1,41 +1,90 @@
 # Snapworxx Robots.txt
-# Generated for search engine crawlers
+#
+# Audit D5.5: this file previously blocked GPTBot, CCBot, anthropic-ai and
+# Claude-Web outright, which opted the site out of AI-assistant discovery —
+# the fastest-growing route buyers use to shortlist tools in this category.
+# AI crawlers are now allowed on the public marketing pages and blocked from
+# everything private, the same way search engines are.
 
 User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /api
 Disallow: /auth
+Disallow: /dashboard
+Disallow: /claim
+Disallow: /promo
+Disallow: /success
 Disallow: /_next
 Disallow: /private
 
-# AI Crawlers - Block to prevent scraping
+# AI assistants and answer engines: allowed on the marketing site, scoped away
+# from anything private.
 User-agent: GPTBot
-Disallow: /
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
-User-agent: CCBot
-Disallow: /
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
 User-agent: anthropic-ai
-Disallow: /
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
 User-agent: Claude-Web
-Disallow: /
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
-User-agent: Omgili
-Disallow: /
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
-# Search Engines - Allow
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+
+User-agent: CCBot
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+
+# Search engines
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
 
-# Specific crawl delays for crawlers
-User-agent: *
-Crawl-delay: 1
-
-# Sitemap reference
 Sitemap: https://snapworxx.com/sitemap.xml
-Sitemap: https://snapworxx.com/sitemap-0.xml
