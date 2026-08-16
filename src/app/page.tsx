@@ -33,7 +33,7 @@ export default async function Home() {
             muted
             playsInline
             preload="metadata"
-            poster="/hero-poster.jpg"
+            poster="/hero-poster"
             aria-hidden="true"
             className="h-full w-full object-cover"
           >
