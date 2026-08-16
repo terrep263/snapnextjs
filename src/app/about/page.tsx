@@ -45,30 +45,12 @@ export default function AboutPage() {
               <div className="text-xl font-bold text-gray-900">{FOUNDER.name}</div>
               <div className="text-gray-600">{FOUNDER.title}</div>
               <div className="text-sm text-gray-500">{FOUNDER.location}</div>
-              {(FOUNDER.linkedin || FOUNDER.x) && (
-                <div className="mt-2 flex gap-4 text-sm">
-                  {FOUNDER.linkedin && (
-                    <a
-                      href={FOUNDER.linkedin}
-                      className="font-medium text-purple-700 underline"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      LinkedIn
-                    </a>
-                  )}
-                  {FOUNDER.x && (
-                    <a
-                      href={FOUNDER.x}
-                      className="font-medium text-purple-700 underline"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      X
-                    </a>
-                  )}
-                </div>
-              )}
+              <a
+                href={`mailto:${SITE.supportEmail}`}
+                className="mt-2 inline-block text-sm font-medium text-purple-700 underline"
+              >
+                {SITE.supportEmail}
+              </a>
             </div>
           </div>
 

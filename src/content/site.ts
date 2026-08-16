@@ -20,16 +20,14 @@ export const SITE = {
  * page renders an initials avatar instead — it will never show a broken image
  * or a stock face.
  *
- * TODO (Terre): add your LinkedIn / X URLs below and they appear on /about
- * automatically.
+ * No social links by design — the founder trust signal here is the name, the
+ * face and a reachable email, not a follower count.
  */
 export const FOUNDER = {
   name: 'Terre Polite',
   title: 'Founder, SnapWorxx',
   location: `${SITE.company} · ${SITE.companyLocation}`,
   photo: '/founder.jpg' as string | null,
-  linkedin: null as string | null,
-  x: null as string | null,
   story: [
     'I built SnapWorxx after watching the same thing happen at every event I went to: the host ends up begging the group chat for the good shots, and half of them never arrive.',
     'Every guest is already holding a camera. The only thing missing is one place for the photos to land — no app to download, no account to make, no "who has the video of the toast?" three weeks later.',
