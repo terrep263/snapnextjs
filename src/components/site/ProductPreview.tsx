@@ -5,36 +5,36 @@ import { QrCode } from 'lucide-react'
  * stock footage, so a visitor never saw what "winning" actually looks like:
  * a filled gallery the morning after, and the live feed while it's happening).
  *
- * ============================================================================
- * ACTION REQUIRED (Vincent)
- * ============================================================================
- * The two frames below are UI mockups drawn in markup — they show the real
- * SnapWorxx layout but not real photos, because only you can produce a real
- * screenshot of a filled gallery.
+ * The frames below are the real SnapWorxx layout rendered around real photos
+ * from the public sample gallery, rather than a flat screenshot. That keeps
+ * them sharp on any display, responsive at every breakpoint, and correct as
+ * the UI evolves — a PNG screenshot goes stale the moment the layout changes.
  *
- * To swap in real screenshots, drop the files in /public/product/ and set:
- *   GALLERY_SHOT  = '/product/gallery.png'    (the grid, morning after)
- *   FEED_SHOT     = '/product/live-feed.png'  (the live feed, mid-event)
- * The mockups disappear automatically once these are set.
- * ============================================================================
+ * To change which photos appear, swap the entries below for any image URL from
+ * the sample gallery.
  */
-const GALLERY_SHOT: string | null = null
-const FEED_SHOT: string | null = null
 
-/** Neutral placeholder tiles — deliberately abstract, never fake photos. */
-const TILE_TONES = [
-  'from-purple-200 to-purple-300',
-  'from-amber-100 to-amber-200',
-  'from-slate-200 to-slate-300',
-  'from-rose-100 to-rose-200',
-  'from-purple-100 to-purple-200',
-  'from-sky-100 to-sky-200',
-  'from-stone-200 to-stone-300',
-  'from-emerald-100 to-emerald-200',
-  'from-violet-200 to-violet-300',
+/** Real photos from the public sample gallery (/e/sample-event-slug/gallery). */
+const GALLERY_TILES = [
+  { src: '/api/img/sample-event-slug/1786907348145-joansbirthday21.jpg', alt: 'Guests laughing together at a table during a 60th birthday celebration' },
+  { src: '/api/img/sample-event-slug/1786902009112-classy-wedding-couple-embrace.jpg', alt: 'A bride and groom embracing in a car after their wedding' },
+  { src: '/api/img/sample-event-slug/1786907338296-joansbirthday16.jpg', alt: 'Three guests posing together at a birthday party table' },
+  { src: '/api/img/sample-event-slug/1786907335071-joansbirthday14.jpg', alt: 'A group of guests photographed together at a birthday celebration' },
+  { src: '/api/img/sample-event-slug/1786902041603-groom-holds-bride-s-hand-while-walking-on-cobblestone-path.jpg', alt: 'A bride and groom walking hand in hand along a cobblestone path' },
+  { src: '/api/img/sample-event-slug/1786907352895-joansbirthday31.jpg', alt: 'A guest smiling with a baby at a family celebration' },
+  { src: '/api/img/sample-event-slug/1786907333318-joansbirthday13.jpg', alt: 'Guests seated around a decorated table at a birthday party' },
+  { src: '/api/img/sample-event-slug/1786902045853-stylish-bride-and-groom-on-old-european-street.jpg', alt: 'A bride and groom on a city street after their ceremony' },
+  { src: '/api/img/sample-event-slug/1786907375839-joansbirthday99.jpg', alt: 'Two guests taking a selfie together at a birthday party' },
 ]
 
-function GalleryMockup() {
+/** The three most recent arrivals, as the feed shows them mid-event. */
+const FEED_TILES = [
+  { src: '/api/img/sample-event-slug/1786907375839-joansbirthday99.jpg', alt: 'Two guests taking a selfie at the party' },
+  { src: '/api/img/sample-event-slug/1786907349767-joansbirthday22.jpg', alt: 'Guests together at the celebration' },
+  { src: '/api/img/sample-event-slug/1786907327666-joansbirthday101.jpg', alt: 'A guest photographed with a young family member' },
+]
+
+function GalleryFrame() {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
       <div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-3">
@@ -56,10 +56,14 @@ function GalleryMockup() {
           </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {TILE_TONES.map((tone, i) => (
-            <div
-              key={i}
-              className={`aspect-square rounded-lg bg-gradient-to-br ${tone}`}
+          {GALLERY_TILES.map((tile) => (
+            <img
+              key={tile.src}
+              src={tile.src}
+              alt={tile.alt}
+              loading="lazy"
+              decoding="async"
+              className="aspect-square w-full rounded-lg bg-gray-100 object-cover"
             />
           ))}
         </div>
@@ -68,7 +72,7 @@ function GalleryMockup() {
   )
 }
 
-function FeedMockup() {
+function FeedFrame() {
   return (
     <div className="mx-auto w-full max-w-[260px] overflow-hidden rounded-[2rem] border-8 border-gray-900 bg-white shadow-2xl">
       <div className="flex items-center justify-between bg-gray-900 px-4 py-2 text-[10px] text-white">
@@ -80,12 +84,22 @@ function FeedMockup() {
       </div>
       <div className="space-y-2 p-3">
         <div className="text-xs font-semibold text-gray-900">Live feed</div>
-        {TILE_TONES.slice(0, 3).map((tone, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className={`h-14 w-14 shrink-0 rounded-lg bg-gradient-to-br ${tone}`} />
+        {FEED_TILES.map((tile, i) => (
+          <div key={tile.src} className="flex items-center gap-2">
+            <img
+              src={tile.src}
+              alt={tile.alt}
+              loading="lazy"
+              decoding="async"
+              className="h-14 w-14 shrink-0 rounded-lg bg-gray-100 object-cover"
+            />
             <div className="min-w-0 flex-1">
-              <div className="mb-1 h-2 w-3/4 rounded bg-gray-200" />
-              <div className="h-2 w-1/2 rounded bg-gray-100" />
+              <div className="text-[10px] font-medium text-gray-700">
+                A guest just added a photo
+              </div>
+              <div className="text-[9px] text-gray-400">
+                {i === 0 ? 'just now' : i === 1 ? '1 min ago' : '2 min ago'}
+              </div>
             </div>
           </div>
         ))}
@@ -113,15 +127,7 @@ export default function ProductPreview() {
 
         <div className="mx-auto grid max-w-5xl items-center gap-12 md:grid-cols-[1.4fr_1fr]">
           <div>
-            {GALLERY_SHOT ? (
-              <img
-                src={GALLERY_SHOT}
-                alt="A filled SnapWorxx gallery the morning after an event, showing guest photos in a grid with a download-all button"
-                className="w-full rounded-2xl border border-gray-200 shadow-xl"
-              />
-            ) : (
-              <GalleryMockup />
-            )}
+            <GalleryFrame />
             <p className="mt-4 text-sm text-gray-500">
               The morning after: one gallery, full resolution, yours to download
               and keep.
@@ -129,15 +135,7 @@ export default function ProductPreview() {
           </div>
 
           <div>
-            {FEED_SHOT ? (
-              <img
-                src={FEED_SHOT}
-                alt="The SnapWorxx live feed on a phone, showing guest photos arriving during the event"
-                className="mx-auto w-full max-w-[260px] rounded-[2rem] shadow-2xl"
-              />
-            ) : (
-              <FeedMockup />
-            )}
+            <FeedFrame />
             <p className="mt-4 text-center text-sm text-gray-500">
               During the event: photos land in the live feed as guests upload
               them (Premium).
