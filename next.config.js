@@ -30,6 +30,21 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 31536000,
   },
+  /**
+   * HeyCatch short links. Single-character paths (/a-/z, /0-/9) are reserved
+   * for campaign attribution and redirect to the homepage carrying the code as
+   * a utm_campaign. Matches one segment only, so /e/<slug> galleries are
+   * unaffected — the app has no bare single-character routes.
+   */
+  async redirects() {
+    return [
+      {
+        source: '/:l([a-z0-9])',
+        destination: '/?utm_source=heycatch&utm_campaign=:l',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
