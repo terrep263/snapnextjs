@@ -22,7 +22,7 @@ export async function GET(
   let eventName = 'Event Gallery';
   if (supabaseUrl && supabaseKey) {
     try {
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = createClient(supabaseUrl, supabaseKey, { db: { schema: 'snapnextjs' } });
       const { data } = await supabase
         .from('events')
         .select('name')
