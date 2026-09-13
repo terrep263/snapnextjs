@@ -13,7 +13,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
 const STORAGE_BASE_URL = `${supabaseUrl}/storage/v1/object/public/photos`;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, { db: { schema: 'snapnextjs' } });
 
 export const getServiceRoleClient = () => {
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,6 +24,7 @@ export const getServiceRoleClient = () => {
   }
   return createClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false },
+    db: { schema: 'snapnextjs' },
   });
 };
 
