@@ -13,7 +13,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const supabase = createClient(
     SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    { db: { schema: 'snapnextjs' } }
   );
 
   const [{ data: event }, { data: photo }] = await Promise.all([
