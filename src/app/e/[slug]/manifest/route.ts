@@ -15,7 +15,9 @@ export async function GET(
 ) {
   const { slug } = await params;
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Server-side only: reach Supabase over the container network. Manifest
+  // icons/start_url are relative paths, so no internal URL leaks to the client.
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

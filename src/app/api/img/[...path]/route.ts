@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const SUPABASE_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// This proxy only ever FETCHES bytes itself and returns the bytes (never the
+// upstream URL), so it must use the internal container address — the public
+// hostname is not reachable from inside the VPS.
+const SUPABASE_BASE = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 
 /**
  * GET /api/img/[...path]

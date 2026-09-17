@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   if (_authDenied) return _authDenied;
   const slug = request.nextUrl.searchParams.get('slug') || 'test-terre-wcrx66';
   
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Server-side only: reach Supabase over the container network.
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {
