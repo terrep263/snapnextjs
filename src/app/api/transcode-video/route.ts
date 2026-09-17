@@ -47,12 +47,23 @@ export async function POST(req: Request) {
 
     if (!sourceUrl) return NextResponse.json({ error: 'sourceUrl required' }, { status: 400 });
 
-    // Only allow Supabase storage / custom domain for security in this POC
-    const allowedHost = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    // Only allow Supabase storage / custom domain for security in this POC.
+    // sourceUrl is supplied by the browser, so it carries the PUBLIC host; the
+    // internal host is accepted too for server-to-server callers.
+    const publicHost = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const internalHost = process.env.SUPABASE_INTERNAL_URL || '';
     const customDomain = 'https://sharedfrom.snapworxx.com';
-    if (!(sourceUrl.startsWith(allowedHost) || sourceUrl.startsWith(customDomain))) {
+    const allowedHosts = [publicHost, internalHost, customDomain].filter(Boolean);
+    if (!allowedHosts.some((host) => sourceUrl.startsWith(host))) {
       return NextResponse.json({ error: 'sourceUrl must be from configured Supabase storage' }, { status: 400 });
     }
+
+    // We download this ourselves, so swap the public host for the internal one:
+    // the public hostname is not reachable from inside the VPS.
+    const downloadUrl =
+      internalHost && publicHost && sourceUrl.startsWith(publicHost)
+        ? `${internalHost}${sourceUrl.slice(publicHost.length)}`
+        : sourceUrl;
 
     if (!ffmpegAvailable()) {
       return NextResponse.json({ error: 'ffmpeg-unavailable' }, { status: 503 });
@@ -62,7 +73,7 @@ export async function POST(req: Request) {
     const inputExt = path.extname(new URL(sourceUrl).pathname) || '.in';
     const inputPath = path.join(tmpDir, `input${inputExt}`);
 
-    await downloadToFile(sourceUrl, inputPath);
+    await downloadToFile(downloadUrl, inputPath);
 
     const results: Record<string, string> = {};
     const supabase = getServiceRoleClient();

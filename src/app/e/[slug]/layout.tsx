@@ -38,7 +38,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   // Create client directly here to ensure env vars are available
   // Use service role key to bypass RLS for metadata generation
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Server-side only: use the internal container address (the public hostname
+  // is not reachable from inside the VPS). OG/manifest URLs below are built
+  // from APP_URL, so nothing internal is ever handed to a browser.
+  const supabaseUrl = process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
   if (!supabaseUrl || !supabaseKey) {

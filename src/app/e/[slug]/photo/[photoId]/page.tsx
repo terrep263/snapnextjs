@@ -2,7 +2,11 @@ import { Metadata } from 'next';
 import { createClient } from '@supabase/supabase-js';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://snapworxx.com';
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+// Server component / generateMetadata only: use the internal container address
+// (the public hostname is not reachable from inside the VPS). The OG image URL
+// returned to crawlers is built from APP_URL, never from this value.
+const SUPABASE_URL =
+  process.env.SUPABASE_INTERNAL_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
 type Props = {
   params: Promise<{ slug: string; photoId: string }>;
