@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceRoleClient, getPhotoPublicUrl } from '@/lib/supabase';
+import { getServiceRoleClient, getPhotoPublicUrl, toPublicStorageUrl } from '@/lib/supabase';
 import {
   shouldApplyWatermark,
   applyWatermarkToImage,
@@ -143,7 +143,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
-          url: signedUrlData.signedUrl,
+          // Built by the server client (internal host) but consumed by the
+          // browser, so it must be rewritten back to the public host.
+          url: toPublicStorageUrl(signedUrlData.signedUrl),
           isWatermarked: false,
           packageType,
           isVideo: photo.is_video,
@@ -224,7 +226,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           data: {
-            url: signedUrlData?.signedUrl || photo.url,
+            url: toPublicStorageUrl(signedUrlData?.signedUrl) || photo.url,
             isWatermarked: false,
             packageType,
             isVideo: true,

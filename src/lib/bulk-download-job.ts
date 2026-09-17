@@ -3,7 +3,7 @@
  * Handles background ZIP generation for Premium events
  */
 
-import { getServiceRoleClient, getPhotoPublicUrl } from '@/lib/supabase';
+import { getServiceRoleClient, getPhotoPublicUrl, toPublicStorageUrl } from '@/lib/supabase';
 import archiver from 'archiver';
 import { Writable } from 'stream';
 
@@ -208,7 +208,10 @@ export async function processBulkDownloadJob(jobId: string): Promise<void> {
         continue;
       }
 
-      downloadUrls.push(signedUrlData.signedUrl);
+      // These URLs are sent to the browser, so rewrite the internal host the
+      // server-side client used back to the public one.
+      const publicSignedUrl = toPublicStorageUrl(signedUrlData.signedUrl);
+      if (publicSignedUrl) downloadUrls.push(publicSignedUrl);
     }
 
     // Mark job as complete
@@ -366,4 +369,3 @@ if (typeof setInterval !== 'undefined') {
     cleanupExpiredJobs().catch(console.error);
   }, 60 * 60 * 1000);
 }
-
